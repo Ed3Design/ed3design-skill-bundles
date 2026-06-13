@@ -29,8 +29,30 @@
 
 ## 🚀 Quickstart
 
+### Via Claude Code Marketplace (Recommended)
+
+Add this repo as a marketplace, then install bundles individually:
+
+```
+/plugin marketplace add Ed3Design/ed3design-skill-bundles
+/plugin install token-savers@ed3design-skill-bundles
+/plugin install code-quality@ed3design-skill-bundles
+# ... or any of the 8 bundles
+```
+
+Available plugins after `marketplace add`:
+- `token-savers` — Token optimization (4 skills + 5 tools)
+- `code-quality` — Code review + Git hygiene (16 skills + 4 hooks + 1 agent)
+- `planning-disciplines` — Roadmap + decision (10 skills + 1 agent)
+- `async-forensik` — asyncio + container debugging (7 skills + 1 agent)
+- `schema-discipline` — SQL/schema bug prevention (6 skills + 1 agent)
+- `skill-system-meta` — Skill lifecycle (5 skills + 1 hook)
+- `cad-design` — Parametric CAD workflows (4 skills)
+- `maker-fdm` — BOM + embedded UI (2 skills)
+
+### Manual install (no marketplace)
+
 ```bash
-# Clone repo
 git clone https://github.com/Ed3Design/ed3design-skill-bundles
 cd ed3design-skill-bundles
 
@@ -42,12 +64,6 @@ chmod +x ~/.claude/tools/*.py
 # Optional dependencies (token-savers):
 pip install certifi              # html2md SSL
 brew install tesseract tesseract-lang poppler  # OCR + PDF
-```
-
-Or via Claude Code marketplace (when registered):
-
-```
-/plugin install ed3design-skill-bundles/<bundle-name>
 ```
 
 ## 💡 Design Philosophy

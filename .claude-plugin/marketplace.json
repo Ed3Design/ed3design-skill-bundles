@@ -1,0 +1,65 @@
+{
+  "name": "ed3design-skill-bundles",
+  "description": "Engineering-discipline library for Claude Code: 54 skills, 6 hooks, 4 sub-agents, 5 Python tools across 8 thematic bundles. Software engineering (token savings, code quality, planning, async forensics, schema discipline, skill-system meta) and hardware/maker engineering (CAD design, FDM/maker workflows). Empirically validated patterns.",
+  "owner": {
+    "name": "ed3Dworks"
+  },
+  "plugins": [
+    {
+      "name": "token-savers",
+      "description": "Token optimization for Claude Code: 4 skills + 5 Python tools delivering 70-98% token savings in typical workflows (PDF reads, image vision, web reads, vault searches, DB schema checks, Git diff summaries).",
+      "version": "0.2.0",
+      "source": "./token-savers",
+      "author": {"name": "ed3Dworks"}
+    },
+    {
+      "name": "code-quality",
+      "description": "Code-quality + Git disciplines for Python/SQL/Git projects. 16 skills (code review, Git hygiene, code patterns), 4 PreToolUse hooks for automatic Git enforcement, and 1 read-only code-reviewer sub-agent. Language- and framework-agnostic.",
+      "version": "0.2.0",
+      "source": "./code-quality",
+      "author": {"name": "ed3Dworks"}
+    },
+    {
+      "name": "planning-disciplines",
+      "description": "Planning + decision disciplines for any multi-phase project. 10 skills + 1 planning-assistant sub-agent. Process discipline that structurally prevents wished-for implementation.",
+      "version": "0.2.0",
+      "source": "./planning-disciplines",
+      "author": {"name": "ed3Dworks"}
+    },
+    {
+      "name": "async-forensik",
+      "description": "Forensic disciplines for asyncio Python + container stacks. 7 skills + 1 forensik-detective sub-agent for hypothesis-test pipelines.",
+      "version": "0.2.0",
+      "source": "./async-forensik",
+      "author": {"name": "ed3Dworks"}
+    },
+    {
+      "name": "schema-discipline",
+      "description": "SQL/schema disciplines that structurally prevent bug classes. 6 skills + 1 schema-validator sub-agent. Pattern correctness across DB engines (PostgreSQL/MySQL/SQLite).",
+      "version": "0.2.0",
+      "source": "./schema-discipline",
+      "author": {"name": "ed3Dworks"}
+    },
+    {
+      "name": "skill-system-meta",
+      "description": "Skill-system disciplines for Claude Code power users who build their own skills. 5 skills for skill lifecycle (TDD promotion, post-session review, sub-agent patterns, design-first iteration) + 1 UserPromptSubmit hook for session-end detection.",
+      "version": "0.2.0",
+      "source": "./skill-system-meta",
+      "author": {"name": "ed3Dworks"}
+    },
+    {
+      "name": "cad-design",
+      "description": "Parametric CAD design disciplines for makers, mechanical engineers, and product designers. 4 skills covering CAD API scripting (Fusion 360, OpenSCAD, commercial platforms), parametric construction workflows, mechanical design principles, and image-to-mesh-CAD pipelines.",
+      "version": "0.1.0",
+      "source": "./cad-design",
+      "author": {"name": "ed3Dworks"}
+    },
+    {
+      "name": "maker-fdm",
+      "description": "Maker disciplines for FDM-printed builds and embedded UI documentation. 2 skills covering Bill-of-Materials validation for multi-component physical builds and embedded GUI documentation from source (ESP32/Arduino touchscreens with LovyanGFX, TFT_eSPI, U8g2, LVGL).",
+      "version": "0.1.0",
+      "source": "./maker-fdm",
+      "author": {"name": "ed3Dworks"}
+    }
+  ]
+}
