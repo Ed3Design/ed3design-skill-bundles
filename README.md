@@ -3,11 +3,9 @@
 [![Bundle Validation](https://github.com/Ed3Design/ed3design-skill-bundles/actions/workflows/validate.yml/badge.svg)](https://github.com/Ed3Design/ed3design-skill-bundles/actions/workflows/validate.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> Engineering-discipline library for Claude Code power users. 54 skills + 5 Python tools + 6 hooks + 4 sub-agents across 8 thematic bundles.
+> Software-engineering-discipline library for Claude Code power users. 48 skills + 5 Python tools + 6 hooks + 4 sub-agents across 6 thematic bundles.
 
-## 📦 Bundles
-
-## Software Engineering Bundles
+## 📦 Bundles (Software Engineering)
 
 | Bundle | Skills | Hooks | Agents | Tools | Status |
 |---|---|---|---|---|---|
@@ -18,14 +16,15 @@
 | [`schema-discipline`](./schema-discipline/) | 6 | — | **1** (`schema-validator`) | — | ✅ v0.2.0 |
 | [`skill-system-meta`](./skill-system-meta/) | 5 | **1** | — | — | ✅ v0.2.0 |
 
-## Hardware / Maker Engineering Bundles
+**Total**: 48 skills + 6 hooks + 4 sub-agents + 5 tools — patterns extracted from real-world software engineering practice and structured for reuse (Python/SQL/Git workflows).
 
-| Bundle | Skills | Hooks | Agents | Tools | Status |
-|---|---|---|---|---|---|
-| [`cad-design`](./cad-design/) | 4 | — | — | — | ✅ v0.1.0 |
-| [`maker-fdm`](./maker-fdm/) | 2 | — | — | — | ✅ v0.1.0 |
+## 🔧 Hardware / Maker Engineering — Separate Repo
 
-**Total**: 54 skills + 6 hooks + 4 sub-agents + 5 tools — patterns extracted from real-world engineering practice and structured for reuse. Covers software engineering (Python/SQL/Git workflows) AND hardware/maker engineering (CAD, FDM, embedded UI).
+Hardware-focused bundles (parametric CAD, FDM/maker workflows, embedded systems) moved to a **dedicated sibling repo** for clearer audience differentiation:
+
+→ **[`ed3design-engineering-bundles`](https://github.com/Ed3Design/ed3design-engineering-bundles)** (currently private — request access if interested)
+
+That repo covers `cad-design`, `maker-fdm`, and `embedded-systems` bundles for makers, mechanical engineers, and hardware hobbyists.
 
 ## 🚀 Quickstart
 
@@ -37,7 +36,7 @@ Add this repo as a marketplace, then install bundles individually:
 /plugin marketplace add Ed3Design/ed3design-skill-bundles
 /plugin install token-savers@ed3design-skill-bundles
 /plugin install code-quality@ed3design-skill-bundles
-# ... or any of the 8 bundles
+# ... or any of the 6 bundles
 ```
 
 Available plugins after `marketplace add`:
@@ -47,8 +46,6 @@ Available plugins after `marketplace add`:
 - `async-forensik` — asyncio + container debugging (7 skills + 1 agent)
 - `schema-discipline` — SQL/schema bug prevention (6 skills + 1 agent)
 - `skill-system-meta` — Skill lifecycle (5 skills + 1 hook)
-- `cad-design` — Parametric CAD workflows (4 skills)
-- `maker-fdm` — BOM + embedded UI (2 skills)
 
 ### Manual install (no marketplace)
 
