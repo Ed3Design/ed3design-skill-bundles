@@ -1,29 +1,29 @@
 ---
 name: static-source-bug-class-coverage-test
-description: Use when adding regression-test coverage for a Bug-Klasse that manifests as a repeated source-code-pattern across multiple call-sites in the same file (or codebase), NOT a single localized bug. Example today (G3-B1): four `WHERE status<>'open'` aggregations in `status.py` all needed `AND win IS NOT NULL` — Endpoint-Mock-Tests can guard one call-site at a time but force you to mock the entire endpoint plumbing (asyncpg-connect, FastAPI-router, conftest fixtures). Pattern: write a static-source-inspect-test that reads the source file directly via `Path(__file__).resolve().parents[N] / "src/file.py"`, extracts pattern-candidates via regex (e.g. all triple-quoted SQL blocks containing `virtual_trades` AND `sum(CASE WHEN win`), and asserts each candidate contains the fix-marker (`win IS NOT NULL`). Critical: include a Whitelist-Skip for f-String-Templates with externalized variables (`{where_clause}`) that get the fix via their definition-site, not the SQL-block itself — otherwise the test produces False-Positives for already-fixed code. Trigger on phrases like "Bug-Klassen-Coverage-Test schreiben", "alle Aggregationen in File X auf Pattern Y prüfen", "Static-Source-Inspect-Test", "regression guard for the same bug pattern in multiple call-sites", "ich will dass NEUE Aggregationen das gleiche Pattern haben", "warum nicht einfach Endpoint-Mocks für alle 4 Stellen?". Do NOT load for single-call-site Bugs (Endpoint-Mock reicht), for Bug-Klassen die nicht im Source-Pattern erkennbar sind (z.B. Runtime-Logik-Bugs ohne syntaktisches Pattern), oder für Files mit komplexen multi-layer f-String-Verschachtelungen wo False-Positive-Whitelisting unzuverlässig wird (dann Integration-Test gegen Real-DB die saubererere Lösung).
+description: Use when adding regression-test coverage for a bug-class that manifests as a repeated source-code-pattern across multiple call-sites in the same file (or codebase), NOT a single localized bug. Example: four `WHERE status<>'open'` aggregations in `status.py` all needed `AND win IS NOT NULL` — endpoint-mock tests can guard one call-site at a time but force you to mock the entire endpoint plumbing (asyncpg-connect, FastAPI-router, conftest fixtures). Pattern: write a static-source-inspect-test that reads the source file directly via `Path(__file__).resolve().parents[N] / "src/file.py"`, extracts pattern-candidates via regex (e.g. all triple-quoted SQL blocks containing `virtual_trades` AND `sum(CASE WHEN win`), and asserts each candidate contains the fix-marker (`win IS NOT NULL`). Critical: include a whitelist-skip for f-string templates with externalized variables (`{where_clause}`) that get the fix via their definition-site, not the SQL-block itself — otherwise the test produces false-positives for already-fixed code. Trigger on phrases like "write bug-class coverage test", "check all aggregations in file X for pattern Y", "static source inspect test", "regression guard for the same bug pattern in multiple call-sites", "I want NEW aggregations to have the same pattern", "why not just endpoint mocks for all 4 spots?". Do NOT load for single-call-site bugs (endpoint-mock suffices), for bug classes that aren't recognizable in the source pattern (e.g. runtime-logic bugs without syntactic pattern), or for files with complex multi-layer f-string nesting where false-positive whitelisting becomes unreliable (then integration test against real DB is the cleaner solution).
 ---
 
 # static-source-bug-class-coverage-test
 
-> ✅ **PROMOTED 2026-05-27**: Pattern aus G3-B1 Cockpit-Query-Fix Session. TDD-Pressure-Test bestanden (RED: relativ-Pfad + fragile f-String-Detection; GREEN: `Path(__file__).resolve()` + Triple-Quote-Regex + sauberer Whitelist-Skip). Polish eingebaut: Hinweis zu f-String-concatenated SQL.
+> ✅ **PROMOTED**: pattern from a query-fix session. TDD pressure-test passed (RED: relative path + fragile f-string detection; GREEN: `Path(__file__).resolve()` + triple-quote regex + clean whitelist skip). Polish incorporated: hint about f-string-concatenated SQL.
 
-## Pattern (Kurzform)
+## Pattern (short form)
 
-1. **Identifiziere Bug-Klasse als Source-Pattern**: SQL-Block mit X UND ohne Y, async-Funktion ohne Z, etc.
-2. **Test lädt File via Read** (`Path(__file__).resolve().parents[N] / "path/to/file.py"`) — KEIN relativer Pfad
-3. **Extrahiere Pattern-Kandidaten via Regex** über Triple-Quoted-Strings oder Code-Blocks
-4. **Für jeden Kandidaten**: prüfe Fix-Marker-Pattern enthalten
-5. **WICHTIG — Whitelist-Skip**: Patterns die via f-String-Substitution den Fix kriegen (`{where_clause}`-Templates) skippen, sonst False-Positives für bereits-gefixten Code
-6. **Violations-Liste**: bei Mismatch → assert mit voller Snippet-Liste im AssertionError
+1. **Identify bug class as source pattern**: SQL block with X AND without Y, async function without Z, etc.
+2. **Test loads file via Read** (`Path(__file__).resolve().parents[N] / "path/to/file.py"`) — NO relative path
+3. **Extract pattern candidates via regex** over triple-quoted strings or code blocks
+4. **For each candidate**: check fix-marker pattern is contained
+5. **IMPORTANT — whitelist skip**: patterns that get the fix via f-string substitution (`{where_clause}` templates) skip, otherwise false-positives for already-fixed code
+6. **Violations list**: on mismatch → assert with full snippet list in AssertionError
 
-> **Limitation**: dieser Test deckt nur triple-quoted SQL-Strings (`"""..."""`) ab. SQL-Strings via f-String-Concatenation (`f"SELECT ... WHERE " + condition`) sind nicht erfasst — bei solchen Patterns ist ein Integration-Test gegen Real-DB die zuverlässigere Lösung.
+> **Limitation**: this test only covers triple-quoted SQL strings (`"""..."""`). SQL strings via f-string concatenation (`f"SELECT ... WHERE " + condition`) are not captured — for such patterns an integration test against real DB is the more reliable solution.
 
-## Konkretes Beispiel (G3-B1, 27.05.2026)
+## Concrete example
 
 ```python
 def test_status_module_no_unfiltered_win_aggregations():
-    """Static check: jede sum(CASE WHEN win) Aggregation in status.py
-    muss in einem Query-Block sein, dessen WHERE win IS NOT NULL enthält."""
+    """Static check: every sum(CASE WHEN win) aggregation in status.py
+    must be in a query block whose WHERE contains win IS NOT NULL."""
     from pathlib import Path
     import re
 
@@ -33,7 +33,7 @@ def test_status_module_no_unfiltered_win_aggregations():
     )
     src = src_path.read_text(encoding="utf-8")
 
-    # Triple-quoted-SQL-Blocks extrahieren
+    # Extract triple-quoted SQL blocks
     sql_blocks = re.findall(r'"""(.*?)"""', src, re.DOTALL)
 
     violations: list[str] = []
@@ -43,56 +43,56 @@ def test_status_module_no_unfiltered_win_aggregations():
             continue
         if not ("sum(case when" in block_lower and "win" in block_lower):
             continue
-        # WHITELIST: f-String-Blöcke mit externalisierten where_clause skippen —
-        # die werden von den 4 Endpoint-Mock-Tests separat geguarded
+        # WHITELIST: skip f-string blocks with externalized where_clause —
+        # those are guarded separately by the 4 endpoint mock tests
         if "{where_clause}" in block:
             continue
         if "win is not null" not in block_lower:
             violations.append(block.strip()[:200])
 
     assert not violations, (
-        "Unfiltered win-Aggregation(s) gefunden in status.py — Bug-Klasse "
-        "aus G3-B1 (KW22-Cockpit-Verzerrung) wieder eingeschleust:\n\n"
+        "Unfiltered win-aggregation(s) found in status.py — bug class "
+        "(cockpit distortion) reintroduced:\n\n"
         + "\n---\n".join(violations)
     )
 ```
 
 ## Anti-Patterns
 
-| Anti-Pattern | Was statt dessen |
+| Anti-Pattern | What to do instead |
 |---|---|
-| Naiv alle Pattern-Matches als Violation melden (ohne Whitelist) | False-Positives für Code wo Fix via externalized-Variable kommt → Whitelist-Skip mit klarem Kommentar |
-| Pattern-Regex zu greedy (matches mehrere Blocks) | Triple-Quote-Capture mit `DOTALL` + `.*?` non-greedy |
-| Test als Endpoint-Integration-Test bauen | 4 Bug-Stellen = 4 Endpoint-Mocks = 4× Setup. Static-Source-Inspect mit 1 Test deckt alle ab |
-| File-Path hard-coded oder relativ | `Path(__file__).resolve().parents[N]` — test läuft von beliebigem cwd |
-| Violations-Error ohne Snippet-Liste | Test-Failure-Message nutzlos — User weiß nicht WO im File die Violation ist |
+| Naively report all pattern matches as violation (without whitelist) | False-positives for code where fix comes via externalized-variable → whitelist skip with clear comment |
+| Pattern regex too greedy (matches multiple blocks) | Triple-quote capture with `DOTALL` + `.*?` non-greedy |
+| Build test as endpoint-integration test | 4 bug spots = 4 endpoint mocks = 4× setup. Static-source inspect with 1 test covers all |
+| File path hardcoded or relative | `Path(__file__).resolve().parents[N]` — test runs from any cwd |
+| Violations error without snippet list | Test-failure message useless — user doesn't know WHERE in the file the violation is |
 
-## Quick-Reference: wann Static-Source vs Endpoint-Mock vs Integration-Test
+## Quick reference: when static-source vs endpoint-mock vs integration test
 
-| Bug-Klasse | Test-Strategie |
+| Bug class | Test strategy |
 |---|---|
-| Source-Pattern in 1 Call-Site | Endpoint-Mock |
-| Source-Pattern in N>1 Call-Sites im selben File | **Static-Source-Inspect** (dieses Skill) |
-| Source-Pattern über mehrere Files | Static-Source-Inspect über Glob-Pattern |
-| Runtime-Logik-Bug ohne syntaktisches Pattern | Real-DB-Integration-Test |
-| SQL via f-String-Concatenation (nicht triple-quoted) | Real-DB-Integration-Test |
-| Mehr-Layer-f-String-Verschachtelung mit komplexer Substitution | Real-DB-Integration-Test (Whitelist wird unzuverlässig) |
+| Source pattern in 1 call-site | Endpoint mock |
+| Source pattern in N>1 call-sites in the same file | **Static-source inspect** (this skill) |
+| Source pattern across multiple files | Static-source inspect over glob pattern |
+| Runtime logic bug without syntactic pattern | Real-DB integration test |
+| SQL via f-string concatenation (not triple-quoted) | Real-DB integration test |
+| Multi-layer f-string nesting with complex substitution | Real-DB integration test (whitelist becomes unreliable) |
 
-## Real-World-Impact
+## Real-world impact
 
-G3-B1 Cockpit-Query-Fix 27.05.2026: 4 Aggregations-Stellen, 1 Static-Source-Test deckt alle ab plus Regression-Guard für zukünftige Aggregationen. Test fand naiv 4 Bug-Stellen (2 davon False-Positive durch f-String). Verfeinerung auf 2 echte mit Whitelist-Skip war ironisch ein 2-Iteration-Cycle, der Skill macht das in 1.
+Query-fix session: 4 aggregation spots, 1 static-source test covers all plus regression guard for future aggregations. Test found 4 bug spots naively (2 of them false-positive due to f-string). Refinement to 2 real with whitelist skip was ironically a 2-iteration cycle, the skill does that in 1.
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing-Log)
 
-### Cycle 1 — 2026-05-27 (PASS)
+### Cycle 1 — PASS
 
-- **RED-Subagent** (ohne Skill): Wählte ebenfalls Static-Inspection (kein Endpoint-Mock) — überraschend smart. ABER: nutzte relativen Pfad `Path("api/routes/analytics/metrics.py")` (bricht bei anderem cwd), und komplexe heuristische f-String-Variable-Definition-Regex (sucht Var-Definition im ganzen Modul — fragil bei Multi-Modul-Imports). Ehrlichkeits-Vorbehalt selbst benannt.
+- **RED-Subagent** (without skill): also chose static inspection (no endpoint mock) — surprisingly smart. BUT: used relative path `Path("api/routes/analytics/metrics.py")` (breaks at different cwd), and complex heuristic f-string-variable-definition regex (searches var definition in whole module — fragile with multi-module imports). Honesty caveat self-named.
 
-- **GREEN-Subagent** (mit Skill): `Path(__file__).resolve().parents[2]` korrekt, Triple-Quote-Regex sauber, Whitelist-Skip mit erklärendem Kommentar. Self-Reflection identifizierte Skill-Lücke: f-String-concatenated SQL nicht abgedeckt → Polish-Item eingebaut.
+- **GREEN-Subagent** (with skill): `Path(__file__).resolve().parents[2]` correct, triple-quote regex clean, whitelist skip with explanatory comment. Self-reflection identified skill gap: f-string-concatenated SQL not covered → polish item incorporated.
 
-- **Refactor**: kein R1-R3 nötig. Polish-Item (f-String-Concatenation-Limitation-Note) direkt eingebaut.
+- **Refactor**: no R1-R3 needed. Polish item (f-string concatenation limitation note) directly incorporated.
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2-Backlog (Polish, non-blocking)
 
-1. Glob-Pattern-Beispiel für "Source-Pattern über mehrere Files" Fall (z.B. `glob("api/**/*.py")` + iterate)
-2. `--no-header` / `format-string` Anpassung für Violations-Message wenn Snippet sehr groß
+1. Glob pattern example for "source pattern across multiple files" case (e.g. `glob("api/**/*.py")` + iterate)
+2. `--no-header` / `format-string` adjustment for violations message when snippet is very large

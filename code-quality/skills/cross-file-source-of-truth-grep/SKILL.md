@@ -1,66 +1,66 @@
 ---
 name: cross-file-source-of-truth-grep
-description: Use when you are about to refactor a value, constant, helper-function, lookup, or config-pattern from old-form to new-form across the codebase — schema-drift fixes („`yf_symbol` → `symbol`"), display-name SoT migration („inline-dict → `core/utils/display.instrument_label`"), config-pattern updates („hardcoded VRM-ID → env-var"), helper-function rename, deprecated-import-cleanup. STOP and run `grep -r "<old-pattern>"` on the WHOLE repo (not just the files you have open) BEFORE writing the new pattern anywhere. Specifically trigger when (a) you write phrases like „ich refactore X auf Y", „Schema-Drift in Y beheben", „migriere von alter auf neue Form", „rename helper", „config-Default rausziehen", „display-name single-source-of-truth", (b) you have a mental model „die 3 Files die das nutzen" or „nur in /core/ relevant" — gerade dispatcher / scheduler / jobs / notifications / tests verstecken oft 1-2 weitere Stellen, (c) the new pattern is in production code but you haven't checked notification-dispatcher, scheduler-jobs, batch-scripts, integration-tests, mock-fixtures. Wolf-Erlebnis 09.06.2026 Phase-1-Re-Review: `notifications/signal_dispatcher.py:_get_display_name` rief noch alten `config_loader`-Pfad auf, obwohl der Hauptpfad migriert war — wäre wochenlang unbemerkt im V1/V2-Signal-Telegram-Dispatch geblieben. Method: `grep -rn "<altes-pattern>" --include="*.py"` mit Ausschluss von `node_modules`, `.git`, `*.pyc`, `__pycache__`, dann jede Trefferzeile lesen + zuordnen (Production / Notification / Scheduler / Test / Mock / Deprecated). Do NOT load for greenfield-code (no old pattern to migrate from), for renames that are pure cosmetics with no semantic shift (e.g. variable in same file), for refactors that are guaranteed file-local (private helper in a single module). Complements `pre-deploy-code-drift-detection` (this skill catches drift VOR dem Refactor, that one catches drift NACH dem Refactor); complement to `silent-except-versteckt-schema-drift` (which finds the same kind of dormant bug from the symptom side).
+description: Use when you are about to refactor a value, constant, helper-function, lookup, or config-pattern from old-form to new-form across the codebase — schema-drift fixes ("`yf_symbol` → `symbol`"), display-name SoT migration ("inline-dict → `core/utils/display.instrument_label`"), config-pattern updates ("hardcoded VRM-ID → env-var"), helper-function rename, deprecated-import cleanup. STOP and run `grep -r "<old-pattern>"` on the WHOLE repo (not just the files you have open) BEFORE writing the new pattern anywhere. Specifically trigger when (a) you write phrases like "I'm refactoring X to Y", "fix schema drift in Y", "migrate from old to new form", "rename helper", "extract config default", "display-name single-source-of-truth", (b) you have a mental model "the 3 files that use this" or "only in /core/ relevant" — especially dispatcher / scheduler / jobs / notifications / tests often hide 1-2 additional places, (c) the new pattern is in production code but you haven't checked notification-dispatcher, scheduler-jobs, batch-scripts, integration-tests, mock-fixtures. Experience from practice: `notifications/signal_dispatcher.py:_get_display_name` still called the old `config_loader` path although the main path had been migrated — would have stayed undetected for weeks in the signal Telegram dispatch. Method: `grep -rn "<old-pattern>" --include="*.py"` excluding `node_modules`, `.git`, `*.pyc`, `__pycache__`, then read each hit line + categorize (production / notification / scheduler / test / mock / deprecated). Do NOT load for greenfield code (no old pattern to migrate from), for renames that are pure cosmetics with no semantic shift (e.g. variable in same file), for refactors that are guaranteed file-local (private helper in a single module). Complements `pre-deploy-code-drift-detection` (this skill catches drift BEFORE the refactor, that one catches drift AFTER the refactor); complement to `silent-except-versteckt-schema-drift` (which finds the same kind of dormant bug from the symptom side).
 ---
 
 # Cross-File Source-of-Truth Grep
 
-> ✅ **PROMOTED 2026-06-10** — TDD Cycle 1 PASS. RED-Subagent gab heuristisch „erst grep" Empfehlung, aber ohne den entscheidenden 4. Grep-Pass auf Mapping-Werte. GREEN-Subagent ergänzte den 4. Pass `grep -rn "'CL=F'\s*:\s*'WTI"` — der genau Kopien der Mapping-Struktur unter abweichenden Variablen-Namen fängt (`_DISPLAY_MAP`, `LABELS`, in-Helper-Function-eingebettete Dicts). Genau dieser Pass hätte den 09.06.-`signal_dispatcher.py:_get_display_name`-Bug vor dem Refactor abgefangen. **R1-Refactor angewendet**: 4. Grep-Pass in Quick-Reference als separate Zeile + Hinweis-Block.
+> ✅ **PROMOTED** — TDD Cycle 1 PASS. RED-Subagent gave a heuristic "grep first" recommendation, but without the decisive 4th grep pass on mapping values. GREEN-Subagent added the 4th pass `grep -rn "'CL=F'\s*:\s*'WTI"` — which catches copies of the mapping structure under deviating variable names (`_DISPLAY_MAP`, `LABELS`, dicts embedded inside helper functions). Precisely this pass would have caught the `signal_dispatcher.py:_get_display_name` bug before the refactor. **R1 refactor applied**: 4th grep pass in Quick Reference as a separate line + hint block.
 
 ## Overview
 
-**Vor jedem Refactor: grep -r auf den ALTEN Pattern, nicht auf den NEUEN.**
+**Before every refactor: grep -r for the OLD pattern, not the NEW one.**
 
-Wenn du ein altes Pattern (Spaltennname, Helper-Aufruf, Inline-Dict, Default-String, deprecated-Import) durch ein neues ersetzt, brennen sich häufig **2-5 zusätzliche Aufrufer** ein die du im mentalen Modell „die 3 relevanten Files" nicht hattest:
+When you replace an old pattern (column name, helper call, inline dict, default string, deprecated import) with a new one, **2-5 additional callers** often burn in that you didn't have in the mental model of "the 3 relevant files":
 
-- `notifications/`-Dispatcher (Telegram, Email, Webhook)
-- Scheduler-Jobs (cron-getriggert, oft wenig touched)
-- Batch-Scripts (offline analytics)
-- Integration-Tests + Mock-Fixtures
-- Deprecated-aber-noch-im-Pfad-Module
+- `notifications/` dispatcher (Telegram, email, webhook)
+- Scheduler jobs (cron-triggered, often rarely touched)
+- Batch scripts (offline analytics)
+- Integration tests + mock fixtures
+- Deprecated-but-still-in-path modules
 
-Skill = simple Disziplin: **`grep -rn "<altes-pattern>"` BEVOR du den ersten neuen Aufruf schreibst.** 30 Sekunden Aufwand verhindern Stunden Re-Review-Cycle.
+Skill = simple discipline: **`grep -rn "<old-pattern>"` BEFORE you write the first new call.** 30 seconds of effort prevents hours of re-review cycle.
 
-Diese Maxime ist die Refactor-Variante der Wolf-Maxime „Single Source of Truth" (09.06.2026): die SoT-Migration ist erst dann vollständig wenn der grep auf das alte Pattern leer ist.
+This maxim is the refactor-variant of the "Single Source of Truth" maxim: the SoT migration is only complete when grep on the old pattern is empty.
 
 ## When to use
 
-**Trigger-Phrasen (du würdest gerade sagen)**:
-- „ich refactore <X> auf <Y>"
-- „Schema-Drift in <table>.<column> beheben"
-- „SoT für <Display-Name / Config-Var / Helper> einziehen"
-- „migriere von altem `config_loader`-Pfad auf neuen"
-- „rename helper-function von foo auf bar"
-- „deprecated import cleanup"
-- „die config-Defaults aus dem Code rausziehen"
+**Trigger phrases (you would just be saying)**:
+- "I'm refactoring <X> to <Y>"
+- "fix schema drift in <table>.<column>"
+- "introduce SoT for <Display-Name / config-var / helper>"
+- "migrate from old `config_loader` path to new"
+- "rename helper-function from foo to bar"
+- "deprecated import cleanup"
+- "extract config defaults from code"
 
-**Hochrisiko-Marker** (zusätzlicher Trigger):
-- Du hast im Kopf eine kleine Liste betroffener Files (≤5) — gerade dann grep, weil das ist die unterschätzungsanfällige Lage
-- Das neue Pattern lebt schon irgendwo („wir haben das in `core/` standardisiert") — d.h. ältere Stellen sind noch nicht migriert
-- Modul gehört zu **Notification / Dispatcher / Scheduler / Cron / Batch** — diese Pfade werden seltener touched, drift häuft sich
+**High-risk markers** (additional trigger):
+- You have a small list of affected files in mind (≤5) — precisely then grep, because that's the under-estimation-prone case
+- The new pattern already lives somewhere ("we standardized this in `core/`") — meaning older spots are not migrated yet
+- Module belongs to **notification / dispatcher / scheduler / cron / batch** — these paths are rarely touched, drift accumulates
 
 ## When NOT to use
 
-- **Greenfield-Code**: das alte Pattern existiert noch nicht
-- **Reiner Cosmetic-Rename in einer Datei**: lokale Variable, keine semantische Verschiebung
-- **Garantiert file-lokaler Helper**: `_private_helper` im Modul, mit `_`-Präfix-Konvention
-- **Rename eines Symbols mit IDE-Refactor-Tool**: wenn LSP-Refactor sauber alle Aufrufer abdeckt, ist grep redundant (aber **danach** trotzdem 1× verifizieren)
+- **Greenfield code**: the old pattern doesn't exist yet
+- **Pure cosmetic rename in a single file**: local variable, no semantic shift
+- **Guaranteed file-local helper**: `_private_helper` in module, with `_` prefix convention
+- **Rename of a symbol with IDE refactor-tool**: when LSP refactor cleanly covers all callers, grep is redundant (but verify 1× **afterwards** anyway)
 
-## The 4-Step Cross-File-SoT-Grep Flow
+## The 4-Step Cross-File SoT Grep Flow
 
-### Step 1 — Altes Pattern explizit notieren
+### Step 1 — Note the old pattern explicitly
 
-Vor dem grep schreibe als Kommentar oder TodoWrite:
-- **Altes Pattern**: `o.yf_symbol` (Spalten-Alias)
-- **Neues Pattern**: `o.symbol AS yf_symbol`
-- **Vermutete Aufrufer-Anzahl**: 3 (`signals.py`, `timeline.py`, `take_signal`)
-- **Was ich vermute zu finden**: 3-5 (mit ~2 Extra in Tests/Mocks)
+Before grep, write as a comment or via TodoWrite:
+- **Old pattern**: `o.yf_symbol` (column alias)
+- **New pattern**: `o.symbol AS yf_symbol`
+- **Suspected caller count**: 3 (`signals.py`, `timeline.py`, `take_signal`)
+- **What I expect to find**: 3-5 (with ~2 extra in tests/mocks)
 
-### Step 2 — Grep mit Repo-Scope
+### Step 2 — Grep with repo scope
 
 ```bash
-# Standard: alle Python-Files inkl. tests, scripts, integrations
-grep -rn "<altes-pattern>" --include="*.py" \
+# Standard: all Python files incl. tests, scripts, integrations
+grep -rn "<old-pattern>" --include="*.py" \
   --exclude-dir=node_modules \
   --exclude-dir=.git \
   --exclude-dir=__pycache__ \
@@ -68,95 +68,95 @@ grep -rn "<altes-pattern>" --include="*.py" \
   | grep -v "\.pyc:"
 ```
 
-**Niemals** nur in einem Sub-Verzeichnis (`grep ... /core/`). Das verfehlt das Skill-Ziel.
+**Never** just in a subdirectory (`grep ... /core/`). That misses the skill's goal.
 
-### Step 3 — Trefferliste kategorisieren
+### Step 3 — Categorize the hit list
 
-Sortiere jeden Treffer in eine dieser Kategorien:
+Sort each hit into one of these categories:
 
-| Kategorie | Beispiel | Aktion |
+| Category | Example | Action |
 |---|---|---|
-| **Production-Hot-Path** | `core/services/X.py` | migrieren (Pflicht) |
-| **Production-Cold-Path** | `notifications/dispatcher.py`, `scheduler/jobs/Y.py` | **migrieren** + Pre-Push-Hook-Live-Smoke wenn möglich |
-| **Test/Mock** | `tests/integration/test_Y.py` mit fixed-Daten | migrieren + Fixture-Updates |
-| **Doc / Comment / Note** | `# old: yf_symbol` | so lassen (Historie) ODER ersetzen wenn fully-replace gefordert |
-| **Deprecated-aber-im-Pfad** | `legacy/foo.py` mit Import von Production | **explizit entscheiden**: migrieren ODER deprecation-Hinweis + Issue |
-| **False-Positive** | substring-match in Variable-Name | ignorieren |
+| **Production hot-path** | `core/services/X.py` | migrate (mandatory) |
+| **Production cold-path** | `notifications/dispatcher.py`, `scheduler/jobs/Y.py` | **migrate** + pre-push hook live-smoke if possible |
+| **Test/Mock** | `tests/integration/test_Y.py` with fixed data | migrate + fixture updates |
+| **Doc / Comment / Note** | `# old: yf_symbol` | leave as-is (history) OR replace if fully-replace required |
+| **Deprecated-but-in-path** | `legacy/foo.py` with import from production | **explicitly decide**: migrate OR add deprecation notice + issue |
+| **False positive** | substring match in variable name | ignore |
 
-### Step 4 — Migrieren + Verifikations-Grep
+### Step 4 — Migrate + verification grep
 
-Nach dem Refactor: **erneut `grep -rn "<altes-pattern>"`** — Ergebnis sollte leer sein (oder nur die Doc/Comment-False-Positives bleiben).
+After the refactor: **grep again `grep -rn "<old-pattern>"`** — result should be empty (or only the doc/comment false-positives remain).
 
 ```bash
-grep -rn "<altes-pattern>" --include="*.py" | wc -l
-# Erwartung: 0 (oder Liste der bewusst nicht-migrierten Treffer)
+grep -rn "<old-pattern>" --include="*.py" | wc -l
+# Expectation: 0 (or list of deliberately not-migrated hits)
 ```
 
 ## Quick Reference
 
-| Refactor-Typ | Grep-Pattern (Beispiel) |
+| Refactor type | Grep pattern (example) |
 |---|---|
-| Spalten-Rename | `grep -rn "\.yf_symbol\\|yf_symbol AS"` |
-| Helper-Rename | `grep -rn "from .* import old_helper\\|old_helper("` |
-| Inline-Dict → SoT (Variablen-Name) | `grep -rn "display_names\\s*=\\s*{"` |
-| **Inline-Dict → SoT (Werte-Substring, fängt verschleierte Namen)** | **`grep -rn "'CL=F'\\s*:\\s*'WTI"` — fängt `_DISPLAY_MAP`, `LABELS`, `SYMBOL_NAMES` etc. die das gleiche Mapping unter anderem Namen kopieren** |
-| Deprecated Import | `grep -rn "from config_loader import"` |
-| Hardcoded Env-Default | `grep -rn '"c0619ab1e363"\\|"my-host"'` (Beispiel-Werte) |
-| Magic-String → Enum | `grep -rn "'long'\\|'short'" --include="*.py"` |
+| Column rename | `grep -rn "\.yf_symbol\\|yf_symbol AS"` |
+| Helper rename | `grep -rn "from .* import old_helper\\|old_helper("` |
+| Inline-dict → SoT (variable name) | `grep -rn "display_names\\s*=\\s*{"` |
+| **Inline-dict → SoT (value substring, catches obscured names)** | **`grep -rn "'CL=F'\\s*:\\s*'WTI"` — catches `_DISPLAY_MAP`, `LABELS`, `SYMBOL_NAMES` etc. which copy the same mapping under another name** |
+| Deprecated import | `grep -rn "from config_loader import"` |
+| Hardcoded env default | `grep -rn '"c0619ab1e363"\\|"my-host"'` (example values) |
+| Magic string → enum | `grep -rn "'long'\\|'short'" --include="*.py"` |
 
-> **R1-Refactor (10.06.2026 Cycle 1)**: Der Substring-Grep auf Mapping-**Werte** (`'CL=F': 'WTI`) ist die kritischste Variante — sie findet Kopien der Mapping-Struktur unter abweichendem Variablen-Namen. Genau diese Variante hätte den 09.06.-`signal_dispatcher.py:_get_display_name`-Bug VOR dem Refactor abgefangen (dort hieß das Dict nicht `display_names` sondern war eingebettet in eine Helper-Funktion).
+> **R1 refactor (Cycle 1)**: the substring-grep on mapping **values** (`'CL=F': 'WTI`) is the most critical variant — it finds copies of the mapping structure under deviating variable names. Precisely this variant would have caught the `signal_dispatcher.py:_get_display_name` bug BEFORE the refactor (the dict there was not named `display_names` but was embedded in a helper function).
 
 ## Anti-Patterns
 
-| Anti-Pattern | Lehre |
+| Anti-Pattern | Lesson |
 |---|---|
-| „Ich kenne die 3 Files die das nutzen" | Mentale Modelle übersehen Notification/Scheduler/Batch — grep ist 30s, weniger als die Re-Review-Cycle |
-| Nur in `core/` greppen | Notification-Dispatcher liegt oft in `notifications/`, Scheduler-Jobs in `scheduler/jobs/` — repo-weit greppen |
-| Grep ohne `--include="*.py"` | Treffer in `.pyc`, `.log`, `node_modules` rauschen Output zu |
-| Nach Refactor nicht erneut greppen | Verifikations-grep ist die Schlussprüfung — leerer Output = Migration vollständig |
-| LSP-Refactor blind vertrauen | LSP findet meist alles, aber Dynamic-Imports (`importlib`) und String-Schlüssel (`getattr(o, "yf_symbol")`) entgehen — grep findet beide |
+| "I know the 3 files that use this" | Mental models overlook notification/scheduler/batch — grep is 30s, less than the re-review cycle |
+| Only grep in `core/` | Notification dispatcher often lies in `notifications/`, scheduler jobs in `scheduler/jobs/` — grep repo-wide |
+| Grep without `--include="*.py"` | Hits in `.pyc`, `.log`, `node_modules` noise the output |
+| Don't grep again after refactor | Verification grep is the final check — empty output = migration complete |
+| Trust LSP refactor blindly | LSP usually finds everything, but dynamic imports (`importlib`) and string keys (`getattr(o, "yf_symbol")`) escape — grep finds both |
 
 ## Cost of Skipping (real)
 
-**Wolf-Erlebnis 09.06.2026 Phase-1-Re-Review** (Code-Review-Aufarbeitung):
-- Display-Name-SoT-Migration nach `core/utils/display.instrument_label()` hatte 4 Hot-Path-Files gefasst
-- Re-Review-Subagent fand `notifications/signal_dispatcher.py:_get_display_name` mit altem `config_loader`-Pfad
-- Wäre **wochenlang unbemerkt** im V1/V2-Signal-Telegram-Dispatch geblieben — Symbole im Telegram statt Display-Names
+**Experience from a Phase-1 re-review** (code-review cleanup):
+- Display-name SoT migration to `core/utils/display.instrument_label()` had covered 4 hot-path files
+- Re-review subagent found `notifications/signal_dispatcher.py:_get_display_name` with old `config_loader` path
+- Would have stayed **unnoticed for weeks** in the V1/V2 signal Telegram dispatch — symbols in Telegram instead of display names
 
-**Pattern**: Notification-Dispatcher-Module werden seltener touched + haben oft eigene Helper-Versions die nicht im Haupt-Refactor-Pfad sichtbar sind.
+**Pattern**: notification-dispatcher modules are rarely touched + often have their own helper versions that are not visible in the main refactor path.
 
-**Lehre**: 30s Grep vorher = Stunden Re-Review-Cycle gespart.
+**Lesson**: 30s grep upfront = hours of re-review cycle saved.
 
 ## Red Flags — STOP and grep
 
-- Du schreibst gerade den ersten neuen Aufruf nach einem Refactor
-- Dein mentales Modell ist „die 3 Files" oder „nur in /core/"
-- Notification/Scheduler/Batch wurden in deiner Liste **nicht** explizit erwähnt
-- LSP-Refactor lief sauber, aber du hast Dynamic-Imports im Codebase
+- You're writing the first new call after a refactor right now
+- Your mental model is "the 3 files" or "only in /core/"
+- Notification/scheduler/batch were **not** explicitly mentioned in your list
+- LSP refactor ran cleanly, but you have dynamic imports in the codebase
 
-**Alle bedeuten: 30s repo-weiter Grep auf altes Pattern, dann Trefferliste kategorisieren, dann erst migrieren.**
+**All mean: 30s repo-wide grep on old pattern, then categorize hit list, then migrate.**
 
 ## Cross-References
 
-- **REQUIRED COMPLEMENT**: `pre-deploy-code-drift-detection` (Drift-Check NACH dem Refactor)
-- **COMPLEMENT**: `silent-except-versteckt-schema-drift` (gleiche Bug-Klasse aus Symptom-Sicht)
-- Wolf-Maxime: „Single Source of Truth — Hardcoded-Defaults sind tickende Bomben" (`CLAUDE.md` Vault, 09.06.2026)
+- **REQUIRED COMPLEMENT**: `pre-deploy-code-drift-detection` (drift check AFTER the refactor)
+- **COMPLEMENT**: `silent-except-versteckt-schema-drift` (same bug class from the symptom side)
+- Maxim: "Single Source of Truth — hardcoded defaults are ticking time bombs"
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing-Log)
 
-### Cycle 1 — 2026-06-10 (PASS mit R1-Refactor)
+### Cycle 1 — PASS with R1 refactor
 
-- **RED-Subagent** (ohne Skill, Scenario „display_names-Inline-Dicts auf zentrale `instrument_label()` migrieren, 3 Files bekannt"): Empfahl heuristisch „erst grep nach weiteren Vorkommen" — überraschend gut, aber **nur den Variablen-Namen-Grep** (`grep -rn "display_names"`). Self-Critique listete 7 Punkte (Repo nicht angeschaut, DB als SoT nicht thematisiert, Migration-Reihenfolge bei Imports, Tests vor Löschen, Tooling-Hinweis, Anti-Pattern-Bogen-Schlag, kein Dict-Diff vor Merge).
+- **RED-Subagent** (without skill, scenario "migrate display_names inline-dicts to central `instrument_label()`, 3 known files"): heuristically recommended "first grep for further occurrences" — surprisingly good, but **only the variable-name grep** (`grep -rn "display_names"`). Self-critique listed 7 points (repo not inspected, DB as SoT not addressed, migration order with imports, tests before deletion, tooling hint, anti-pattern arc, no dict diff before merge).
 
-- **GREEN-Subagent** (mit Skill): Brachte den entscheidenden Mehrwert — den **4. Grep-Pass auf Mapping-Werte** (`grep -rn "'CL=F'\s*:\s*'WTI"`) der Kopien der Mapping-Struktur unter abweichenden Variablen-Namen fängt. Plus: konkrete Hochrisiko-Pfade für ultimative-platform-Codebase benannt (`notifications/signal_dispatcher.py`, `notifications/telegram_*.py`, `scheduler/jobs/*.py`, `briefings/*.py`), Cross-Reference auf `pre-deploy-code-drift-detection` als Komplement nach dem Refactor, Schema-Use-Case-Mismatch-Hinweis (`display_name IS NULL`-Check).
+- **GREEN-Subagent** (with skill): brought the decisive added value — the **4th grep pass on mapping values** (`grep -rn "'CL=F'\s*:\s*'WTI"`) that catches copies of the mapping structure under deviating variable names. Plus: named concrete high-risk paths for the codebase (`notifications/signal_dispatcher.py`, `notifications/telegram_*.py`, `scheduler/jobs/*.py`, `briefings/*.py`), cross-reference to `pre-deploy-code-drift-detection` as complement after the refactor, schema-use-case-mismatch hint (`display_name IS NULL` check).
 
-- **R1-Refactor angewendet**: Quick-Reference-Tabelle um Zeile „Inline-Dict → SoT (Werte-Substring, fängt verschleierte Namen)" erweitert + Hinweis-Block dass dies die kritischste Variante ist (hätte 09.06.-Bug abgefangen).
+- **R1 refactor applied**: Quick Reference table extended with row "Inline-dict → SoT (value substring, catches obscured names)" + hint block that this is the most critical variant (would have caught the bug).
 
-- **Vermiedener Anti-Pattern**: GREEN hat den 09.06.-Bug exakt vorhergesagt — `notifications/signal_dispatcher.py` mit eigenem `_get_display_name` würde unmigriert bleiben, wochenlang Roh-Symbole im V1/V2-Telegram-Dispatch.
+- **Anti-pattern avoided**: GREEN predicted the bug exactly — `notifications/signal_dispatcher.py` with its own `_get_display_name` would have stayed unmigrated, raw symbols in the V1/V2 Telegram dispatch for weeks.
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2-Backlog (Polish, non-blocking)
 
-1. **CWD-Hinweis** für Subagent-Use-Cases: „wenn dein CWD nicht das Ziel-Repo ist: erst `cd` oder Befehle an User delegieren". GREEN-Subagent hatte CWD-Mismatch (Vault statt Repo) und musste das durch Befehl-Vorgabe lösen.
-2. **LSP find_references als Komplement-Quelle** (nicht nur als Anti-Pattern): bei LSP-fähigen Repos zusätzliche Verifikation neben grep.
-3. **Schema-Use-Case-Mismatch als expliziter Sub-Check** in Step 3: bei DB-gestützten Lookups (`instruments.display_name IS NULL`) ist ein DB-Datenstand-Check vor Migration nötig — ist eigene Drift-Klasse.
-4. **Hochrisiko-Pfade-Liste** für ultimative-platform-Codebase als Quick-Reference: notification/, scheduler/, briefings/, analytics/, tests/integration/ — projekt-spezifisch wertvoll.
+1. **CWD hint** for subagent use-cases: "when your CWD is not the target repo: first `cd` or delegate commands to user". GREEN subagent had a CWD mismatch (vault instead of repo) and had to solve that via command suggestions.
+2. **LSP find_references as complement source** (not only as anti-pattern): for LSP-capable repos additional verification alongside grep.
+3. **Schema-use-case mismatch as explicit sub-check** in Step 3: for DB-backed lookups (`instruments.display_name IS NULL`) a DB-data-state check before migration is needed — own drift class.
+4. **High-risk paths list** for the codebase as Quick Reference: notification/, scheduler/, briefings/, analytics/, tests/integration/ — project-specifically valuable.

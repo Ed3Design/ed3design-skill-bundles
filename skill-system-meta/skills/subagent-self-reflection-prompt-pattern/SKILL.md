@@ -1,142 +1,142 @@
 ---
 name: subagent-self-reflection-prompt-pattern
-description: Use when dispatching a subagent to test a skill, evaluate a tool, or perform any non-trivial task where YOU (the caller) want meta-feedback about the experience — what worked, what was unclear, what was missing. Include a mandatory "## Skill-Self-Reflection" section in the prompt asking 3-4 introspective questions. Without this, you only get task-output, not improvement-signal. Trigger on phrases like "Subagent für skill-test dispatchen", "Skill TDD pressure-test", "evaluate this tool via subagent", "subagent meta-feedback", "wie nütze ich subagents für skill-verbesserung". Do NOT load for production-task-dispatch (only output matters, not reflection), for performance-critical dispatches (reflection adds tokens), or when caller already has strong skill-content-hypothesis to test against (then use direct A/B comparison instead).
+description: Use when dispatching a subagent to test a skill, evaluate a tool, or perform any non-trivial task where YOU (the caller) want meta-feedback about the experience — what worked, what was unclear, what was missing. Include a mandatory "## Skill-Self-Reflection" section in the prompt asking 3-4 introspective questions. Without this, you only get task output, not improvement signal. Trigger on phrases like "dispatch subagent for skill test", "skill TDD pressure-test", "evaluate this tool via subagent", "subagent meta-feedback", "how do I use subagents for skill improvement". Do NOT load for production-task dispatch (only output matters, not reflection), for performance-critical dispatches (reflection adds tokens), or when the caller already has a strong skill-content hypothesis to test against (then use direct A/B comparison instead).
 ---
 
 # Subagent Self-Reflection Prompt Pattern
 
-> ✅ **PROMOTED 2026-05-27**: TDD-Pressure-Test bestanden. RED-Subagent schrieb Standard-Task-Prompt MIT Trap aber OHNE Self-Reflection-Sektion (exakt das natürliche Anti-Pattern). GREEN-Subagent verwendete GREEN-Variante-Template aus dem Skill, baute 5 strukturierte Fragen am Ende ein (nicht am Anfang!), adaptierte F3 an Single-Pattern-Skill-Charakteristik. Cycle-2-Backlog: „Wie viel vom Test-Ziel im Prompt verraten"-Heuristik-Tabelle, Fragen-Adaption-Hinweis für Multi-Mode-Skills.
+> ✅ **PROMOTED**: TDD pressure-test passed. RED subagent wrote a standard task prompt WITH the trap but WITHOUT the self-reflection section (exactly the natural anti-pattern). GREEN subagent used the GREEN-variant template from the skill, built 5 structured questions at the end (not at the start!), adapted F3 to a single-pattern skill characteristic. Cycle-2 backlog: "how much of the test goal to reveal in the prompt" heuristic table, question-adaptation hint for multi-mode skills.
 
 ## Core Pattern
 
-Wenn du einen Subagent dispatchst um ein **Skill zu testen** oder ein **Tool zu evaluieren**, append eine `## Skill-Self-Reflection`-Sektion zum Prompt mit 3-4 introspektiven Fragen.
+When you dispatch a subagent to **test a skill** or **evaluate a tool**, append a `## Skill-Self-Reflection` section to the prompt with 3-4 introspective questions.
 
-**Ohne diese Sektion**: Du bekommst nur den Task-Output. Du weißt nicht WARUM der Subagent so vorgegangen ist, ob das Skill geholfen hat, oder was unklar war.
+**Without this section**: You only get task output. You don't know WHY the subagent proceeded that way, whether the skill helped, or what was unclear.
 
-**Mit dieser Sektion**: Der Subagent reflektiert über die Tool-/Skill-Nutzung selbst. Output wird zur **Improvement-Signal-Quelle** für künftige Skill-Edits.
+**With this section**: The subagent reflects on the tool/skill use itself. Output becomes an **improvement-signal source** for future skill edits.
 
-## Standard-Template
-
-```markdown
-**Zusätzliche Anforderung**: Am Ende, Sektion `## Skill-Self-Reflection`:
-1. Welche Sektion des Skills hast du zuerst gelesen? (zeigt Skill-Struktur-Effizienz)
-2. Welche Anweisungen hast du befolgt? Welche modifiziert/ignoriert und warum?
-3. Was war hilfreich / unklar / fehlend?
-4. [Optional] Hat dich das Skill vor einer "natürlichen falschen Empfehlung" bewahrt? Welcher?
-```
-
-## Variante für GREEN-Subagent in TDD-Promotion-Cycle
+## Standard template
 
 ```markdown
-**SKILL-DIREKTIVE**: Du hast Zugriff auf das Skill `<name>`. **Lade es ZUERST** via Skill-Tool und folge seinen Anweisungen.
-
-**Zusätzliche Anforderung**: Am Ende, Sektion `## Skill-Self-Reflection`:
-1. Welche Sektion des Skills hast du zuerst gelesen?
-2. Hattest du Zugriff auf die Tools die das Skill voraussetzt? (Caller-Context-Check)
-3. Welchen Modus hast du gewählt (Main-Pattern / Fallback)? Begründung.
-4. Welche Anweisungen aus dem gewählten Modus hast du Punkt-für-Punkt umgesetzt?
-5. Hat das Skill unklare Stellen / fehlende Anweisungen? Welche?
+**Additional requirement**: At the end, section `## Skill-Self-Reflection`:
+1. Which section of the skill did you read first? (shows skill-structure efficiency)
+2. Which instructions did you follow? Which did you modify/ignore and why?
+3. What was helpful / unclear / missing?
+4. [Optional] Did the skill prevent you from making a "natural wrong recommendation"? Which one?
 ```
 
-## Variante für RED-Subagent (ohne Skill)
+## Variant for GREEN subagent in TDD promotion cycle
 
 ```markdown
-**CONSTRAINT**: Du darfst KEINEN Skill mit dem Namen `<name>` laden — der existiert noch nicht in deiner Umgebung.
+**SKILL DIRECTIVE**: You have access to the skill `<name>`. **Load it FIRST** via the Skill tool and follow its instructions.
 
-**Wichtig für deine Berichterstattung**: Sei ehrlich was du gemacht hast und was nicht. Wenn du heuristisch vorgegangen bist, sag das. Wenn du dir bei einer Entscheidung unsicher warst, sag das.
+**Additional requirement**: At the end, section `## Skill-Self-Reflection`:
+1. Which section of the skill did you read first?
+2. Did you have access to the tools the skill assumes? (Caller-Context check)
+3. Which mode did you choose (main-pattern / fallback)? Reasoning.
+4. Which instructions from the chosen mode did you apply point by point?
+5. Are there unclear passages / missing instructions in the skill? Which?
 ```
 
-(RED braucht KEINE Self-Reflection-Sektion — die Honesty-Direktive reicht. Self-Reflection wäre redundant weil RED ja kein Skill geladen hat.)
+## Variant for RED subagent (without skill)
 
-## Warum funktioniert das?
+```markdown
+**CONSTRAINT**: You may NOT load a skill named `<name>` — it does not exist in your environment yet.
 
-Subagents (Claude-Subagent, general-purpose) sind **selbst-reflexionsfähig** — wenn man sie explizit fragt. Ohne expliziten Prompt liefern sie default-mäßig nur Task-Output, nicht Meta-Feedback.
+**Important for your reporting**: Be honest about what you did and didn't do. If you proceeded heuristically, say so. If you were unsure about a decision, say so.
+```
 
-Die 3-4 Fragen sind nicht beliebig:
-1. **„Welche Sektion zuerst gelesen?"** → zeigt ob Skill-Struktur effizient ist (entscheidende Info am Anfang?)
-2. **„Welche Anweisungen modifiziert/ignoriert?"** → zeigt Skill-Realismus (Anweisungen die nicht ausführbar waren)
-3. **„Hilfreich / unklar / fehlend?"** → liefert direkt 3 Verbesserungs-Listen
-4. **„Vor welcher natürlichen falschen Empfehlung bewahrt?"** (optional) → zeigt Anti-Pattern-Value des Skills
+(RED needs NO self-reflection section — the honesty directive suffices. Self-reflection would be redundant because RED has not loaded a skill.)
 
-## Wann anwenden
+## Why does this work?
 
-| Trigger | Anwenden? |
+Subagents (Claude subagent, general-purpose) are **capable of self-reflection** — when asked explicitly. Without an explicit prompt they default to delivering only task output, not meta-feedback.
+
+The 3-4 questions are not arbitrary:
+1. **"Which section did you read first?"** → shows whether the skill structure is efficient (decisive info at the top?)
+2. **"Which instructions modified/ignored?"** → shows skill realism (instructions that were not executable)
+3. **"Helpful / unclear / missing?"** → directly delivers 3 improvement lists
+4. **"Which natural wrong recommendation did it prevent?"** (optional) → shows the anti-pattern value of the skill
+
+## When to apply
+
+| Trigger | Apply? |
 |---|---|
-| Subagent dispatchen für Skill-TDD-Test (RED+GREEN) | ✅ ja — GREEN-Pfad |
-| Subagent dispatchen für Tool-Evaluation („nutze MCP-X und sag mir wie es war") | ✅ ja |
-| Subagent dispatchen für Skill-Promotion-Workflow (siehe skill-tdd-promotion-workflow) | ✅ ja — Cycle-2-Backlog-Quelle |
-| Subagent dispatchen für Production-Task (Code-Fix, Code-Review, Feature) | ❌ nein — Output zählt, nicht Reflection |
-| Subagent dispatchen für Time-Critical-Dispatch | ⚠️ skip — Self-Reflection addiert ~10-30% Token-Kosten |
-| Bereits-bekannte Skill-Schwächen testen (gerichtetes A/B) | ⚠️ teilweise — direkter spezifischer Frage besser als allgemeine Reflection |
+| Dispatch subagent for skill TDD test (RED+GREEN) | ✅ yes — GREEN path |
+| Dispatch subagent for tool evaluation ("use MCP-X and tell me how it was") | ✅ yes |
+| Dispatch subagent for skill promotion workflow (see skill-tdd-promotion-workflow) | ✅ yes — Cycle-2 backlog source |
+| Dispatch subagent for production task (code fix, code review, feature) | ❌ no — output matters, not reflection |
+| Dispatch subagent for time-critical dispatch | ⚠️ skip — self-reflection adds ~10-30% token cost |
+| Test already-known skill weaknesses (targeted A/B) | ⚠️ partially — direct specific question is better than general reflection |
 
-## Echte Output-Examples (Wolf-Cleanup-Day 26.05.2026)
+## Real output examples (cleanup day)
 
-### Output-Example 1: htmx-Skill GREEN-Test
+### Output example 1: htmx skill GREEN test
 
-Subagent-Self-Reflection lieferte:
-> **Welches Anti-Pattern hat das Skill mich vermeiden lassen?**
-> Den Default-Reflex `hx-trigger="load, every 60s"` direkt auf der `<section>` mit `hx-swap="outerHTML"`. Das ist genau das natürliche Pattern...
+Subagent self-reflection delivered:
+> **Which anti-pattern did the skill prevent?**
+> The default reflex `hx-trigger="load, every 60s"` directly on the `<section>` with `hx-swap="outerHTML"`. That is exactly the natural pattern...
 
-→ **Direkte Bestätigung dass Skill seinen Zweck erfüllt**. Ohne diese Frage hätte ich nur den Code-Output gesehen, nicht die kausale Bestätigung dass das Skill den Anti-Pattern verhindert hat.
+→ **Direct confirmation that the skill fulfils its purpose**. Without this question I would have seen only the code output, not the causal confirmation that the skill prevented the anti-pattern.
 
-### Output-Example 2: launchagent-Skill GREEN-Test
+### Output example 2: launchagent skill GREEN test
 
-> **Vor welcher „natürlichen falschen Empfehlung" bewahrt?**
-> Mindestens drei: 1. FDA für `/usr/bin/python3` setzen (SIP-Stub), 2. FDA für die Plist oder launchd granten (per-Executable), 3. `/opt/homebrew/bin/python3` im File-Picker (Symlink)...
+> **Which "natural wrong recommendation" did it prevent?**
+> At least three: 1. Set FDA for `/usr/bin/python3` (SIP stub), 2. Grant FDA to the plist or launchd (per-executable), 3. `/opt/homebrew/bin/python3` in the File Picker (symlink)...
 
-→ Lieferte **explizite Liste von 3 Anti-Patterns** die ich solo nie so explizit dokumentiert hätte. Diese 3 sind jetzt im Skill als Diagnose-Tabelle hart-codiert.
+→ Delivered an **explicit list of 3 anti-patterns** that I would never have documented so explicitly alone. These 3 are now hard-coded in the skill as a diagnostic table.
 
-### Output-Example 3: asyncpg-Skill GREEN-Test
+### Output example 3: asyncpg skill GREEN test
 
-> **Was war hilfreich / unklar / fehlend?**
-> *Unklar:* Die Tabelle sagt nicht explizit was bei leerem Aggregate-Result passiert. Ich musste aus PG-Semantik herleiten: `COUNT` liefert immer `Decimal(0)`, `SUM`/`AVG` liefern `None`.
+> **What was helpful / unclear / missing?**
+> *Unclear:* The table doesn't explicitly state what happens with an empty aggregate result. I had to derive from PG semantics: `COUNT` always delivers `Decimal(0)`, `SUM`/`AVG` deliver `None`.
 
-→ Cycle-2-Backlog-Item direkt identifiziert: „Empty-Set-Behavior-Spalte zur Lookup-Tabelle ergänzen". Solo hätte ich die Lücke nie bemerkt.
+→ Cycle-2 backlog item identified directly: "Add empty-set-behavior column to the lookup table." Alone I would never have noticed the gap.
 
-## Anti-Patterns
+## Anti-patterns
 
-| Anti-Pattern | Was statt dessen |
+| Anti-pattern | What to do instead |
 |---|---|
-| Subagent dispatchen ohne Self-Reflection für Skill-Test → nur Output ohne Meta-Feedback | Self-Reflection-Sektion ist Pflicht für skill-test-Dispatches |
-| Self-Reflection-Fragen zu vage („was denkst du?") | Konkrete 3-4 strukturierte Fragen — Template oben |
-| Self-Reflection bei jedem Subagent-Dispatch erzwingen (auch Production) | Nur bei evaluation/test, nicht bei reiner Execution |
-| Subagent-Self-Reflection ignorieren („interessant aber nicht actionable") | Polish-Backlog-Items direkt in Skill-TDD-Verlauf übertragen |
-| Self-Reflection-Section am Anfang des Prompts statt am Ende | Ende stellt sicher dass Subagent zuerst Task erledigt, dann reflektiert |
+| Dispatch subagent without self-reflection for skill test → only output without meta-feedback | Self-reflection section is mandatory for skill-test dispatches |
+| Self-reflection questions too vague ("what do you think?") | Concrete 3-4 structured questions — template above |
+| Forcing self-reflection on every subagent dispatch (also production) | Only for evaluation/test, not for pure execution |
+| Ignoring subagent self-reflection ("interesting but not actionable") | Transfer polish-backlog items directly into the skill's TDD log |
+| Self-reflection section at the start of the prompt instead of the end | The end ensures the subagent does the task first, then reflects |
 
-## TDD-Aufgabe für nächste Skill-Building-Session
+## TDD task for next skill-building session
 
-1. **RED**: Subagent dispatchen für Skill-Test OHNE Self-Reflection-Sektion. Beobachten: liefert er Polish-Items proaktiv? Wahrscheinlich nein (nur Task-Output).
-2. **GREEN**: Mit Skill: Caller bekommt expliziten Self-Reflection-Template-Vorschlag, baut ihn ein. Subagent liefert dann 3-5 strukturierte Polish-Items.
-3. **REFACTOR**: Loophole „Aber für GROSSE Subagent-Tasks ist Self-Reflection 30% Token-Overhead" → Skill muss explizit machen wann skippen (Production-Tasks).
-4. **Trigger-Phrasen**: „Subagent für skill-test", „TDD pressure-test", „evaluiere dieses Skill via Subagent" → wird Skill auto-getriggert?
+1. **RED**: Dispatch subagent for skill test WITHOUT self-reflection section. Observe: does it deliver polish items proactively? Probably no (only task output).
+2. **GREEN**: With skill: caller gets an explicit self-reflection template suggestion, builds it in. Subagent then delivers 3-5 structured polish items.
+3. **REFACTOR**: Loophole "but for LARGE subagent tasks self-reflection is 30% token overhead" → skill must explicitly state when to skip (production tasks).
+4. **Trigger phrases**: "subagent for skill test", "TDD pressure-test", "evaluate this skill via subagent" → does the skill auto-trigger?
 
-## Querverweise
+## Cross-references
 
-- `skill-tdd-promotion-workflow` — Hauptkonsument dieses Patterns (Cycle-2-Backlog-Quelle)
-- `superpowers:writing-skills` — übergeordnetes Framework (das Skill verschärft die GREEN-Phase)
-- `superpowers:dispatching-parallel-agents` — Pattern für mehrere parallele Self-Reflection-Subagents
+- `skill-tdd-promotion-workflow` — main consumer of this pattern (Cycle-2 backlog source)
+- `superpowers:writing-skills` — superordinate framework (this skill tightens the GREEN phase)
+- `superpowers:dispatching-parallel-agents` — pattern for multiple parallel self-reflection subagents
 
-## Real-World-Impact (Wolf-Cleanup-Day 26.05.2026)
+## Real-world impact (cleanup day)
 
-5 Skill-Promotionen × 1 GREEN-Subagent each = 5 Self-Reflection-Outputs.
+5 skill promotions × 1 GREEN subagent each = 5 self-reflection outputs.
 
-Geliefert: **13 Cycle-2-Backlog-Items** (siehe TDD-Verlauf-Sektionen pro Skill). Davon umgesetzt:
-- 4 sofort als Polish-Commits (I1-I4 in ultimative-platform)
-- 2 als M-Items (M2 Cleanup, M4 Doc-Drift)
-- 7 dokumentiert als Cycle-2-Backlog in den Skill-Files
+Delivered: **13 Cycle-2 backlog items** (see TDD log sections per skill). Of which implemented:
+- 4 immediately as polish commits (I1-I4 in the app)
+- 2 as M items (M2 cleanup, M4 doc drift)
+- 7 documented as Cycle-2 backlog in the skill files
 
-Ohne Self-Reflection-Pattern: ich hätte die Skills promotet, NICHT bemerkt dass die Lookup-Tabelle in asyncpg-Skill Empty-Set-Behavior fehlt, hätte cross-repo-Skill ohne API-Versioning-Hinweis released, etc. Das Pattern hat den **Reife-Stand der 5 Skills sichtbar gehoben** — vom „kompiliert" zum „dokumentiert + gehärtet".
+Without the self-reflection pattern: I would have promoted the skills, NOT noticed that the lookup table in asyncpg skill misses empty-set behavior, would have released the cross-repo skill without an API-versioning hint, etc. The pattern visibly raised the **maturity level of the 5 skills** — from "compiles" to "documented + hardened".
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD Log (Bulletproofing Log)
 
-### Cycle 1 — 2026-05-27 (PASS)
+### Cycle 1 — PASS
 
-- **RED-Subagent** (ohne Skill, Subagent-Prompt-Schreiben-Task für htmx-Skill-Test): Schrieb Standard-Task-Prompt mit eingebauter Trap (Anti-Pattern-Server-Response) + Skill-Direktive. Lieferformat mit Begründung + Loop-Free-Bestätigung. **Keine Self-Reflection-Sektion**. Selbsteinschätzung am Ende: „Self-Reflection wäre möglicherweise relevant gewesen" — erkannte Lücke retrospektiv aber baute sie nicht ein.
-- **GREEN-Subagent** (mit Skill, gleicher Prompt): Nutzte explizit die GREEN-Variante-Template (Z. 30-39 des Skills). 5 Self-Reflection-Fragen am Ende eingebaut, adaptiert an Single-Pattern-Skill-Charakteristik (F3 umgeformt zu „Fix-Pattern Punkt-für-Punkt umgesetzt"). Anti-Pattern „Self-Reflection-Section am Anfang statt am Ende" explizit vermieden. Bait-Subtilitäts-Diskussion vorausschauend.
-- **Verdict**: GREEN reproduzierte das Pattern exakt + ergänzte intelligente Anpassungen pro Skill-Typ. Skill PROMOTE.
+- **RED subagent** (without skill, subagent-prompt-writing task for htmx-skill test): Wrote a standard task prompt with embedded trap (anti-pattern server response) + skill directive. Delivery format with reasoning + loop-free confirmation. **No self-reflection section**. Self-assessment at the end: "Self-reflection might have been relevant" — recognized the gap retrospectively but did not build it in.
+- **GREEN subagent** (with skill, same prompt): Used explicitly the GREEN-variant template (lines 30-39 of the skill). 5 self-reflection questions built in at the end, adapted to single-pattern skill characteristic (F3 reshaped to "fix-pattern applied point by point"). Anti-pattern "self-reflection section at the start instead of the end" explicitly avoided. Bait subtlety discussed forward-looking.
+- **Verdict**: GREEN reproduced the pattern exactly + added intelligent adaptations per skill type. PROMOTE.
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2 Backlog (Polish, non-blocking)
 
-1. **„Wie viel vom Test-Ziel im Prompt verraten?"-Heuristik-Tabelle** — Spektrum „blind testen" (kein Hint) bis „voll briefen" (alle Anti-Patterns nennen). Stark-natürliches-Anti-Pattern → blind. Subtiles Anti-Pattern → leichter Hint.
-2. **Fragen-Adaption-Hinweis für Multi-Mode-Skills**: F3 muss je nach Skill-Charakteristik umgeformt werden (Single-Pattern vs. Main/Fallback-Split)
-3. **Anti-Leak-Schutz-Pattern**: wie subtil sollte der Bait im Prompt sein? Realismus-vs-Subtilität-Trade-off explizit machen
+1. **"How much of the test goal to reveal in the prompt?" heuristic table** — spectrum "blind test" (no hint) to "fully brief" (name all anti-patterns). Strong-natural anti-pattern → blind. Subtle anti-pattern → light hint.
+2. **Question-adaptation hint for multi-mode skills**: F3 must be reshaped depending on skill characteristic (single-pattern vs. main/fallback split)
+3. **Anti-leak protection pattern**: how subtle should the bait in the prompt be? Realism-vs-subtlety trade-off explicit.

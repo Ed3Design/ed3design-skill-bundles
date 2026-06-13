@@ -1,27 +1,27 @@
 ---
 name: cross-repo-state-inspection-before-commit
-description: Use when the user issues a vague git instruction like "commit hub", "push das ins Repo", "hub soll ins Git", "bring das in Versionierung", "stage the changes", "deploy that to GitHub" — without specifying scope (which files, which repo, which branch, push-or-just-commit, new-repo-or-existing). The risk: jumping to action without verifying repo-state means picking the wrong scope (committing everything when user meant only one subdir, creating a new repo when one already exists, pushing modifications that user wanted to defer). Encodes the 4-step inspection pattern from 2026-06-11 hub-commit session where Wolf said "hub soll ins Repo" — initial interpretation could have been "create new repo" but `git status` + `git log origin/main..HEAD` + `git remote -v` revealed: (a) the parent dir `/srv/projects/` IS already a git repo (`Ed3Design/swatserver-infra`), (b) 1 commit was already ahead of origin, (c) 8 hub-files were untracked, (d) 5 OTHER untracked subproject-dirs were NOT to be committed. Trigger phrases like "commit X", "push das", "ins Repo bringen", "ins Git", "versionieren", "stage that", "bring to GitHub", "create a commit for", "new commit needed", "git workflow für X". Do NOT load when the user has given fully-specified instructions ("git add hub/ && git commit -m 'X' && git push"), for repos that are clearly single-project (no mono-repo, no untracked siblings), or when the working tree is clean (no inspection-ambiguity). Also do NOT load for fresh repos that have never been initialized (different concern — that's `git init` workflow).
+description: Use when the user issues a vague git instruction like "commit hub", "push that to the repo", "hub should go in git", "put that under version control", "stage the changes", "deploy that to GitHub" — without specifying scope (which files, which repo, which branch, push-or-just-commit, new-repo-or-existing). The risk: jumping to action without verifying repo state means picking the wrong scope (committing everything when user meant only one subdir, creating a new repo when one already exists, pushing modifications that user wanted to defer). Encodes the 4-step inspection pattern: when the user says "hub should go into the repo" — initial interpretation could have been "create new repo" but `git status` + `git log origin/main..HEAD` + `git remote -v` revealed: (a) the parent dir `/srv/projects/` IS already a git repo, (b) 1 commit was already ahead of origin, (c) 8 hub-files were untracked, (d) 5 OTHER untracked subproject-dirs were NOT to be committed. Trigger phrases like "commit X", "push that", "into the repo", "into git", "version it", "stage that", "bring to GitHub", "create a commit for", "new commit needed", "git workflow for X". Do NOT load when the user has given fully-specified instructions ("git add hub/ && git commit -m 'X' && git push"), for repos that are clearly single-project (no mono-repo, no untracked siblings), or when the working tree is clean (no inspection ambiguity). Also do NOT load for fresh repos that have never been initialized (different concern — that's `git init` workflow).
 ---
 
 # Cross-Repo State Inspection Before Commit
 
-> ✅ **PROMOTED 2026-06-12** — TDD-Pressure-Test PASS. RED: Single-Source-Tunnelblick + `git add . && commit`-Reflex; GREEN: 4-Step + Step 3b (`ls-files --others --exclude-standard --directory`) + 4 Scope-Optionen A/B/C/D + robustere `branch --show-current`-Substitution. Cycle 2 Polish: Mono-Repo als 5-Step-Variante explizit, Rebase-in-progress-Pre-Check, Detached-HEAD-Handling, MM-Doppel-State.
+> ✅ **PROMOTED** — TDD pressure-test PASS. RED: single-source tunnel-vision + `git add . && commit` reflex; GREEN: 4-Step + Step 3b (`ls-files --others --exclude-standard --directory`) + 4 scope-options A/B/C/D + more robust `branch --show-current` substitution. Cycle 2 polish: mono-repo as 5-step variant explicit, rebase-in-progress pre-check, detached-HEAD handling, mixed dual-state.
 
 Before acting on a vague git instruction, take 60 seconds to verify the actual repo-state. Saves 5-30 minutes of "wait, that's not what I meant" rollback later.
 
 ## When to use
 
-- User says "commit X", "push das ins Git", "X soll ins Repo" without specifying scope
+- User says "commit X", "push that to git", "X should go into the repo" without specifying scope
 - You're not 100% sure if X is in an existing repo or needs a new one
 - Working tree shows modifications you didn't make (other people's work, prior sessions)
 - Mono-repo with potentially multiple untracked subprojects
-- Repo has both local-only commits AND uncommitted changes (ambiguous "fertig?")
+- Repo has both local-only commits AND uncommitted changes (ambiguous "done?")
 
 ## When NOT to use
 
 - User gave full git command-line ("git add A B && git commit -m 'Y' && git push") — execute, don't inspect
 - Single-purpose repo, clean tree, fresh-from-clone state — no ambiguity
-- `git init`-from-scratch case (different concern, this skill assumes repo exists)
+- `git init` from-scratch case (different concern, this skill assumes repo exists)
 - CI/CD automated commit (no human-in-loop to clarify)
 
 ## The 4-step inspection
@@ -70,73 +70,73 @@ If multiple remotes (`origin` + `upstream`, or `origin` + `mirror`) → ask user
 After Steps 1-3, you have facts. Now ask the user with **specific scope options**:
 
 ```
-git status zeigt:
-- 8 untracked hub-Files
-- 5 untracked Subprojekt-Dirs (absprung/, pvista/, ...)
-- 2 Mods in _shared/ und ops/
-- 1 lokaler Commit ahead of origin/main
+git status shows:
+- 8 untracked hub files
+- 5 untracked subproject dirs (foo/, bar/, ...)
+- 2 mods in _shared/ and ops/
+- 1 local commit ahead of origin/main
 
-"Hub soll ins Repo" — meinst Du:
-  A) NUR die 8 hub-Files + den ahead-Commit (Wolf-Intent vermutlich)
-  B) hub + die 2 _shared/ops Mods auch
-  C) Alle 5 Subprojekte zusätzlich (große Operation, vermutlich nicht heute)
+"Hub should go into the repo" — did you mean:
+  A) ONLY the 8 hub files + the ahead commit (probably user intent)
+  B) hub + the 2 _shared/ops mods too
+  C) All 5 subprojects additionally (large operation, probably not today)
 ```
 
-Never assume A. Ask. The 60-Sekunden-Klärung verhindert eine 30-Minuten-Rollback.
+Never assume A. Ask. The 60-second clarification prevents a 30-minute rollback.
 
-## Real-world example: 2026-06-11 hub-commit
+## Real-world example: hub-commit
 
-Wolf: „Der Hub soll ins Repo, kann am Schluss der aktuellen Session erfolgen"
+User: "The hub should go into the repo, can happen at the end of the current session"
 
-**Without skill**: möglicher Pfad → lokales `~/Documents/Claude-Code/hub/` (nur Stub mit 2 Files) git-initialisieren, neuen GitHub-Repo erstellen, falsche Source pushen.
+**Without skill**: possible path → initialize a local `~/Documents/Claude-Code/hub/` as a git repo (only stub with 2 files), create new GitHub repo, push the wrong source.
 
-**Mit Inspektion**: aufgedeckt dass `/srv/projects/` auf swatserver bereits `Ed3Design/swatserver-infra` Mono-Repo ist mit:
-- 1 ahead-Commit von 25.05. (`74ab162 feat(cockpit)`) → musste auch gepushed werden
-- 8 untracked hub-Files (Dockerfile, compose, requirements, app/__init__.py, app/collectors.py, app/static/, app/templates/index.html, app/main.py — wait, main.py war tracked-modified)
-- 2 OTHER modifications (`_shared/traefik`, `ops/postgres-dumpall.sh`) → NICHT committed (Scope-Klärung)
-- 5 OTHER untracked Subprojekt-Dirs → NICHT committed (Scope-Klärung als Backlog vermerkt)
+**With inspection**: revealed that `/srv/projects/` on the server is already a mono-repo with:
+- 1 ahead commit (`74ab162 feat(cockpit)`) → had to be pushed too
+- 8 untracked hub files (Dockerfile, compose, requirements, app/__init__.py, app/collectors.py, app/static/, app/templates/index.html, app/main.py — wait, main.py was tracked-modified)
+- 2 OTHER modifications (`_shared/traefik`, `ops/postgres-dumpall.sh`) → NOT committed (scope clarification)
+- 5 OTHER untracked subproject dirs → NOT committed (scope clarification recorded as backlog)
 
-Outcome: 2 saubere Pushes (`74ab162` → `59ca63f`), keine Rollback, keine über-/unter-Commit-Drift.
+Outcome: 2 clean pushes (`74ab162` → `59ca63f`), no rollback, no over-/under-commit drift.
 
 ## Quick-Reference
 
 ```bash
-# 60-Sekunden-Inspektion vor jedem vagen Commit-Befehl:
+# 60-second inspection before every vague commit instruction:
 git -C $PATH status --short
 git -C $PATH log origin/$(git -C $PATH branch --show-current)..HEAD --oneline | head -5
 git -C $PATH remote -v
-# Dann User mit konkreten Scope-Optionen fragen.
+# Then ask user with concrete scope options.
 ```
 
 ## Anti-patterns
 
-- ❌ **`git add .` ohne `git status` zu lesen** — fasst alle untracked Files inkl. Subdirs in den Commit
-- ❌ **`git add -A` ohne Scope-Klärung** — stages auch _shared/ + ops/-Mods die der User nicht erwähnt hat
-- ❌ **Annahme „User meinte das ganze Repo"** vs „User meinte nur EIN Subdir" — das ist GENAU die Ambiguität die diese Skill löst
-- ❌ **Push vergessen** wenn `git log origin/main..HEAD` einen ahead-Commit zeigt — der bleibt sonst lokal verwaiste
-- ❌ **Bei Sub-Dir-only Commit den Pfad-Prefix vergessen**: `git add Dockerfile` statt `git add hub/Dockerfile` → stage'd am Repo-Root, falscher Pfad
-- ❌ **Mit `git commit -a` bei vagem Scope** — `-a` stage'd ALLE tracked-modified Files automatisch, übersteuert die Scope-Klärung
-- ❌ **Submodules vergessen**: bei Submodule-Repos zusätzlich `git submodule status` checken, sonst landet ein Submodule-Pointer-Update versehentlich im Commit
+- ❌ **`git add .` without reading `git status`** — pulls in all untracked files incl. subdirs into the commit
+- ❌ **`git add -A` without scope clarification** — stages _shared/ + ops/ mods the user didn't mention
+- ❌ **Assumption "user meant the whole repo"** vs "user meant only ONE subdir" — that's EXACTLY the ambiguity this skill resolves
+- ❌ **Forget to push** when `git log origin/main..HEAD` shows an ahead commit — otherwise it stays orphaned locally
+- ❌ **For a sub-dir-only commit forgetting the path prefix**: `git add Dockerfile` instead of `git add hub/Dockerfile` → staged at repo root, wrong path
+- ❌ **With `git commit -a` at vague scope** — `-a` stages ALL tracked-modified files automatically, overrides scope clarification
+- ❌ **Forget submodules**: for submodule repos additionally check `git submodule status`, otherwise a submodule pointer update lands accidentally in the commit
 
-## Special case: Mono-Repo mit untracked Subprojekten
+## Special case: mono-repo with untracked subprojects
 
-Wenn `git status` zeigt `?? subproject-A/`, `?? subproject-B/`, ... als ganze Dirs:
+When `git status` shows `?? subproject-A/`, `?? subproject-B/`, ... as whole dirs:
 
-**Frage explizit ab**:
-> Untracked Subprojekte: `<list>`. Sollen die auch ins Mono-Repo, ODER sind das absichtlich separate Repos (lokal in `~/Documents/Claude-Code/<subproj>/`)?
+**Ask explicitly**:
+> Untracked subprojects: `<list>`. Should these also go into the mono-repo, OR are these deliberately separate repos (locally in `~/Documents/Claude-Code/<subproj>/`)?
 
-Mono-Repo + separate Sub-Repos können koexistieren wenn `.gitignore` die Subprojekt-Dirs explizit excluded. Wenn die NICHT in `.gitignore` stehen aber dauerhaft untracked sind = unklare Strategie → Backlog-Item für eine Polish-Session.
+Mono-repo + separate sub-repos can coexist when `.gitignore` excludes the subproject dirs explicitly. If they are NOT in `.gitignore` but permanently untracked = unclear strategy → backlog item for a polish session.
 
 ## Connection to other skills
 
-- `commit-message-honesty-precheck` (GA) — nach Scope-Klärung kommt die Commit-Message-Wahrheit
-- `pre-push-bypass-audit-trail` (GA) — wenn Push trotzdem failed wegen Hook, vorher den Bypass-Audit
-- `swatserver-fastapi-iteration` (GA) — sibling für swatserver-Deployment-Loop (rsync → docker compose → curl), kein Git
-- `production-seed-vs-demo-seed-split` (GA) — bei Subprojekt-Klärung verwandt (wann seed-Files in Git vs gitignore'd)
+- `commit-message-honesty-precheck` (GA) — after scope clarification comes commit-message truth
+- `pre-push-bypass-audit-trail` (GA) — if push still fails due to hook, do the bypass-audit first
+- `your-server-fastapi-iteration` (GA) — sibling for server deployment loop (rsync → docker compose → curl), no git
+- `production-seed-vs-demo-seed-split` (GA) — related to subproject clarification (when seed files in git vs gitignored)
 
 ## Promotion notes (DRAFT → GA)
 
-Created 2026-06-11 from hub-commit session where Wolfs „Hub soll ins Repo" erst durch Inspektion korrekt scopebar wurde. Promote via `skill-tdd-promotion-workflow` after:
-- 1 RED-Subagent: edge-cases wie „submodule changes", „rebase in progress (.git/MERGE_HEAD)", „shallow clone", „bare repo"
-- 1 production-anchor real-world catch (z.B. ultimative-platform-Commit wo Scope nicht klar war zwischen Trader-Refactor und ML-Shadow-Items)
+Created from a hub-commit session where the user's "hub should go into the repo" became correctly scopeable only through inspection. Promote via `skill-tdd-promotion-workflow` after:
+- 1 RED subagent: edge-cases like "submodule changes", "rebase in progress (.git/MERGE_HEAD)", "shallow clone", "bare repo"
+- 1 production-anchor real-world catch where scope was unclear between two parallel refactors
 - Cross-link to `commit-message-honesty-precheck`

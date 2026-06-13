@@ -1,52 +1,52 @@
 ---
 name: forensik-spur-fuer-fire-and-forget-sends
-description: Use when designing or hardening any "send + log + swallow"-Pattern (Telegram-Bot-Sends, Email-Notifications, Webhook-Dispatches, Slack-Pings, Push-Notifications, SMS-Sends, alert-dispatcher) where (a) DB-State persistence is separated from external-API-Send, (b) Send-Errors are silently fail-open via log-only, and (c) future forensics may need to distinguish "send happened, user missed" from "send never happened" without relying on log-aggregator availability. Trigger on phrases like "log.warning bei Send-Fail", "fire-and-forget Telegram", "warum kam die Nachricht nicht", "Send-Discrepancy", "DB-Save lief aber Telegram nicht", "Container-Logs sind weg", "Forensik ohne Logs", "send + swallow Pattern", "*_sent_at column", "asyncio.create_task send", "advisor send forensik". Skill produces (1) one-time DB-migration für `*_sent_at TIMESTAMPTZ`, (2) Update-nach-Send-OK Persistenz, (3) Forensik-Query-Template für Discrepancy-Detection. Do NOT load for synchronous send-and-wait patterns where the Send-Result is the immediate caller-return-value (then check the return-value, no DB-Spur needed), for sends where Container-Logs are guaranteed-persistent (e.g. external log-aggregator like Datadog/Sentry für ALL services — then logs are sufficient), or for one-off ad-hoc scripts (overkill für 30-min-Skripts). Encodes the 03.06.2026 ultimative-platform E-7.3 trap: per_signal_advisor DB-Save lief erfolgreich (2 assessments), Telegram-Send fail-open log.warning, Container-Restart 09:03 UTC hat Logs vor diesem Zeitpunkt gelöscht → keine Forensik mehr möglich. Mit `telegram_sent_at`-Spalte: SQL-Query zeigt sofort welche Sends fehlschlugen, log-unabhängig.
+description: Use when designing or hardening any "send + log + swallow" pattern (Telegram bot sends, email notifications, webhook dispatches, Slack pings, push notifications, SMS sends, alert dispatcher) where (a) DB-state persistence is separated from external API send, (b) send errors are silently fail-open via log-only, and (c) future forensics may need to distinguish "send happened, user missed" from "send never happened" without relying on log-aggregator availability. Trigger on phrases like "log.warning on send-fail", "fire-and-forget Telegram", "why didn't the notification arrive", "send discrepancy", "DB save ran but Telegram didn't", "container logs are gone", "forensics without logs", "send + swallow pattern", "*_sent_at column", "asyncio.create_task send", "advisor send forensics". Skill produces (1) one-time DB migration for `*_sent_at TIMESTAMPTZ`, (2) update-after-send-OK persistence, (3) forensic query template for discrepancy detection. Do NOT load for synchronous send-and-wait patterns where the send result is the immediate caller return value (then check the return value, no DB trail needed), for sends where container logs are guaranteed persistent (e.g. external log aggregator like Datadog/Sentry for ALL services — then logs are sufficient), or for one-off ad-hoc scripts (overkill for 30-min scripts). Encodes a real-world trap: a per-signal advisor's DB save ran successfully (2 assessments), Telegram send fail-open log.warning, container restart erased logs before that point → no forensics possible. With a `telegram_sent_at` column: a SQL query immediately shows which sends failed, log-independent.
 ---
 
-# Forensik-Spur für Fire-and-Forget-Sends
+# Forensic trail for fire-and-forget sends
 
 ## Overview
 
-Pattern "DB-Save → External-Send → log.warning bei Send-Fail" ist nice für resilience, aber bei Container-Restart oder Log-Rotation ist die Send-Fail-Forensik weg. Wenn der User morgens fragt "warum kam meine Notification nicht?", musst du sagen "weiß nicht, Logs sind futsch".
+The pattern "DB save → external send → log.warning on send-fail" is nice for resilience, but on container restart or log rotation the send-fail forensics are gone. When the user asks the next morning "why didn't my notification arrive?", you have to say "I don't know, logs are toast".
 
-**Core principle:** Jede External-Send-Action braucht eine DB-Spur (`*_sent_at`) als log-unabhängiger Audit-Layer.
+**Core principle:** every external-send action needs a DB trail (`*_sent_at`) as a log-independent audit layer.
 
 ## When to use
 
-- Telegram-Bot-Sends (action-trigger oder notification)
-- Email-Dispatch (transactional oder marketing)
-- Webhook-Posts an externe Services
-- Slack/Discord-Channel-Pings
-- SMS-Sends via Twilio / etc.
-- Push-Notifications (FCM/APN)
-- Alert-Dispatcher (any external integration)
-- Async `asyncio.create_task(send_x())` (gemildert silent-error-Klasse)
+- Telegram bot sends (action trigger or notification)
+- Email dispatch (transactional or marketing)
+- Webhook POSTs to external services
+- Slack/Discord channel pings
+- SMS sends via Twilio / etc.
+- Push notifications (FCM/APN)
+- Alert dispatcher (any external integration)
+- Async `asyncio.create_task(send_x())` (mitigates the silent-error class)
 
 ## When NOT to use
 
-- Sync send-and-wait wo Caller den Send-Result direkt hat
-- External log-aggregator (Datadog/Sentry/etc.) deckt persistent ALL services
-- Ad-hoc scripts mit kurzer Lebensdauer
-- Sends mit eigener External-Receipt-Tracking (z.B. Twilio Status-Callback in eigene DB)
+- Sync send-and-wait where the caller has the send result directly
+- External log aggregator (Datadog/Sentry/etc.) persistently covers ALL services
+- Ad-hoc scripts with short lifetime
+- Sends with their own external receipt tracking (e.g. Twilio status callback into your own DB)
 
 ## The 4-step procedure
 
-### Step 1 — DB-Migration: `*_sent_at TIMESTAMPTZ`
+### Step 1 — DB migration: `*_sent_at TIMESTAMPTZ`
 
 ```sql
 ALTER TABLE <state_table>
 ADD COLUMN IF NOT EXISTS <channel>_sent_at TIMESTAMPTZ;
 ```
 
-Idempotent + additiv. Conventions:
-- `telegram_sent_at` für Telegram-Sends
-- `email_sent_at` für Mails
-- `webhook_posted_at` für Webhooks
+Idempotent + additive. Conventions:
+- `telegram_sent_at` for Telegram sends
+- `email_sent_at` for mails
+- `webhook_posted_at` for webhooks
 - `slack_sent_at` etc.
 
-Wenn mehrere Channels: separate Spalten. Wenn EIN-Send-pro-Row: dedicated Spalte direkt. Wenn 1:n (mehrere Sends pro Row über Zeit): separate `*_dispatches`-Tabelle.
+For multiple channels: separate columns. For ONE send per row: dedicated column directly. For 1:n (multiple sends per row over time): a separate `*_dispatches` table.
 
-### Step 2 — Update-Logik nach Send-OK
+### Step 2 — Update logic after send-OK
 
 ```python
 async def _send_x(record_id: int, ..., conn=None):
@@ -56,7 +56,7 @@ async def _send_x(record_id: int, ..., conn=None):
         log.error("Send-Fail (record_id=%s): %s", record_id, exc)
         return False
 
-    # Forensik-Spur
+    # Forensic trail
     if conn is not None:
         try:
             await conn.execute(
@@ -65,19 +65,19 @@ async def _send_x(record_id: int, ..., conn=None):
                 record_id,
             )
         except Exception as exc:
-            log.warning("sent_at-Update fehlgeschlagen: %s", exc)
+            log.warning("sent_at update failed: %s", exc)
 
     return True
 ```
 
-**Wichtig**: Update INNERHALB des Send-Funktion, NICHT vom Caller. Sonst kann Caller vergessen und Spur ist wieder weg.
+**Important**: update INSIDE the send function, NOT from the caller. Otherwise the caller can forget and the trail is gone again.
 
-### Step 3 — Forensik-Query als Template-Snippet
+### Step 3 — Forensic query as a template snippet
 
-Im Code-Comment oder einer dedicated `docs/forensics/send-discrepancy.md`:
+In a code comment or a dedicated `docs/forensics/send-discrepancy.md`:
 
 ```sql
--- Welche Records hatten DB-Save aber kein erfolgreichen Send (= Send-Fail)?
+-- Which records had DB save but no successful send (= send-fail)?
 SELECT id, <key-columns>, created_at
 FROM <state_table>
 WHERE <channel>_sent_at IS NULL
@@ -86,9 +86,9 @@ ORDER BY created_at DESC
 LIMIT 50;
 ```
 
-Margin: groß genug für Send-Latency, klein genug um aktuelle in-flight sends nicht zu zeigen.
+Margin: large enough for send latency, small enough not to show current in-flight sends.
 
-### Step 4 — Tests + Doc
+### Step 4 — Tests + docs
 
 ```python
 async def test_sent_at_set_on_send_ok():
@@ -104,25 +104,25 @@ async def test_sent_at_null_on_send_fail():
 
 ## Anti-patterns
 
-- ❌ **Update vor Send** — `UPDATE sent_at` BEFORE the actual send → mark as sent when actually failed
-- ❌ **Update aus Caller** — Caller vergisst Update oder Race-Condition
-- ❌ **Status-Spalte statt Timestamp** (`status='sent'`) — verliert die "wann"-Information für Latenz-Forensik
-- ❌ **Index auf `*_sent_at IS NULL`** ohne partial-index — kann teuer werden bei großen Tabellen. Use `CREATE INDEX ... WHERE sent_at IS NULL` für die häufigste Forensik-Query
-- ❌ **Send + Update in einer Transaction** — wenn Send 30s dauert, hält das die DB-Connection länger als nötig. Separate Transactions.
+- ❌ **Update before send** — `UPDATE sent_at` BEFORE the actual send → mark as sent when actually failed
+- ❌ **Update from caller** — caller forgets update or race condition
+- ❌ **Status column instead of timestamp** (`status='sent'`) — loses the "when" information for latency forensics
+- ❌ **Index on `*_sent_at IS NULL`** without partial index — can become expensive on large tables. Use `CREATE INDEX ... WHERE sent_at IS NULL` for the most common forensic query
+- ❌ **Send + update in one transaction** — if send takes 30s, this holds the DB connection longer than needed. Separate transactions.
 
-## Worked example (03.06.2026 — E-7.3)
+## Worked example
 
-Wolf-Forensik: heute morgen 06:02 UTC zwei Advisor-Outputs in `claude_assessments` persistiert (id=140 SI=F, id=141 ZC=F), aber kein Telegram angekommen. Container-Restart 09:03 UTC hat Logs gelöscht — Send-Fail-Ursache nicht beweisbar.
+User-driven forensics: in the morning at 06:02 UTC, two advisor outputs were persisted in `claude_assessments` (id=140 SI=F, id=141 ZC=F), but no Telegram arrived. A container restart at 09:03 UTC erased the logs — the send-fail cause was unprovable.
 
-**Fix**: 
+**Fix**:
 ```sql
 ALTER TABLE claude_assessments
 ADD COLUMN IF NOT EXISTS telegram_sent_at TIMESTAMPTZ;
 ```
 
-Plus update-nach-Send-OK in `_send_advisor_telegram`.
+Plus update-after-send-OK in `_send_advisor_telegram`.
 
-**Cycle-2-Forensik-Query** (in Code-Comment):
+**Cycle-2 forensic query** (in code comment):
 ```sql
 SELECT id, symbol, direction, created_at FROM claude_assessments
 WHERE telegram_sent_at IS NULL
@@ -130,20 +130,20 @@ WHERE telegram_sent_at IS NULL
   AND created_at < NOW() - INTERVAL '1 minute';
 ```
 
-Damit ist jede Future-Send-Discrepancy in <1s aus DB ablesbar, log-unabhängig.
+That way, every future send discrepancy is readable from the DB in <1s, log-independent.
 
 ## Skill-Composition
 
-- `superpowers:test-driven-development` — für die Send-Tests
-- `library-subclass-explicit-type-classification-DRAFT` — wenn Send-Errors nach Retry/Fail-Fast klassifiziert werden müssen (siehe E-7.3.2 als Twin-Skill)
-- Wolf-Vault CLAUDE.md ultimative-platform-Sektion — Pattern dort als Backlog-Hint dokumentieren
+- `superpowers:test-driven-development` — for the send tests
+- `library-subclass-explicit-type-classification-DRAFT` — when send errors need to be classified as retry/fail-fast (see the twin skill)
+- The project CLAUDE.md your-app section — document the pattern there as a backlog hint
 
 ## Why this is overlooked (common cause of regret)
 
-Bei Implementation glaubt man "log.warning ist robust genug — Logs sind ja persistent". Aber:
-- **Container-Restart** (Deploy, OOM-Kill, Health-Check-Failure) → in-memory Logs weg
-- **Log-Rotation** (logrotate, k8s-fluentd-quotas) → ältere Logs weg
-- **Log-Aggregator-Outage** → nichts wird mehr durchgereicht
-- **Production-Stress-Spike** → Log-Buffer overruns
+During implementation, one believes "log.warning is robust enough — logs are persistent". But:
+- **Container restart** (deploy, OOM kill, health-check failure) → in-memory logs gone
+- **Log rotation** (logrotate, k8s fluentd quotas) → older logs gone
+- **Log-aggregator outage** → nothing gets forwarded anymore
+- **Production stress spike** → log buffer overruns
 
-Genau in diesen Fällen brauchst du die Forensik MEHR als sonst. DB-Spur ist 1× Migration + 5 Zeilen Code, gegen jahrelang Future-Sessions Forensik.
+Precisely in those cases you need forensics MORE than usual. The DB trail is 1× migration + 5 lines of code, against years of future sessions of forensic value.

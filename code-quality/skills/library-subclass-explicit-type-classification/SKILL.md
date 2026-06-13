@@ -1,6 +1,7 @@
 ---
 name: library-subclass-explicit-type-classification
-description: Use when classifying exceptions or other library-provided objects by type AND the semantically-distinct behaviors map onto a class-hierarchy where subclasses inherit from a base that has DIFFERENT desired handling. Common in retry-logic for HTTP clients (requests/httpx/urllib3 — Timeout vs HTTPError vs ConnectionError vs subclass), Telegram bots (python-telegram-bot — BadRequest erbt von NetworkError aber soll NICHT als Network-Issue behandelt werden), SQL clients (psycopg/asyncpg — OperationalError vs ProgrammingError vs subclass), file I/O (FileNotFoundError vs PermissionError vs OSError). Trigger on phrases like "Retry-Logik für TelegramError", "isinstance vs type()", "retry classification", "exception type check", "BadRequest erbt von NetworkError", "Subclass-Falle", "HTTPError vs Timeout", "retry strategy bei Lib X". The skill produces (1) class-hierarchy-mapping (literal `mro()`-Check), (2) explicit type-classification helper, (3) tests that lock the distinction. Do NOT load when all exceptions of a hierarchy should be handled identically (then base-class isinstance is correct), when the library docs explicitly state "always catch base class" (e.g. some SDKs flatten error semantics), or for first-time exception-handling design without prior library-hierarchy-experience (use general try/except-pattern first). Encodes the 03.06.2026 ultimative-platform E-7.3.2 trap: BadRequest erbt von NetworkError in python-telegram-bot 22.x → naives `isinstance(exc, NetworkError)` als Retry-Bedingung würde Markdown-Issues 3× retryen statt fail-fast. Lösung: `type(exc) is NetworkError` (exakter Typ-Check).
+description: Use when classifying exceptions or other library-provided objects by type AND the semantically-distinct behaviors map onto a class-hierarchy where subclasses inherit from a base that has DIFFERENT desired handling. Common in retry-logic for HTTP clients (requests/httpx/urllib3 — Timeout vs HTTPError vs ConnectionError vs subclass), Telegram bots (python-telegram-bot — BadRequest inherits from NetworkError but should NOT be treated as a network issue), SQL clients (psycopg/asyncpg — OperationalError vs ProgrammingError vs subclass), file I/O (FileNotFoundError vs PermissionError vs OSError). Trigger on phrases like "retry logic for TelegramError", "isinstance vs type()", "retry classification", "exception type check", "BadRequest inherits from NetworkError", "subclass trap", "HTTPError vs Timeout", "retry strategy for library X". The skill produces (1) class-hierarchy mapping (literal `mro()` check), (2) explicit type-classification helper, (3) tests that lock the distinction. Do NOT load when all exceptions of a hierarchy should be handled identically (then base-class isinstance is correct), when the library docs explicitly state "always catch base class" (e.g. some SDKs flatten error semantics), or for first-time exception-handling design without prior library-hierarchy experience (use general try/except pattern first). Encodes a real trap: BadRequest inherits from NetworkError in python-telegram-bot 22.x → naive `isinstance(exc, NetworkError)` as retry condition would retry Markdown issues 3x instead of failing fast. Solution: `type(exc) is NetworkError` (exact type check).
+
 ---
 
 # Library-Subclass Explicit Type Classification
@@ -19,12 +20,12 @@ Some library exception/object hierarchies have subclasses with semantically-dist
 TelegramError
 ├── NetworkError              ← "transient, retryable"
 │   ├── TimedOut              ← retryable
-│   └── BadRequest            ← NOT retryable (Markdown-Issue, falsche chat_id)
+│   └── BadRequest            ← NOT retryable (Markdown issue, wrong chat_id)
 ├── RetryAfter                ← retryable, wait exc.retry_after
 └── Forbidden                 ← NOT retryable (bot blocked)
 ```
 
-`isinstance(exc, NetworkError)` matched BadRequest. Falsch für Retry-Logic.
+`isinstance(exc, NetworkError)` matched BadRequest. Wrong for retry logic.
 
 ### Requests / HTTPX
 
@@ -48,12 +49,12 @@ Error
 ├── OperationalError          ← maybe-retryable (connection lost)
 │   ├── DeadlockDetected      ← retryable
 │   └── DataError-Subclass    ← NOT retryable (bad data)
-└── ProgrammingError          ← NOT retryable (SQL-Bug)
+└── ProgrammingError          ← NOT retryable (SQL bug)
 ```
 
 ## The 5-step procedure
 
-### Step 1 — Liste die Klassen-Hierarchie mit `__mro__`
+### Step 1 — List the class hierarchy with `__mro__`
 
 ```python
 from telegram.error import BadRequest
@@ -61,109 +62,109 @@ print([b.__name__ for b in BadRequest.__mro__])
 # ['BadRequest', 'NetworkError', 'TelegramError', 'Exception', 'BaseException', 'object']
 ```
 
-**Mandatory** before writing classification logic — Library-Doku-Behauptungen sind oft unvollständig.
+**Mandatory** before writing classification logic — library doc claims are often incomplete.
 
-### Step 2 — Identifiziere die Semantic-Divergence
+### Step 2 — Identify the semantic divergence
 
-Für jede Subclass:
-- Was ist die User-Action-Empfehlung von der Library (Doku)?
-- Was ist die Code-Action-Notwendigkeit von deinem Code?
-- Welche Subclass-Sets haben semantisch identische Aktionen?
+For each subclass:
+- What is the user-action recommendation from the library (docs)?
+- What is the code-action necessity from your code?
+- Which subclass sets have semantically identical actions?
 
-### Step 3 — Schreibe explizite Klassifikations-Helper
+### Step 3 — Write explicit classification helper
 
 ```python
 def _is_retryable_telegram_error(exc: Exception) -> bool:
-    """Klassifiziert TelegramError.
+    """Classifies TelegramError.
 
-    Wichtig: BadRequest erbt von NetworkError. Wir prüfen per type(),
-    NICHT via isinstance(NetworkError) — das matched BadRequest auch.
+    Important: BadRequest inherits from NetworkError. We check by type(),
+    NOT via isinstance(NetworkError) — that matches BadRequest too.
     """
     from telegram.error import TimedOut, RetryAfter, NetworkError
     if isinstance(exc, (TimedOut, RetryAfter)):
         return True
-    if type(exc) is NetworkError:  # EXAKTER Typ, keine Subclasses
+    if type(exc) is NetworkError:  # EXACT type, no subclasses
         return True
     return False
 ```
 
-**Pattern**: Tuple-isinstance für Subclass-Familien die identisch behandelt werden, `type() is X` für base-class-Match ohne Subclasses.
+**Pattern**: tuple-isinstance for subclass families that are handled identically, `type() is X` for base-class match without subclasses.
 
 ### Step 4 — Lock the distinction with TDD
 
 ```python
 def test_bad_request_is_not_retryable():
-    """BadRequest erbt von NetworkError → naives isinstance würde BadRequest
-    als retryable einstufen. Verifiziert dass type()-Check unterscheidet."""
+    """BadRequest inherits from NetworkError → naive isinstance would classify
+    BadRequest as retryable. Verifies that type() check distinguishes."""
     from telegram.error import BadRequest
     assert _is_retryable_telegram_error(BadRequest("test")) is False
 
 def test_network_error_is_retryable():
-    """NetworkError selbst (ohne Subclass) ist retryable."""
+    """NetworkError itself (without subclass) is retryable."""
     from telegram.error import NetworkError
     assert _is_retryable_telegram_error(NetworkError("test")) is True
 ```
 
-Beide Tests sind nötig — der erste lockt gegen Refactoring-Slip, der zweite gegen accidentelle Unterstrike-Klassifikation.
+Both tests are needed — the first locks against refactoring slip, the second against accidental under-classification.
 
-### Step 5 — Document the Hierarchy-Pitfall in Code-Comment
+### Step 5 — Document the hierarchy pitfall in code comments
 
-Zukünftige Entwickler MÜSSEN den Grund für `type() is X` verstehen, sonst refactoren sie es naiv zurück zu `isinstance`. Im Docstring + neben dem Check.
+Future developers MUST understand the reason for `type() is X`, otherwise they will naively refactor it back to `isinstance`. In the docstring + next to the check.
 
 ## Anti-patterns
 
-- ❌ **Naives `isinstance(exc, NetworkError)`** als Retry-Bedingung — matched Subclasses mit anderer Semantik
-- ❌ **Catch-all `except TelegramError`** als Klassifikation-Layer — verliert die Distinction komplett
-- ❌ **Keine MRO-Prüfung** vor der Klassifikation — Annahmen über Hierarchie sind oft falsch (z.B. man denkt BadRequest erbt direkt von TelegramError, tut es aber nicht)
-- ❌ **`type() ==` statt `type() is`** — funktioniert hier auch aber `is` ist Convention für identity-check bei type-objects
-- ❌ **Subclass-Liste hardcoden ohne Test** — wenn die Library-Hierarchie sich ändert, weiß man nicht dass die Klassifikation veraltet ist
+- ❌ **Naive `isinstance(exc, NetworkError)`** as retry condition — matches subclasses with different semantics
+- ❌ **Catch-all `except TelegramError`** as classification layer — loses the distinction completely
+- ❌ **No MRO check** before classification — assumptions about hierarchy are often wrong (e.g. one thinks BadRequest inherits directly from TelegramError, but it doesn't)
+- ❌ **`type() ==` instead of `type() is`** — works here too but `is` is convention for identity check with type objects
+- ❌ **Hardcoded subclass list without test** — when the library hierarchy changes, you don't know that the classification is stale
 
-## Quick-Check-Routine
+## Quick-Check routine
 
-Wann ist dieser Skill relevant?
+When is this skill relevant?
 
-1. Du baust Retry-/Fallback-/Special-Handling-Logic für eine externe Library
-2. Library-Doku klassifiziert Errors per Klasse
-3. Du erwischst dich bei `isinstance(exc, SomeBaseClass)` als Retry-Gate
-4. → Stop. Prüfe MRO der Subclasses, klassifiziere explizit.
+1. You're building retry/fallback/special-handling logic for an external library
+2. Library docs classify errors by class
+3. You catch yourself using `isinstance(exc, SomeBaseClass)` as a retry gate
+4. → Stop. Check MRO of the subclasses, classify explicitly.
 
-## Worked example (03.06.2026 — E-7.3.2)
+## Worked example
 
-Wolf-Forensik: heute morgen 06:02 UTC Advisor-Sends nicht angekommen. Live-Reproduktion mit log.error fing `Timed out` ab. Naive Retry-Implementation:
+User-driven forensics: an Advisor-Send didn't arrive. Live reproduction with log.error caught `Timed out`. Naive retry implementation:
 
 ```python
-# Naiv (FALSCH):
+# Naive (WRONG):
 if isinstance(exc, NetworkError):  # matched BadRequest!
     retry()
 ```
 
-Hätte dazu geführt: jeder BadRequest (z.B. Markdown-Parse-Fehler) würde 3× retryed werden. 3× same fail, 3× exponential backoff = 7s Wartezeit für nichts, plus Verzögerung anderer Tasks.
+Would have led to: every BadRequest (e.g. Markdown parse error) would be retried 3x. 3x same fail, 3x exponential backoff = 7s wait for nothing, plus delay of other tasks.
 
-Korrekte Klassifikation:
+Correct classification:
 ```python
 if isinstance(exc, (TimedOut, RetryAfter)):
     retry()
-elif type(exc) is NetworkError:  # EXAKT
+elif type(exc) is NetworkError:  # EXACT
     retry()
 else:
     fail_fast()
 ```
 
-Tests: `no_retry_on_bad_request` verifizierte dass BadRequest single-attempt bleibt.
+Tests: `no_retry_on_bad_request` verified that BadRequest stays single-attempt.
 
-## Skill-Composition
+## Skill composition
 
-- `superpowers:test-driven-development` — für die Tests die die Klassifikation locken
-- `superpowers:systematic-debugging` — wenn der Bug "Retry verhält sich falsch" über systematic-debugging gefunden wird
+- `superpowers:test-driven-development` — for the tests that lock the classification
+- `superpowers:systematic-debugging` — when the bug "retry behaves wrong" is found via systematic-debugging
 
-## Library-Notes (verifizierte Pitfalls)
+## Library notes (verified pitfalls)
 
 | Library | Pitfall |
 |---|---|
-| `python-telegram-bot` 22.x | `BadRequest` erbt von `NetworkError` |
-| `requests` | `SSLError` erbt von `ConnectionError` (nicht retryable) |
-| `httpx` | `HTTPStatusError` separat von `RequestError` (anders als requests) |
-| `psycopg` | `DeadlockDetected` erbt von `OperationalError` (retryable) vs andere `OperationalError`-Subclasses (nicht) |
-| `boto3` | `ClientError` per `error['Code']` klassifiziert — nicht per Subclass |
+| `python-telegram-bot` 22.x | `BadRequest` inherits from `NetworkError` |
+| `requests` | `SSLError` inherits from `ConnectionError` (not retryable) |
+| `httpx` | `HTTPStatusError` separate from `RequestError` (different from requests) |
+| `psycopg` | `DeadlockDetected` inherits from `OperationalError` (retryable) vs other `OperationalError` subclasses (not) |
+| `boto3` | `ClientError` classified per `error['Code']` — not per subclass |
 
-Bei jeder neuen Library: `print([b.__name__ for b in YourException.__mro__])` zuerst.
+For every new library: `print([b.__name__ for b in YourException.__mro__])` first.

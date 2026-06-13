@@ -1,0 +1,22 @@
+{
+  "name": "maker-fdm",
+  "version": "0.1.0",
+  "description": "Maker disciplines for FDM-printed builds and embedded UI documentation. 2 skills covering Bill-of-Materials validation for multi-component physical builds (≥5 parts) and embedded GUI documentation from source (ESP32/Arduino touchscreens with LovyanGFX, TFT_eSPI, U8g2, LVGL).",
+  "author": {
+    "name": "ed3Dworks"
+  },
+  "homepage": "https://github.com/Ed3Design/ed3design-skill-bundles",
+  "repository": "https://github.com/Ed3Design/ed3design-skill-bundles",
+  "license": "MIT",
+  "keywords": [
+    "fdm",
+    "3d-printing",
+    "maker",
+    "bom",
+    "embedded",
+    "esp32",
+    "arduino",
+    "lvgl",
+    "ed3design"
+  ]
+}

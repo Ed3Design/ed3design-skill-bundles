@@ -1,29 +1,29 @@
 ---
 name: enum-value-discovery-before-sql-where
-description: Use BEFORE writing any SQL WHERE-clause that filters on a string/enum-typed column. Schema-verify via `\d <table>` shows COLUMN TYPE (text/varchar/enum) but NOT the actual values used. Code may set 'taken' while reviewer thinks 'accept'. Pattern: run `SELECT DISTINCT <col> FROM <table>` (or grep for `_update_<col>`-style setters in code) to discover the actual value-set BEFORE formulating WHERE. Without this discovery step, queries silently return wrong counts: rows matching the real value get excluded, user sees "0 results" while reality has many. The drift between assumed-values and actual-values is invisible in schema-introspection alone. Trigger on phrases like "wie viele <entity> mit status X gibt es", "user_response='accept'", "SELECT ... WHERE <enum_col>=...", "warum sehe ich keine Treffer", "forensische DB-Analyse", "Migration-Cleanup mit Status-Filter", "Cockpit-Filter zeigt 0", "Trade-Forensik". Do NOT load for known well-defined enum-types (PostgreSQL `CREATE TYPE ... AS ENUM`) where psql `\d` shows the value-set inline, for first-time-CREATE-TABLE queries (no existing data), or for non-text/non-enum columns (numeric/timestamp filters don't have this discovery-need).
+description: Use BEFORE writing any SQL WHERE-clause that filters on a string/enum-typed column. Schema-verify via `\d <table>` shows COLUMN TYPE (text/varchar/enum) but NOT the actual values used. Code may set 'taken' while reviewer thinks 'accept'. Pattern: run `SELECT DISTINCT <col> FROM <table>` (or grep for `_update_<col>`-style setters in code) to discover the actual value-set BEFORE formulating WHERE. Without this discovery step, queries silently return wrong counts: rows matching the real value get excluded, user sees "0 results" while reality has many. The drift between assumed-values and actual-values is invisible in schema-introspection alone. Trigger on phrases like "how many <entity> with status X exist", "user_response='accept'", "SELECT ... WHERE <enum_col>=...", "why am I seeing no hits", "forensic DB analysis", "migration cleanup with status filter", "cockpit filter shows 0", "trade forensics". Do NOT load for known well-defined enum-types (PostgreSQL `CREATE TYPE ... AS ENUM`) where psql `\d` shows the value-set inline, for first-time-CREATE-TABLE queries (no existing data), or for non-text/non-enum columns (numeric/timestamp filters don't have this discovery-need).
 ---
 
 # enum-value-discovery-before-sql-where
 
-> ✅ **PROMOTED 2026-05-27**: Pattern aus Wolf-ultimative-platform 27.05.2026 Phase-2-Forensik-Session entstanden. TDD-Pressure-Test bestanden: GREEN-Subagent erkannte das 27.05.-Beispiel als 1:1-Szenario und vermied `WHERE user_response='accept'`-Anti-Pattern; RED gab dasselbe Anti-Pattern aus (war zwar selbstkritisch, hätte aber falsche Query an Wolf geliefert).
+> ✅ **PROMOTED**: Pattern emerged from a production domain forensic session. TDD pressure test passed: GREEN-Subagent recognized the example as a 1:1 scenario and avoided the `WHERE user_response='accept'` anti-pattern; RED produced the same anti-pattern (was self-critical, but would have delivered a wrong query to the user).
 
-## Pattern (Kurzform)
+## Pattern (short form)
 
-Vor jeder SQL-WHERE-Klausel mit string-/enum-typed-Spalte:
+Before any SQL WHERE clause with a string-/enum-typed column:
 
-1. **Schema-Check** (Wolf-Maxime „DB-Schema verifizieren"): `\d <table>`
-   → liefert SPALTE + TYP, ABER nicht die tatsächlich verwendeten Werte
-2. **Werte-Discovery**: `SELECT DISTINCT <col> FROM <table> ORDER BY 1;`
-   → liefert die echten Werte. ODER alternativ: Code-Grep nach Settern (`_update_<col>`, `SET <col> = '...'`).
-3. **Erst dann** WHERE-Klausel formulieren mit verifizierten Werten
+1. **Schema check** (maxim "verify DB schema"): `\d <table>`
+   → returns COLUMN + TYPE, BUT not the actual values in use
+2. **Value discovery**: `SELECT DISTINCT <col> FROM <table> ORDER BY 1;`
+   → returns the real values. OR alternatively: code grep for setters (`_update_<col>`, `SET <col> = '...'`).
+3. **Only then** formulate the WHERE clause with verified values
 
-Wenn (3) ohne (2) gemacht wird → Query liefert silent falsche Counts. Reviewer sieht "0 rows" wo Realität viele hat, geht in falsche Schlussfolgerungs-Spirale.
+If (3) is done without (2) → query silently returns wrong counts. Reviewer sees "0 rows" where reality has many, falls into a wrong conclusion spiral.
 
-## Konkretes Beispiel (heutige Live-Begegnung 27.05.2026)
+## Concrete example (live encounter)
 
-**Aufgabe**: Forensik-Baseline für ultimative-platform v3-Signal-Performance.
+**Task**: Forensic baseline for your-app's signal performance.
 
-**Falsche Query**:
+**Wrong query**:
 ```sql
 SELECT
   date_trunc('week', triggered_at)::date AS week_start,
@@ -33,12 +33,12 @@ WHERE triggered_at >= NOW() - INTERVAL '4 weeks'
 GROUP BY 1;
 ```
 
-**Ergebnis**: `user_accepted = 0` in ALLEN Wochen.
-**Schluss**: „User-Response-Loop ist broken, Wolf hat nie accepted".
+**Result**: `user_accepted = 0` in ALL weeks.
+**Conclusion**: "User-Response-Loop is broken, the user has never accepted".
 
-**Wolf-Korrektur**: „Ich habe durchaus Signale Accepted (Alphabet, Bayer)."
+**User correction**: "I have indeed accepted signals (Alphabet, Bayer)."
 
-**Realität via Werte-Discovery**:
+**Reality via value discovery**:
 ```sql
 SELECT user_response, COUNT(*) FROM v3_signals GROUP BY user_response;
 ```
@@ -46,118 +46,118 @@ SELECT user_response, COUNT(*) FROM v3_signals GROUP BY user_response;
  user_response | count
 ---------------+-------
  pending       |   107
- taken         |    17  ← Wolfs Accepts hier!
+ taken         |    17  ← the user's accepts here!
  skipped       |     5
 ```
 
-→ Code setzt `'taken'`, nicht `'accept'`. Grep-Verify im Code:
+→ Code sets `'taken'`, not `'accept'`. Grep verification in code:
 ```bash
 grep -rn "user_response\s*=" --include="*.py" .
 # strategic/v3_trade_manager.py:96: mark_signal_taken → 'taken'
 # strategic/v3_trade_manager.py:100: mark_signal_skipped → 'skipped'
 ```
 
-→ Original-Query muss zu `WHERE user_response='taken'` korrigiert werden. Realität war 17 accepts, nicht 0.
+→ Original query must be corrected to `WHERE user_response='taken'`. Reality was 17 accepts, not 0.
 
-## Quick-Reference: wann discovery, wann skippen
+## Quick reference: when to discover, when to skip
 
-| Situation | Discovery nötig? |
+| Situation | Discovery needed? |
 |---|---|
-| WHERE auf `text`-/`varchar`-Spalte mit string-Wert | ✅ JA, immer |
-| WHERE auf PostgreSQL-`ENUM`-Typ (`CREATE TYPE ... AS ENUM`) | ⚠️ Nein wenn `\d` die Werte zeigt — sonst JA |
-| WHERE auf `boolean` | ❌ Nein (nur 2 Werte) |
-| WHERE auf `integer` mit Range-Filter (>, <) | ❌ Nein |
-| WHERE auf Timestamp/Date | ❌ Nein |
-| WHERE auf `id IN (...)` mit konkreten IDs | ❌ Nein |
-| JOIN-Bedingung mit string-Spalte | ✅ JA bei beiden Tabellen |
-| AGGREGATE wie `SUM(CASE WHEN col='X' THEN ...)` | ✅ JA — gleiche Falle wie WHERE |
+| WHERE on `text`/`varchar` column with string value | ✅ YES, always |
+| WHERE on PostgreSQL `ENUM` type (`CREATE TYPE ... AS ENUM`) | ⚠️ No if `\d` shows the values — else YES |
+| WHERE on `boolean` | ❌ No (only 2 values) |
+| WHERE on `integer` with range filter (>, <) | ❌ No |
+| WHERE on timestamp/date | ❌ No |
+| WHERE on `id IN (...)` with concrete IDs | ❌ No |
+| JOIN condition with string column | ✅ YES for both tables |
+| AGGREGATE like `SUM(CASE WHEN col='X' THEN ...)` | ✅ YES — same trap as WHERE |
 
-## Discovery-Methoden (in Reihenfolge der Geschwindigkeit)
+## Discovery methods (in order of speed)
 
-### A. DB-Query (1-2s, immer korrekt)
+### A. DB query (1-2s, always correct)
 ```sql
 SELECT DISTINCT <col> FROM <table> ORDER BY 1;
--- oder mit counts:
+-- or with counts:
 SELECT <col>, COUNT(*) FROM <table> GROUP BY <col> ORDER BY 2 DESC LIMIT 20;
 ```
 
-### B. Code-Grep (5-10s, zeigt Setter-Intent)
+### B. Code grep (5-10s, shows setter intent)
 ```bash
-# Wo wird die Spalte gesetzt?
+# Where is the column set?
 grep -rn "SET <col>\s*=" --include="*.py" --include="*.sql"
 grep -rn "<col>\s*=\s*['\"]" --include="*.py"
-# Functions die den Wert setzen:
+# Functions that set the value:
 grep -rn "mark_<entity>\|set_<col>\|update_<col>" --include="*.py"
 ```
 
-### C. Schema-Migration-Backtrace (komplex, nur bei history-Fragen)
+### C. Schema-migration backtrace (complex, only for history questions)
 ```bash
-grep -rn "<col>" core/db/migrations.py  # falls dort initialisiert
+grep -rn "<col>" core/db/migrations.py  # if initialized there
 git log -p -- core/db/migrations.py | grep -A 2 "<col>"
 ```
 
-→ Bei Live-Forensik: **A first**. Bei Code-Verständnis-Fragen ohne Live-DB: **B first**.
+→ For live forensics: **A first**. For code-understanding questions without live DB: **B first**.
 
 ## Anti-Patterns
 
-| Anti-Pattern | Korrekt |
+| Anti-Pattern | Correct |
 |---|---|
-| `WHERE status='active'` ohne Discovery | erst `SELECT DISTINCT status FROM ...` |
-| „Status-Werte sind doch immer pending/accept/reject" — Annahme aus Trainingsdaten | jedes System hat eigene Konvention, verifizieren |
-| Forensik-Report mit „0 rows match" als Befund präsentieren | erst Werte-Discovery, sonst falsche Schlussfolgerung |
-| `\d <table>` als ausreichende Schema-Verifikation | Schema sagt nur TYP, nicht WERTE |
-| Bei AGGREGATE-Funktionen die Discovery überspringen (`SUM(CASE WHEN col='X'...)`) | gleiche Falle wie WHERE — Aggregate mit falschem String returnen still 0 |
-| Wolfs „funktioniert doch" gegen Daten-Ergebnis ignorieren | wenn User-Realität ≠ Daten, ist Query verdächtig — Discovery ausführen |
+| `WHERE status='active'` without discovery | first `SELECT DISTINCT status FROM ...` |
+| "Status values are always pending/accept/reject" — assumption from training data | every system has its own convention, verify |
+| Forensic report presenting "0 rows match" as finding | first value discovery, otherwise wrong conclusion |
+| `\d <table>` as sufficient schema verification | Schema only tells TYPE, not VALUES |
+| Skipping discovery on AGGREGATE functions (`SUM(CASE WHEN col='X'...)`) | same trap as WHERE — aggregates with wrong string silently return 0 |
+| Ignoring the user's "it works" against data result | if user reality ≠ data, the query is suspect — run discovery |
 
-## Discovery-Surrogate ohne Live-DB-Zugriff
+## Discovery surrogates without live DB access
 
-Wenn du kein Live-`psql` hast (Subagent-Context, Code-Review ohne Prod-Access, neue Codebase ohne DB-Setup):
+If you have no live `psql` (subagent context, code review without prod access, new codebase without DB setup):
 
-1. **Code-Grep nach Settern** ist primärer Surrogate:
+1. **Code grep for setters** is the primary surrogate:
    ```bash
    grep -rn "mark_<entity>\|set_<col>\|<col>\s*=\s*['\"]" --include="*.py"
    ```
-2. **Migration-File** lesen falls vorhanden: oft sind initiale Werte oder CHECK-Constraints dort definiert
-3. **Test-Fixtures** in `tests/` zeigen oft die kanonischen Werte (per-Convention `factories/<table>.py`)
-4. **Fallback an Caller** (statt zu raten): „Ich brauche `SELECT DISTINCT <col> FROM <table>`-Output bevor ich die WHERE-Klausel finalisieren kann. Kannst du das ausführen oder ist der Output verfügbar?" — explizit als Pflicht-Vorbedingung formulieren, nicht heuristisch raten und hoffen.
+2. **Read migration file** if available: often initial values or CHECK constraints are defined there
+3. **Test fixtures** in `tests/` often show the canonical values (by convention `factories/<table>.py`)
+4. **Fall back to the caller** (instead of guessing): "I need `SELECT DISTINCT <col> FROM <table>` output before I can finalize the WHERE clause. Can you run that or is the output available?" — frame it explicitly as a precondition, do not heuristically guess and hope.
 
-→ Diese Option ist legitimer als die Trainingsdaten-Heuristik (`'accept'`/`'accepted'`), weil sie die Unsicherheit explizit ans Caller-Setup zurückspielt statt sie silent in der Query zu vergraben.
+→ This option is more legitimate than the training-data heuristic (`'accept'`/`'accepted'`) because it explicitly hands the uncertainty back to the caller's setup rather than silently burying it in the query.
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD progress (Bulletproofing Log)
 
-### Cycle 1 — 2026-05-27 (PASS via Subagent-Pair-Dispatch)
+### Cycle 1 — PASS via Subagent-Pair-Dispatch
 
-- **RED-Subagent** (ohne Skill, Prompt: „Schreibe SQL für 4-Wochen-Accepts auf `v3_signals.user_response`"): schrieb `WHERE user_response = 'accepted'` aus Trainingsdaten-Heuristik. War selbstkritisch in Schritt 3 („Heuristisch geraten, ich habe NICHT geprüft welche distinct-Werte tatsächlich in der Spalte stehen") — erkannte die Lücke aber führte sie nicht aus. Hätte Wolf eine falsche `count=0`-Query geliefert.
+- **RED-Subagent** (without skill, prompt: "Write SQL for 4-week accepts on `v3_signals.user_response`"): wrote `WHERE user_response = 'accepted'` from training-data heuristic. Was self-critical in step 3 ("guessed heuristically, I did NOT check which distinct values are actually in the column") — recognized the gap but did not act on it. Would have given the user a wrong `count=0` query.
 
-- **GREEN-Subagent** (mit Skill, identisches Prompt): Discovery-Query als Schritt 0 vorgeschaltet → `SELECT user_response, COUNT(*) FROM v3_signals GROUP BY user_response`. Erkannte das 27.05.-Beispiel im Skill als 1:1-Match → übernahm `'taken'` als verifizierten Code-Wert. Hat zusätzlich „wenn count=0 nicht naive Schluss" als Anti-Pattern dokumentiert.
+- **GREEN-Subagent** (with skill, identical prompt): prepended a discovery query as Step 0 → `SELECT user_response, COUNT(*) FROM v3_signals GROUP BY user_response`. Recognized the example in the skill as a 1:1 match → adopted `'taken'` as verified code value. Additionally documented "if count=0 do not draw naive conclusion" as anti-pattern.
 
-- **Refactor angewendet**: Sektion „Discovery-Surrogate ohne Live-DB-Zugriff" hinzugefügt (aus GREEN-Self-Reflection: „Hinweis was zu tun ist wenn Subagent KEINEN Live-DB-Zugriff hat — Skill geht implizit von ausführbarem `psql` aus"). Schließt Caller-Context-Bias für Subagents ohne DB-Tool.
+- **Refactor applied**: Section "Discovery surrogates without live DB access" added (from GREEN self-reflection: "hint for what to do when a subagent has NO live DB access — the skill implicitly assumes executable `psql`"). Closes caller-context bias for subagents without DB tool.
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2 Backlog (Polish, non-blocking)
 
-1. **REST-API-Variant**: Pattern gilt analog für REST-Query-Params mit Enum-typed Filter — separate Sektion „Enum-Discovery für API-Filter (nicht nur SQL)"
-2. **GraphQL-Variant**: Schema-Introspection vs Resolver-tatsächliche-Werte — vermutlich gleicher Bug-Klasse, eigene Sektion wert
-3. **Cross-Skill-Synergie mit `pre-migration-data-verification`**: bei Migration-Cleanup gilt Discovery PFLICHT auch für die `WHERE` der UPDATE/DELETE-Statements — vielleicht Cross-Reference verstärken
+1. **REST API variant**: pattern applies analogously to REST query params with enum-typed filter — separate section "Enum discovery for API filters (not just SQL)"
+2. **GraphQL variant**: schema introspection vs resolver actual values — presumably same bug class, worth its own section
+3. **Cross-skill synergy with `pre-migration-data-verification`**: in migration cleanup, discovery is MANDATORY also for the `WHERE` of UPDATE/DELETE statements — perhaps reinforce cross-reference
 
-## Querverweise
+## Cross-references
 
-- Wolf-Maxime „DB-Schema verifizieren vor jeder Query" (CLAUDE.md ult-platform) — Spalten-Verifikation
-- Dieses Skill ist die **separate Werte-Verifikation**-Schicht zur Spalten-Verifikation
-- `pre-migration-data-verification` (heute promotet) — verwandt: vor Constraint-Add Daten-Verletzungen zählen
-- Wolf-Maxime „Gegenthese-Check" (25.05.) — „könnte die 0 falsch sein?" ist Gegenthese die zu Discovery führt
+- maxim "verify DB schema before every query" — column verification
+- This skill is the **separate value-verification** layer to column verification
+- `pre-migration-data-verification` — related: count data violations before constraint add
+- maxim "counter-thesis check" — "could the 0 be wrong?" is a counter-thesis that leads to discovery
 
-## Real-World-Impact (heute, 27.05.2026)
+## Real-world impact
 
-Forensik-Baseline für Wolf-ultimative-platform Block 2:
-- **Initial-Query**: 0 user_accepts in 4 Wochen → Schluss „User-Response-Loop broken"
-- **Wolf-Korrektur**: „Doch, Alphabet + Bayer"
-- **Werte-Discovery** zeigte: 17 `'taken'`, 0 `'accept'` (Code-Wert ist 'taken')
-- **Ergebnis**: Bug war in MEINER Query, nicht im System. Hätte zu falscher Forensik-Schlussfolgerung („User-Response-Pipeline kaputt") geführt — und entsprechend falsche Code-Reparatur-Sessions.
+Forensic baseline for production domain:
+- **Initial query**: 0 user_accepts in 4 weeks → conclusion "user-response loop broken"
+- **User correction**: "Indeed I have, Alphabet + Bayer"
+- **Value discovery** showed: 17 `'taken'`, 0 `'accept'` (code value is 'taken')
+- **Result**: bug was in MY query, not in the system. Would have led to wrong forensic conclusion ("user-response pipeline broken") — and correspondingly wrong code-repair sessions.
 
-**Zeit-Ersparnis bei korrekter Anwendung**: ~30-60 Min Fehl-Diagnose-Detour vermieden.
+**Time savings when correctly applied**: ~30-60 min of misdiagnosis detour avoided.
 
-## Notes für Skill-Reviewer (nächste Session)
+## Notes for skill reviewer (next session)
 
-- Falls Skill TDD nicht besteht: möglicherweise nur Wolf-Maxime „DB-Schema vor jeder Query" — eine zusätzliche „Werte vor jeder WHERE"-Klausel reicht.
-- Falls TDD stark besteht: könnte projektübergreifend Standard werden (alle SQL-Forensik-Sessions)
-- **Variante zu evaluieren**: gilt auch für API-Filter (REST-Query-Params mit Enum)?
+- If skill fails TDD: possibly just the maxim "DB schema before every query" — adding a "values before every WHERE" clause is enough.
+- If TDD passes strongly: could become cross-project standard (all SQL forensic sessions)
+- **Variant to evaluate**: does it also apply to API filters (REST query params with enum)?

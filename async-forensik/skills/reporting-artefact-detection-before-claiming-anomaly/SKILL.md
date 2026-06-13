@@ -1,38 +1,38 @@
 ---
 name: reporting-artefact-detection-before-claiming-anomaly
-description: Use when observing a "surprising anomaly" in backtest output, SQL-query result, multi-run-eval-report, ML-model-performance-table, or any reporting-layer artefact that suggests a system-bug, market-outlier, methodological problem, or drift requiring investigation. Common forms: "WR X% bei n=Y ist katastrophal niedrig", "24h-Baseline-Drift +/-2pp", "Filter N hat seit gestern andere Numbers", "Sub-Sample-Median weicht von Aggregat-Total ab". Before treating the anomaly as a real phenomenon and dispatching forensik-resources to explain it, run a 3-step Reporting-Artefakt-Triage: (1) NULL-Handling-Check — werden NULL-Werte in Zähler/Nenner falsch behandelt? Wurde IS NOT NULL-Filter weggelassen? (2) Cross-Window/Unique-ID-Check — werden überlappende Sub-Windows / Joins / Aggregationen Trades mehrfach gezählt? Cross-Sum vs Unique-Count-Semantik klar? (3) Methodik-Konsistenz-Check zu Vorbericht — wurde dieselbe SQL/Berechnung exakt repliziert oder wurde subtil eine andere Aggregations-Methode benutzt? Drei Filter machen es leicht zu validieren BEVOR Forensik-Subagent dispatcht wird. Trigger phrases like "warum ist WR plötzlich so niedrig", "diese Anomalie verstehe ich nicht", "24h-Drift", "Baseline hat sich verändert", "Sub-Sample-Median überraschend", "Backtest gibt heute andere Numbers als gestern", "KW X war Katastrophe", "warum droppen die Numbers". Do NOT load for confirmed-real anomalies where the artefact-check is already done (then it's a real forensik-task, use domain-specific skills), for first-time-setup-debugging without baseline comparison (no Vorbericht to compare against), for non-reporting-layer issues like code-bugs in the algorithm itself (then it's debugging, not reporting-artefact-triage), or for user-facing UI-rendering-bugs (different domain). Encodes the 2026-06-02 ClaudetteV-Session-Discovery: three separate "anomalies" investigated over 4-hour-multi-subagent-forensik-cycle (KW13 WR 1.12%, C1-blocked 1055, 24h-Baseline-Drift 39.86→37.38) ALL turned out to be reporting-artefacts respectively due to (1) NULL-ko_pnl_pct in Legacy-Migrations-Kohorte ignored by WHERE-clause-filter-omission, (2) Cross-Window-Sum vs Unique-ID-Set semantic ambiguity, (3) Multi-Run-Median vs flat-count methodology difference between consecutive day reports. ~3 hours of subagent-forensik-resources spent on three artefact-validation-cycles that this 3-step check would have closed in 5 minutes each.
+description: Use when observing a "surprising anomaly" in backtest output, SQL query result, multi-run-eval-report, ML-model-performance-table, or any reporting-layer artefact that suggests a system bug, market outlier, methodological problem, or drift requiring investigation. Common forms: "WR X% at n=Y is catastrophically low", "24h baseline drift +/-2pp", "Filter N has different numbers since yesterday", "sub-sample median diverges from aggregate total". Before treating the anomaly as a real phenomenon and dispatching forensic resources to explain it, run a 3-step reporting-artefact triage: (1) NULL-handling check — are NULL values in numerator/denominator mishandled? Was the IS NOT NULL filter omitted? (2) Cross-window / unique-ID check — do overlapping sub-windows / joins / aggregations count trades multiple times? Is cross-sum-vs-unique-count semantics clear? (3) Methodology-consistency check vs previous report — was the same SQL/calculation replicated exactly, or was a subtly different aggregation method used? Three filters make it easy to validate BEFORE a forensic subagent is dispatched. Trigger phrases like "why is WR suddenly so low", "I don't understand this anomaly", "24h drift", "baseline has changed", "sub-sample median surprising", "backtest gives different numbers today than yesterday", "week X was a disaster", "why are the numbers dropping". Do NOT load for confirmed-real anomalies where the artefact check is already done (then it's a real forensic task, use domain-specific skills), for first-time-setup-debugging without baseline comparison (no prior report to compare against), for non-reporting-layer issues like code bugs in the algorithm itself (then it's debugging, not reporting-artefact triage), or for user-facing UI rendering bugs (different domain). Encodes a discovery: three separate "anomalies" investigated over a 4-hour multi-subagent forensic cycle (KW13 WR 1.12%, C1-blocked 1055, 24h-baseline-drift 39.86→37.38) ALL turned out to be reporting artefacts due to (1) NULL-ko_pnl_pct in a legacy-migration cohort ignored by WHERE-clause filter omission, (2) cross-window-sum vs unique-ID-set semantic ambiguity, (3) multi-run-median vs flat-count methodology difference between consecutive day reports. ~3 hours of subagent forensic resources spent on three artefact-validation cycles that this 3-step check would have closed in 5 minutes each.
 
 ---
 
 # reporting-artefact-detection-before-claiming-anomaly
 
-> ✅ **PROMOTED 2026-06-02 (X.0-Closure-Session)**: TDD-Pressure-Test bestanden. RED-Subagent ging direkt in Pause+Forensik-Dispatch-Trap (klassisches Anti-Pattern), erkannte den Bias nur post-hoc in Self-Reflection. GREEN-Subagent identifizierte sofort NULL-Handling-Hypothese aus Genesis-Case-Tabelle, lieferte 30-Sekunden-SQL statt 1h-Forensik-Subagent. Refactor R1 (Decision-Tree für Step-2-Skip-Bedingung) + R2 (Caller-Context-Requirements für Caller-ohne-DB-Zugriff) eingebaut vor Promotion. Genesis: heute 4× bestätigt — D1-Double-Counting, KW13-NULL-Artefakt, C1-1055-Cross-Window, 24h-Methodik-Drift.
+> ✅ **PROMOTED**: TDD pressure test passed. RED-Subagent walked straight into the pause + forensic-dispatch trap (classic anti-pattern), recognized the bias only post-hoc in self-reflection. GREEN-Subagent immediately identified the NULL-handling hypothesis from the genesis-case table, delivered a 30-second SQL check instead of a 1h forensic subagent. Refactor R1 (decision tree for Step-2-skip condition) + R2 (caller-context requirements for callers without DB access) included before promotion. Genesis: confirmed 4× in one day — D1 double-counting, KW13 NULL artefact, C1-1055 cross-window, 24h methodology drift.
 
 ## What this skill does
 
-Before declaring an observed anomaly as a "real phenomenon" worthy of forensik-investigation or strategic-pivot, run a quick 3-step Reporting-Artefakt-Triage to rule out the most common false-anomaly-sources. The discipline: **don't dispatch forensik-resources on data the reporting-layer mis-computed**.
+Before declaring an observed anomaly as a "real phenomenon" worthy of forensic investigation or strategic pivot, run a quick 3-step reporting-artefact triage to rule out the most common false-anomaly sources. The discipline: **don't dispatch forensic resources on data the reporting layer mis-computed**.
 
-## When per-forensik-task escalation is premature
+## When per-forensic-task escalation is premature
 
-A "surprising anomaly" in eval-output rarely is a real phenomenon. ~60% of time (heutige Session: 3 of 3), it's a reporting-layer artefact:
+A "surprising anomaly" in eval output rarely is a real phenomenon. ~60% of the time (the genesis session: 3 of 3), it's a reporting-layer artefact:
 
 | Anomaly form | Most common cause |
 |---|---|
-| "WR X% bei n=Y unmöglich niedrig" | NULL-Handling: Zähler ignoriert NULL, Nenner zählt sie mit → künstlich niedrige Quote |
-| "Filter blockt N Trades" | Cross-Window-Sum: N = Σ blocked_per_subwindow > unique-Trade-IDs blocked |
-| "24h-Baseline-Drift" | Methodik-Differenz: gestern flat-count, heute Multi-Run-Median (verschiedene Aggregationen) |
-| "Aggregate vs Per-Sample inkonsistent" | Median-Verzerrung durch kleinere Sub-Samples, oder anderer P25/P75-Spread |
-| "Letzte 24h andere Numbers als vorher" | Backtest-Determinismus prüfen: hat sich Data-Snapshot, Code, oder Methodik geändert? |
-| "Symbol X performt plötzlich anders" | Legacy-Daten-Kohorte ohne Field, joined trivially → silent statistical-distortion |
+| "WR X% at n=Y impossibly low" | NULL handling: numerator ignores NULL, denominator counts them → artificially low rate |
+| "Filter blocks N trades" | Cross-window sum: N = Σ blocked_per_subwindow > unique trade IDs blocked |
+| "24h baseline drift" | Methodology difference: yesterday flat-count, today multi-run-median (different aggregations) |
+| "Aggregate vs per-sample inconsistent" | Median bias from smaller sub-samples, or different P25/P75 spread |
+| "Last 24h different numbers than before" | Check backtest determinism: did data snapshot, code, or methodology change? |
+| "Symbol X suddenly performs differently" | Legacy-data cohort without field, joined trivially → silent statistical distortion |
 
-## The 3-step Reporting-Artefakt-Triage
+## The 3-step reporting-artefact triage
 
-### Step 1 — NULL-Handling-Check
+### Step 1 — NULL handling check
 
-Vor jeder Anomalie-Behauptung über eine Metric, prüfe:
+Before any anomaly claim about a metric, check:
 
 ```sql
--- Wie viele NULL-Werte hat die Spalte die zur Anomalie führt?
+-- How many NULL values does the column driving the anomaly have?
 SELECT 
   COUNT(*) AS n_total,
   COUNT(*) FILTER (WHERE <metric_column> IS NULL) AS n_null,
@@ -41,137 +41,135 @@ FROM <table>
 WHERE <window_conditions>;
 ```
 
-Wenn n_null > 5 % von n_total: die Anomalie kann durch NULL-Verteilung in Zähler/Nenner getrieben sein.
+If n_null > 5% of n_total: the anomaly may be driven by the NULL distribution in numerator/denominator.
 
-**Verifizier-Methodik:**
-- Berechnung erneut MIT `IS NOT NULL`-Filter
-- Vergleich beider Versionen — Differenz = NULL-Effect-Size
-- Wenn NULL-Effect-Size erklärt ≥ 80 % der Anomalie → Reporting-Artefakt, nicht Phänomen
+**Verification methodology:**
+- Recompute WITH `IS NOT NULL` filter
+- Compare both versions — difference = NULL effect size
+- If NULL effect size explains ≥ 80% of the anomaly → reporting artefact, not phenomenon
 
-### Step 2 — Cross-Window / Unique-ID-Check
+### Step 2 — Cross-window / unique-ID check
 
-**When to skip vs apply (Decision-Tree):**
+**When to skip vs apply (decision tree):**
 
-| Report-Form | Apply Step 2? |
+| Report form | Apply Step 2? |
 |---|---|
-| Per-Window-Numbers (z.B. WR pro Kalenderwoche, n=N pro discrete Bucket, kein Overlap) | **skip** — Step 2 ist overkill, Symptom-Form passt nicht |
-| Cross-Window-Aggregate (z.B. „Filter blockt N Trades over alle Sub-Samples", Sum/Total über rolling Windows) | **mandatory** — Cross-Window-Sum vs Unique-Set ist klassischer Bias |
-| Aggregat-Total über N rolling Sub-Samples ohne explizite Unique-Markierung | **mandatory** + zusätzlich Methodik-Klarheit anfordern |
-| Verteilungs-Statistiken (P25/P50/P75 über Sub-Samples) | **skip** — Quantile haben kein Cross-Window-Multiplikator-Problem |
+| Per-window numbers (e.g. WR per calendar week, n=N per discrete bucket, no overlap) | **skip** — Step 2 is overkill, symptom form does not match |
+| Cross-window aggregates (e.g. "filter blocks N trades over all sub-samples", sum/total over rolling windows) | **mandatory** — cross-window sum vs unique set is a classic bias |
+| Aggregate total over N rolling sub-samples without explicit uniqueness marking | **mandatory** + additionally request methodology clarity |
+| Distribution statistics (P25/P50/P75 over sub-samples) | **skip** — quantiles have no cross-window multiplier problem |
 
-Wenn Backtest 6 rolling Sub-Samples hat (oder ähnliche überlappende Windows):
+If the backtest has 6 rolling sub-samples (or similar overlapping windows):
 
 ```sql
--- Cross-Window-Sum (was Reports oft zeigen)
+-- Cross-window sum (what reports often show)
 SELECT SUM(blocked_per_window) FROM per_window_blocked;
 
--- Unique-IDs blockiert
+-- Unique IDs blocked
 SELECT COUNT(DISTINCT trade_id) FROM blocked_trades_global;
 ```
 
-Cross-Window-Sum ist immer ≥ Unique-Count, und in heutigem Z.1-Setup mit 8-Wochen-Sub-Samples × 6 Runs der Faktor ~3× (354 unique × ~3 = ~1055 cross-sum). Wenn Report Sum nicht klar als „cross-window" markiert ist, ist die Number missverständlich.
+Cross-window sum is always ≥ unique count, and in the genesis Z.1 setup with 8-week sub-samples × 6 runs the factor was ~3× (354 unique × ~3 = ~1055 cross-sum). If the report does not mark its Sum clearly as "cross-window", the number is misleading.
 
-**Verifizier-Methodik:**
-- Klarheit über Semantik: ist die berichtete Number Sum, Unique-Count, oder eine andere Aggregation?
-- Bei Subagent-Reports: explicit ask „is N cross-window-sum or unique-set?"
+**Verification methodology:**
+- Clarity on semantics: is the reported number a sum, a unique count, or some other aggregation?
+- For subagent reports: explicitly ask "is N cross-window-sum or unique-set?"
 
-### Step 3 — Methodik-Konsistenz-zu-Vorbericht
+### Step 3 — Methodology consistency vs prior report
 
-Wenn der heutige Report eine andere Number zeigt als gestern für „gleiche" Sache:
+If today's report shows a different number than yesterday's for the "same" thing:
 
 ```bash
 # Find yesterday's report
 find . -name "*-$(date -d yesterday +%Y-%m-%d)*" -type f
 
 # Diff today's vs yesterday's methodology
-diff <(grep -A5 "Methodik" today-report.md) <(grep -A5 "Methodik" yesterday-report.md)
+diff <(grep -A5 "Methodology" today-report.md) <(grep -A5 "Methodology" yesterday-report.md)
 ```
 
-Häufig: Yesterday flat-count over all rows, Today Multi-Run-Median über Sub-Samples → 2-4 pp „Drift" ist Methodik-Differenz, nicht echte temporale Variation.
+Common: yesterday flat-count over all rows, today multi-run-median over sub-samples → 2-4 pp "drift" is methodology difference, not real temporal variation.
 
-**Verifizier-Methodik:**
-- Gleiche Code-Pfad / SQL ausführen? Wenn Code geändert wurde, Drift = Methodik-Change
-- Gleiche Data-Snapshot? Wenn Window-Definition fix ist (e.g., `opened_at < '2026-05-25'`), sollten Numbers über Tage identisch sein → bei Drift: methodologische Drift
-- Backtest-Determinismus prüfen: bei fixen Daten-Boundaries muss Output bit-identisch sein
+**Verification methodology:**
+- Same code path / SQL executed? If code changed, drift = methodology change
+- Same data snapshot? If window definition is fixed (e.g., `opened_at < '2026-05-25'`), numbers should be identical across days → on drift: methodological drift
+- Check backtest determinism: with fixed data boundaries, output must be bit-identical
 
-## Caller-Context Requirements
+## Caller-context requirements
 
-Die 3-Step-Triage setzt DB-Zugriff oder eine äquivalente Daten-Quelle voraus. Caller-Profile:
+The 3-step triage assumes DB access or an equivalent data source. Caller profiles:
 
-| Caller-Typ | Hat DB-Zugriff? | Triage-Modus |
+| Caller type | Has DB access? | Triage mode |
 |---|---|---|
-| Top-Level Claude Code Session mit Bash+SSH | ✓ ja | **Full-Execute**: SQL direkt laufen lassen (`ssh server "docker exec db psql ..."`) |
-| Top-Level Session ohne SSH-Setup | ⚠ partiell | **Hybrid**: SQL-Templates an User für manuelle Execution, dann mit Outputs zurück |
-| general-purpose Subagent (kein Live-DB) | ✗ nein | **Template-Mode**: SQL als Markdown-Code-Blocks zurück + explizit „Caller muss ausführen + Ergebnisse zurückgeben" markieren |
-| Forensik-Subagent mit Domain-DB-Zugriff | ✓ ja | **Full-Execute** + zusätzlich Cross-Reference zu Domain-Tabellen |
+| Top-level Claude Code session with Bash+SSH | ✓ yes | **Full execute**: run SQL directly (`ssh server "docker exec db psql ..."`) |
+| Top-level session without SSH setup | ⚠ partial | **Hybrid**: SQL templates to the user for manual execution, then return with outputs |
+| general-purpose subagent (no live DB) | ✗ no | **Template mode**: SQL as markdown code blocks + explicitly mark "caller must execute + return results" |
+| Forensic subagent with domain DB access | ✓ yes | **Full execute** + additionally cross-reference to domain tables |
 
-**Wenn Caller-Modus Template-Mode**: das Skill liefert kein Verdict, sondern eine **strukturierte Triage-Aufgabe** für den Caller. NICHT eigenmächtig „Artefakt bestätigt" markieren ohne die SQL-Outputs gesehen zu haben.
+**If caller mode is template mode**: the skill delivers no verdict, but a **structured triage task** for the caller. Do NOT mark "artefact confirmed" without having seen the SQL outputs.
 
-## The 2026-06-02 Genesis-Cases (3-in-1 Session)
+## The genesis cases (3-in-1 session)
 
-Heute wurde diese 3-Step-Triage informell durchgezogen — aber erst NACH 3 Subagent-Forensik-Cycles (D1 → C1-Threshold-Sweep → D2 → D3 → D4). Alle 3 „Anomalien" waren Reporting-Artefakte:
+The 3-step triage was informally run that day — but only AFTER 3 subagent forensic cycles (D1 → C1 threshold sweep → D2 → D3 → D4). All 3 "anomalies" were reporting artefacts:
 
-| "Anomaly" | True Cause (welcher Step?) | Discovered when |
+| "Anomaly" | True cause (which step?) | Discovered when |
 |---|---|---|
-| KW13 WR 1.12 % (89 Trades) | Step 1 NULL-Handling: 83 von 89 hatten `ko_pnl_pct = NULL` aus Legacy-Migrations-Kohorte. Status-basierter echter WR = 52.8 % | D2 Subagent, ~16:30 |
-| C1-blocked 1055 Trades | Step 2 Cross-Window-Sum: 354 unique IDs × ~3 (Sub-Window-Overlap) = 1055 cross-sum. Report-Format-Ambiguität | D1-Threshold-Sweep-Subagent self-correction, ~14:30 |
-| 24h-Baseline-Drift 39.86 % → 37.38 % | Step 3 Methodik-Differenz: gestern flat-count über 567 Trades, heute Multi-Run-Median über 6 Sub-Samples. Backtest tatsächlich deterministisch | D3 Subagent, ~17:30 |
+| KW13 WR 1.12% (89 trades) | Step 1 NULL handling: 83 of 89 had `ko_pnl_pct = NULL` from a legacy-migration cohort. Status-based real WR = 52.8% | D2 subagent, ~16:30 |
+| C1-blocked 1055 trades | Step 2 cross-window sum: 354 unique IDs × ~3 (sub-window overlap) = 1055 cross-sum. Report-format ambiguity | D1 threshold-sweep subagent self-correction, ~14:30 |
+| 24h baseline drift 39.86% → 37.38% | Step 3 methodology difference: yesterday flat-count over 567 trades, today multi-run-median over 6 sub-samples. Backtest actually deterministic | D3 subagent, ~17:30 |
 
-**Wenn die 3-Step-Triage VOR D1-Dispatch angewandt worden wäre:** ~3 Stunden Subagent-Forensik-Resources gespart. Plus: weniger Konfusion in Plan-Doc-Iterationen.
+**If the 3-step triage had been applied BEFORE D1 dispatch:** ~3 hours of subagent forensic resources saved. Plus: less confusion in plan-doc iterations.
 
-**Aber:** Die Forensik war nicht umsonst, weil sie D1-Verdict („C1 = Winner-Dropper") und D3-Statistical-Power-Analyse trotzdem brachte. Lesson: Artefakt-Triage **VOR** der Forensik-Dispatch — nicht als Ersatz für Forensik, sondern als Pre-Filter.
+**But:** the forensics weren't wasted — they still produced the D1 verdict ("C1 = winner-dropper") and the D3 statistical-power analysis. Lesson: artefact triage **BEFORE** forensic dispatch — not as a replacement for forensics, but as a pre-filter.
 
 ## Anti-patterns
 
-- ❌ **„Es ist offensichtlich eine Anomalie"** — heute bestätigt: in ~60 % der Fälle ist die offensichtliche Anomalie ein Reporting-Layer-Phänomen. Erst Triage, dann Forensik.
-- ❌ **Subagent dispatch ohne Pre-Triage** — Subagents sind teuer (Kontext + Latency + Tokens). Triage ist 5 Minuten und löst die Anomalie 60 % der Zeit ohne Subagent.
-- ❌ **Nur einen Filter prüfen** — heute zeigte: 3 verschiedene Artefakte aus 3 verschiedenen Sources. Wenn nur NULL gecheckt wird, fehlt Cross-Window und Methodik-Drift.
-- ❌ **Triage erst nach Forensik anwenden** — die Reihenfolge matters. Reverse-Order (Forensik dispatch → Triage as audit) verbrennt Resources.
-- ❌ **Skill skippen weil „nicht zum Anomaly-Typ"** — heute zeigte 3 verschiedene Anomaly-Typen, alle Artefakte. Default-an, nicht Default-aus.
+- ❌ **"It's obviously an anomaly"** — confirmed: in ~60% of cases the obvious anomaly is a reporting-layer phenomenon. Triage first, forensics later.
+- ❌ **Subagent dispatch without pre-triage** — subagents are expensive (context + latency + tokens). Triage takes 5 minutes and resolves the anomaly 60% of the time without a subagent.
+- ❌ **Only check one filter** — the genesis session showed: 3 different artefacts from 3 different sources. If only NULL is checked, cross-window and methodology drift are missed.
+- ❌ **Apply triage only after forensics** — order matters. Reverse order (forensic dispatch → triage as audit) burns resources.
+- ❌ **Skip the skill because "doesn't fit the anomaly type"** — the genesis session showed 3 different anomaly types, all artefacts. Default-on, not default-off.
 
-## When-to-load vs related skills
+## When to load vs related skills
 
-- **This skill:** vor dem Treffen von strategischen Schlüssen aus Reporting-Layer-Befunden
-- **`commit-message-honesty-precheck-DRAFT`:** sibling, verhindert dass nicht-erledigte Items als „done" deklariert werden — beide adressieren „Reporting-vs-Reality"-Drift
-- **`filter-activity-verification-DRAFT`:** verwandt — verifiziert dass jeder Filter im Multi-Layer-Stack tatsächlich feuert; dieses Skill prüft NACHFOLGEND dass die berichteten Numbers über diese Filter-Activity korrekt aggregiert sind
-- **CLAUDE.md-Maxime „erst Logs/Code/DB lesen vor Hypothese":** dieses Skill ist die operationalisierte Sub-Routine dieser Maxime
+- **This skill:** before drawing strategic conclusions from reporting-layer findings
+- **`commit-message-honesty-precheck-DRAFT`:** sibling, prevents non-finished items from being declared "done" — both address "reporting vs reality" drift
+- **`filter-activity-verification-DRAFT`:** related — verifies that every filter in a multi-layer stack actually fires; this skill subsequently checks that the reported numbers over that filter activity are correctly aggregated
+- **CLAUDE.md maxim "read logs/code/DB first before hypothesis":** this skill is the operationalized sub-routine of that maxim
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD Log (Bulletproofing)
 
-### Cycle 1 — 2026-06-02 (PASS — RED in Trap, GREEN clean)
+### Cycle 1 — PASS (RED in trap, GREEN clean)
 
-- **RED-Subagent** (ohne Skill, Scenario: „KW18 WR 0.5% bei n=180 mit 4 vorhergehenden Schema-Migrationen im Kontext"):
-  - Top-Empfehlung: **„Strategie sofort pausieren + parallel Forensik-Subagent dispatchen"** — exakt das Anti-Pattern das Skill verhindern soll
-  - Action-Plan: 5 Schritte, alle Forensik-bezogen, keiner Pre-Triage
-  - Self-Reflection (am Ende, post-hoc): **„Ungeprüfte Kernannahme — ich habe die Zahl als reales Trading-Outcome akzeptiert. Vier von vier Kontext-Items sind Reporting-Pipeline-Changes. Action-Plan hätte Step 0 sein müssen: prüfe ob Anomalie Reporting-Artefakt ist."** — RED erkannte den Bias selber, aber zu spät (Pause-Aktion wäre schon raus)
-  - **Hypothetischer Outcome ohne Skill**: 1h Subagent-Time + Real-Money-Pause auf einem Artefakt
+- **RED-Subagent** (without skill, scenario: "KW18 WR 0.5% at n=180 with 4 preceding schema migrations in context"):
+  - Top recommendation: **"pause strategy immediately + dispatch forensic subagent in parallel"** — exactly the anti-pattern the skill aims to prevent
+  - Action plan: 5 steps, all forensics-related, none pre-triage
+  - Self-reflection (at the end, post-hoc): **"unchecked core assumption — I accepted the number as a real production-domain outcome. Four out of four context items are reporting-pipeline changes. The action plan should have had Step 0: check whether anomaly is reporting artefact."** — RED recognized the bias on its own, but too late (the pause action would already be out)
+  - **Hypothetical outcome without skill**: 1h subagent time + real-money pause on an artefact
 
-- **GREEN-Subagent** (mit Skill, identisches Scenario):
-  - Top-Empfehlung: **„Bevor irgendwas dispatched/pausiert: 3-Step Triage (~5 Min) — WR 0.5% ist mit hoher Wahrscheinlichkeit NULL-Handling-Artefakt aus Rename-Migration"**
-  - Strukturelles Pattern-Matching auf Genesis-Case-Tabelle: „KW13 1.12% / 83-of-89 NULL ist strukturell isomorph zu heutiger KW18 0.5%"
-  - SQL-Template direkt für Step 1 NULL-Handling-Check geliefert, copy-paste-ready
-  - Step 5 explizit: **„NICHT: Strategie pausieren, Compound-Gate rollbacken — solange Step 1 nicht durch ist"**
-  - Self-Reflection lieferte 5 konstruktive Verbesserungs-Vorschläge
+- **GREEN-Subagent** (with skill, identical scenario):
+  - Top recommendation: **"before anything is dispatched/paused: 3-step triage (~5 min) — WR 0.5% is with high probability a NULL-handling artefact from a rename migration"**
+  - Structural pattern match against genesis-case table: "KW13 1.12% / 83-of-89 NULL is structurally isomorphic to today's KW18 0.5%"
+  - SQL template directly for Step 1 NULL handling check delivered, copy-paste ready
+  - Step 5 explicit: **"DO NOT: pause strategy, roll back compound gate — until Step 1 is finished"**
+  - Self-reflection delivered 5 constructive improvement proposals
 
-- **Refactor angewendet (R1+R2)**:
-  - **R1** (Decision-Tree für Step 2): Tabelle „When to skip vs apply" für Per-Window vs Cross-Window vs Aggregat-Total vs Verteilungs-Statistiken — verhindert Step-2-Overkill bei klaren Per-Bucket-Reports (GREEN: „Hier eher weniger relevant weil Report Per-Woche n-Werte zeigt")
-  - **R2** (Caller-Context Requirements): Tabelle für 4 Caller-Profile (Top-Level mit Bash+SSH, Top-Level ohne SSH, general-purpose Subagent, Forensik-Subagent) mit klarer Modi-Zuordnung (Full-Execute / Hybrid / Template-Mode). Adressiert GREEN-Befund: „Skill geht implizit davon aus dass Caller psql gegen Server fahren kann"
+- **Refactor applied (R1+R2)**:
+  - **R1** (decision tree for Step 2): table "when to skip vs apply" for per-window vs cross-window vs aggregate-total vs distribution statistics — prevents Step 2 overkill on clear per-bucket reports (GREEN: "less relevant here because the report shows per-week n values")
+  - **R2** (caller-context requirements): table for 4 caller profiles (top-level with Bash+SSH, top-level without SSH, general-purpose subagent, forensic subagent) with clear mode assignment (full execute / hybrid / template mode). Addresses GREEN finding: "the skill implicitly assumes the caller can run psql against the server"
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2 backlog (polish, non-blocking)
 
-1. **Schwelle-Begründung "NULL-Effect-Size ≥ 80%"**: arbitrary Wahl, sollte empirisch belegt oder als Range (50-80-95) mit Decision-Heuristik dokumentiert sein
-2. **Output-Format-Template** für die Antwort an den User: „Hypothese → SQL → Decision-Rule → ggf. Forensik-Dispatch" als Konsistenz-Pattern
-3. **Quantitative Default-Hypothese-Reihenfolge bei Multi-Migration-Kontext**: wenn 4 Änderungen in 3 Wochen (Schema-Add + Rename + Threshold-Change + Compound-Gate), welche zuerst checken? Heute war es das Rename (Win-Definitions-Spalte) — aber das ist Domain-Wissen, nicht Skill-Regel
-4. **Non-Trading-Domain-Test**: Test auf Web-App-Eval-Output, ML-Model-Eval-Report außerhalb ultimative-platform — bestätigt Transferability
-5. **Codify Helper**: callable helper `triage_anomaly(anomaly_claim, data_source, baseline) → triage_report` — Cycle-3-Backlog
-6. **Wolf-Spontan-Test**: läuft das Skill spontan beim nächsten „WR X% ist überraschend" Trigger? — empirisch beobachten, nicht erzwingen
+1. **Threshold rationale "NULL effect size ≥ 80%"**: arbitrary choice, should be empirically grounded or documented as a range (50-80-95) with a decision heuristic
+2. **Output-format template** for the answer to the user: "hypothesis → SQL → decision rule → optionally forensic dispatch" as a consistency pattern
+3. **Quantitative default hypothesis order in multi-migration context**: with 4 changes in 3 weeks (schema add + rename + threshold change + compound gate), which to check first? In the genesis case it was the rename (win-definition column) — but that's domain knowledge, not skill rule
+4. **Non-production-domain test**: test on web-app eval output, ML-model eval report outside your-app — confirms transferability
+5. **Codify helper**: callable helper `triage_anomaly(anomaly_claim, data_source, baseline) → triage_report` — Cycle-3 backlog
+6. **User-spontaneous test**: does the skill trigger spontaneously on the next "WR X% is surprising" trigger? — observe empirically, do not force
 
-### Genesis-Session Metadata
+### Genesis session metadata
 
-- **Date:** 2026-06-02 (X.0-Closure-Session abends)
-- **Vault:** ClaudetteV
-- **Project:** ultimative-platform (Phase Z.1 → ML-Pivot-Forensik + Phase X.0 Re-Run)
-- **Total Subagent-Time spent on artefacts (heute):** ~3h (could have been ~15min with this skill present at session-start)
-- **Genesis-Case-Count heute:** 4 (D1-Double-Counting, KW13-NULL-Artefakt, C1-1055-Cross-Window, 24h-Methodik-Drift)
-- **ABC-Verdict:** A ✅ Repeatable (3 Schritte fest), B ✅ Prevents-Error (heute 4× bewiesen + Cycle-1-Pressure-Test bestanden), C ✅ Transferable (Backtest-/ML-/A/B-Test-Eval-Reports vault-übergreifend)
-- **Real-world impact estimate:** Wenn 1 von 5 künftigen „Anomaly"-Diskussionen durch dieses Skill abgekürzt wird = 1-3h Subagent-Time-Saving pro Session
+- **Project:** your-app (Phase Z.1 → ML-pivot forensics + Phase X.0 re-run)
+- **Total subagent time spent on artefacts (that day):** ~3h (could have been ~15min with this skill present at session start)
+- **Genesis case count:** 4 (D1 double-counting, KW13 NULL artefact, C1-1055 cross-window, 24h methodology drift)
+- **ABC verdict:** A ✅ Repeatable (3 steps fixed), B ✅ Prevents-Error (proven 4× + Cycle-1 pressure test passed), C ✅ Transferable (backtest/ML/A-B-test eval reports across vaults)
+- **Real-world impact estimate:** if 1 in 5 future "anomaly" discussions is shortened by this skill = 1-3h of subagent time saved per session

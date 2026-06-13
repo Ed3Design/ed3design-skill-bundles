@@ -1,265 +1,261 @@
 ---
 name: bash-output-filtering-disciplines
-description: Use BEFORE running any Bash command that could produce more than ~50 lines of stdout: `docker logs`, `docker ps -a` (long format), `git log` (full history), `find` (deep tree), `ps aux`, `psql -c "SELECT * FROM ..."`, `cat large.log`, `ls -la` (deep dirs), `journalctl`, `dmesg`, `kubectl logs`, `du -a`. STOP and apply head/tail/grep/wc/jq/awk/sed pre-filters in the SAME command pipeline — never let raw output flow into the conversation context. Every line above the relevant data is wasted Tokens that accumulate over a session (heute morgen ~50k Tokens für Container-Status alleine). Trigger phrases like „docker logs Container X", „git log angucken", „find Files mit Pattern", „ps aux", „journalctl", „SELECT * FROM tabelle", „komplette Logs durchsuchen", „was alles im Verzeichnis liegt", „ls auf großem Folder", „warum ist meine Session-Token-Verbrauch hoch". Do NOT apply when the user EXPLICITLY asked for full output („zeig mir den kompletten Output", „bitte unfiltered"), for commands that are inherently small (`whoami`, `pwd`, `uname -a`, `date`), for one-shot value-extractions (`echo $VAR`, `grep -m1 PATTERN file`), or when piping to a file (`cmd > /tmp/full.txt` — file-write is fine, follow-up Read can be filtered). Encodes Wolf-Token-Optimierung-Pain from 11.06.2026: Vormittag-Session ~30k Tokens nur Bash-Tool-Outputs (Cockpit + docker ps + docker logs ohne tail), Brain-Dump-Item „kritische Analyse der Token-Nutzung" als Wolf-Maxime.
+description: Use BEFORE running any Bash command that could produce more than ~50 lines of stdout: `docker logs`, `docker ps -a` (long format), `git log` (full history), `find` (deep tree), `ps aux`, `psql -c "SELECT * FROM ..."`, `cat large.log`, `ls -la` (deep dirs), `journalctl`, `dmesg`, `kubectl logs`, `du -a`. STOP and apply head/tail/grep/wc/jq/awk/sed pre-filters in the SAME command pipeline — never let raw output flow into the conversation context. Every line above the relevant data is wasted tokens that accumulate over a session (a single morning session can burn ~50k tokens just on container status). Trigger phrases like "docker logs of container X", "look at git log", "find files with pattern", "ps aux", "journalctl", "SELECT * FROM table", "search complete logs", "what is in the directory", "ls on a large folder", "why is my session token consumption high". Do NOT apply when the user EXPLICITLY asked for full output ("show me the complete output", "unfiltered please"), for commands that are inherently small (`whoami`, `pwd`, `uname -a`, `date`), for one-shot value-extractions (`echo $VAR`, `grep -m1 PATTERN file`), or when piping to a file (`cmd > /tmp/full.txt` — file-write is fine, follow-up Read can be filtered). Encodes token-optimization pain: a morning session burning ~30k tokens purely on Bash-tool outputs (cockpit + docker ps + docker logs without tail).
 
 ---
 
 # Bash Output Filtering Disciplines
 
-> ✅ **PROMOTED 2026-06-12** via TDD-Cycle. RED-Subagent reflektierte selbst „mein Default ist deutlich nicht token-effizient — 50× mehr Tokens als nötig". GREEN-Subagent erreichte mit Skill **~98% Saving** (~500 Tokens statt ~50k) via 1 SSH-Call mit server-side for-loop statt 5× sequenzielle SSH-Calls.
+> ✅ **PROMOTED** via TDD-Cycle. RED-Subagent reflected: "my default is significantly not token-efficient — 50x more tokens than necessary". GREEN-Subagent achieved with skill **~98% saving** (~500 tokens instead of ~50k) via 1 SSH-Call with server-side for-loop instead of 5 sequential SSH calls.
 
 ## Overview
 
-**Pain-Anker**: Wolf-Token-Optimierungs-Session 11.06.2026 — ein einziger Health-Check-Sweep verbrennt ~15-20k Tokens nur durch unfilterte Bash-Outputs (Container-Listen, Logs ohne tail, SELECT * statt count, find ohne head). Über 30 Trading-Sessions/Monat ≈ ~500k Tokens reine Boilerplate.
+**Pain anchor**: a single health-check sweep can burn ~15-20k tokens just from unfiltered Bash outputs (container lists, logs without tail, SELECT * instead of count, find without head). Over 30 sessions/month ≈ ~500k tokens of pure boilerplate.
 
-**Core-Disziplin**: Filter **in derselben Command-Pipeline**, nicht „ich filtere mental nach dem Lesen". Sobald Output im Conversation-Context ist, sind die Tokens verbraucht — egal ob du es liest oder nicht.
+**Core discipline**: Filter **in the same command pipeline**, not "I'll filter mentally after reading". Once output is in the conversation context, the tokens are consumed — whether you read them or not.
 
 ## When to Trigger
 
-✅ **JA — Filter-first:**
-- Command könnte > 50 Output-Lines produzieren
-- Command hat `*`-Wildcard oder Tree-Recursion (`find /`, `ls -laR`)
-- DB-Query ohne `LIMIT`, `count(*)` oder `EXPLAIN`
-- Log-Reading ohne `--tail` / `--since`
-- Process-Listing ohne `grep PROCESS_NAME`
-- File-Listing in unbekanntem (potentiell großem) Verzeichnis
+✅ **YES — Filter-first:**
+- Command could produce > 50 output lines
+- Command has `*`-wildcard or tree-recursion (`find /`, `ls -laR`)
+- DB-query without `LIMIT`, `count(*)` or `EXPLAIN`
+- Log-reading without `--tail` / `--since`
+- Process-listing without `grep PROCESS_NAME`
+- File-listing in unknown (potentially large) directory
 
-❌ **NEIN — voll OK:**
-- User sagte explizit „kompletter Output bitte"
-- One-shot Value-Extract (`whoami`, `date`, `pwd`, `echo $VAR`)
-- Tool-Output ist bekannt-klein (< 50 Lines garantiert)
-- Pipe-to-File für später (`cmd > /tmp/x.txt` → Read mit `offset+limit` danach)
+❌ **NO — fully OK:**
+- User explicitly said "complete output please"
+- One-shot value-extract (`whoami`, `date`, `pwd`, `echo $VAR`)
+- Tool-output is known-small (< 50 lines guaranteed)
+- Pipe-to-file for later (`cmd > /tmp/x.txt` → Read with `offset+limit` afterwards)
 
-## Pattern-Katalog
+## Pattern Catalog
 
-### 1. `docker logs` — IMMER mit `--tail` ODER `--since`
+### 1. `docker logs` — ALWAYS with `--tail` OR `--since`
 
 ```bash
-# ❌ schlimm: alle Logs seit Container-Start
-docker logs ultimative-trader
+# ❌ bad: all logs since container start
+docker logs your-app
 
-# ✅ gut: letzte 50 Zeilen
-docker logs --tail 50 ultimative-trader
+# ✅ good: last 50 lines
+docker logs --tail 50 your-app
 
-# ✅ besser: zeitlich begrenzt
-docker logs --since 30m ultimative-trader
+# ✅ better: time-bounded
+docker logs --since 30m your-app
 
-# ✅ am besten: + grep für relevant
-docker logs --since 1h ultimative-trader 2>&1 | grep -iE "error|warning" | tail -20
+# ✅ best: + grep for relevant
+docker logs --since 1h your-app 2>&1 | grep -iE "error|warning" | tail -20
 ```
 
-### 2. `docker ps` — Format einschränken
+### 2. `docker ps` — restrict format
 
 ```bash
-# ❌ schlimm: Full-Format mit viel Whitespace
+# ❌ bad: full format with lots of whitespace
 docker ps -a
 
-# ✅ gut: nur Name + Status
+# ✅ good: only name + status
 docker ps --format "table {{.Names}}\t{{.Status}}"
 
-# ✅ besser für 1-Line-Health-Check:
+# ✅ better for 1-line health-check:
 docker ps --format "{{.Names}}: {{.Status}}" | grep -v healthy
-# → zeigt NUR unhealthy/restarting Container
+# → shows ONLY unhealthy/restarting containers
 ```
 
-### 3. `git log` — IMMER mit `-n N` oder `--oneline`
+### 3. `git log` — ALWAYS with `-n N` or `--oneline`
 
 ```bash
-# ❌ schlimm: ganze Historie mit Vollformat
+# ❌ bad: full history with full format
 git log
 
-# ✅ gut: 10 letzte Commits einzeilig
+# ✅ good: 10 latest commits one-line
 git log --oneline -n 10
 
-# ✅ besser: nur SHA + Subject + Datum
+# ✅ better: only SHA + subject + date
 git log --pretty=format:"%h %ad %s" --date=short -n 20
 ```
 
-### 4. `find` — IMMER mit Output-Cap
+### 4. `find` — ALWAYS with output-cap
 
 ```bash
-# ❌ schlimm: kann tausende Files dumpen
+# ❌ bad: can dump thousands of files
 find <your-project-dir> -name "*.py"
 
-# ✅ gut: max 20 Files
+# ✅ good: max 20 files
 find <your-project-dir> -name "*.py" | head -20
 
-# ✅ besser: nur Count
+# ✅ better: just count
 find <your-project-dir> -name "*.py" | wc -l
 
-# ✅ am besten: Use Glob-Tool für Vault/Repo-Searches (Token-cheaper als find+pipe)
+# ✅ best: use Glob tool for vault/repo searches (token-cheaper than find+pipe)
 ```
 
 ### 5. `psql` — `LIMIT`, `count(*)`, `--csv`
 
 ```bash
-# ❌ schlimm: könnte 10.000 Rows zurückgeben
-psql -c "SELECT * FROM v3_trades"
+# ❌ bad: could return 10,000 rows
+psql -c "SELECT * FROM trades"
 
-# ✅ gut: LIMIT + relevante Spalten
-psql -c "SELECT id, symbol, status FROM v3_trades ORDER BY id DESC LIMIT 10"
+# ✅ good: LIMIT + relevant columns
+psql -c "SELECT id, symbol, status FROM trades ORDER BY id DESC LIMIT 10"
 
-# ✅ besser: Aggregat statt Rows
-psql -c "SELECT count(*), status FROM v3_trades GROUP BY status"
+# ✅ better: aggregate instead of rows
+psql -c "SELECT count(*), status FROM trades GROUP BY status"
 
-# ✅ Output-Format für Subagent-Verarbeitung
-psql --csv -c "SELECT id, symbol FROM v3_trades LIMIT 10"
+# ✅ output format for subagent processing
+psql --csv -c "SELECT id, symbol FROM trades LIMIT 10"
 ```
 
-### 6. `ps aux` — IMMER mit `grep`
+### 6. `ps aux` — ALWAYS with `grep`
 
 ```bash
-# ❌ schlimm: alle Prozesse des Systems
+# ❌ bad: all processes on the system
 ps aux
 
-# ✅ gut: nur der Prozess der interessiert
+# ✅ good: only the process of interest
 ps aux | grep -i python | grep -v grep | head -5
 ```
 
-### 7. `journalctl` / `dmesg` — Zeit-Filter
+### 7. `journalctl` / `dmesg` — time filter
 
 ```bash
-# ❌ schlimm: alle Boot-Logs
+# ❌ bad: all boot logs
 journalctl
 
-# ✅ gut: nur letzte Stunde, nur Errors
+# ✅ good: only last hour, only errors
 journalctl --since "1 hour ago" -p err --no-pager | tail -50
 ```
 
-### 8. `cat large.log` / Full-File-Read
+### 8. `cat large.log` / full-file-read
 
 ```bash
-# ❌ schlimm: dumpt komplette Log-Datei in Context
+# ❌ bad: dumps complete log file into context
 cat /var/log/app.log
 
-# ✅ gut: nur Ende
+# ✅ good: just end
 tail -100 /var/log/app.log
 
-# ✅ besser: nur relevante Lines
+# ✅ better: only relevant lines
 tail -1000 /var/log/app.log | grep -iE "error|critical"
 
-# ✅ für Read-Tool: offset + limit nutzen
+# ✅ for Read-tool: use offset + limit
 # Read file_path="/var/log/app.log" offset=5000 limit=200
 ```
 
-### 9. JSON-Output — `jq -c` für one-line
+### 9. JSON output — `jq -c` for one-line
 
 ```bash
-# ❌ schlimm: pretty-printed JSON mit jeder Zeile expanded
+# ❌ bad: pretty-printed JSON with each line expanded
 curl http://api/data
 
-# ✅ gut: compact one-line per Object
+# ✅ good: compact one-line per object
 curl -s http://api/data | jq -c '.[]' | head -20
 
-# ✅ besser: nur relevante Felder
+# ✅ better: only relevant fields
 curl -s http://api/data | jq -c '.[] | {id, status}' | head -20
 ```
 
-### 10. `ls -la` auf großen Folders
+### 10. `ls -la` on large folders
 
 ```bash
-# ❌ schlimm: alles
+# ❌ bad: everything
 ls -la ~/.claude/skills/
 
-# ✅ gut: nur Verzeichnis-Count
+# ✅ good: only directory count
 ls ~/.claude/skills/ | wc -l
 
-# ✅ besser: Namen einspaltig
+# ✅ better: names single-column
 ls ~/.claude/skills/ | head -20
 ```
 
-### 11. `du -sh` statt `du -a`
+### 11. `du -sh` instead of `du -a`
 
 ```bash
-# ❌ schlimm: jeden File einzeln
+# ❌ bad: every file individually
 du -a ~/Downloads
 
-# ✅ gut: nur Summary
+# ✅ good: just summary
 du -sh ~/Downloads
 
-# ✅ Top-10 größte Dirs
+# ✅ top-10 largest dirs
 du -sh ~/Downloads/* | sort -rh | head -10
 ```
 
-### 12. `wc -l` als Vorab-Probe
+### 12. `wc -l` as a pre-probe
 
-Wenn unklar ob Output groß ist:
+When unclear whether output is large:
 
 ```bash
-# Probe zuerst (ein Integer-Output)
+# Probe first (one integer output)
 cmd | wc -l
-# → wenn < 50: cmd ohne Filter
-# → wenn > 50: Filter dazu
+# → if < 50: cmd without filter
+# → if > 50: add filter
 ```
 
-## Heuristik: Wann welcher Filter
+## Heuristic: which filter when
 
-| Output-Typ | Default-Filter | Begründung |
+| Output type | Default filter | Rationale |
 |---|---|---|
-| Logs (zeitlich) | `--tail 50` oder `--since 30m` | Recent ist meistens relevanter als Historie |
-| Logs (Pattern) | `grep -iE "error\|warn" \| tail -20` | Pre-Filter ERROR-Klasse |
-| Listen (Files, Container, Prozesse) | `\| head -20` | Sample reicht für Übersicht |
-| Listen (Count gefragt) | `\| wc -l` | Nur die Zahl |
-| Tables (DB) | `LIMIT 10` oder `count(*)` | Volldumps sind selten produktiv |
-| JSON-Streams | `jq -c '.field' \| head -20` | Compact + relevant |
-| Find/Search | `\| head -20` | Erste Treffer reichen, sonst Pattern verfeinern |
+| Logs (time-based) | `--tail 50` or `--since 30m` | Recent is usually more relevant than history |
+| Logs (pattern) | `grep -iE "error\|warn" \| tail -20` | Pre-filter ERROR class |
+| Lists (files, containers, processes) | `\| head -20` | Sample suffices for overview |
+| Lists (count asked) | `\| wc -l` | Only the number |
+| Tables (DB) | `LIMIT 10` or `count(*)` | Full dumps are rarely productive |
+| JSON streams | `jq -c '.field' \| head -20` | Compact + relevant |
+| Find/search | `\| head -20` | First hits suffice, otherwise refine pattern |
 
 ## Anti-Patterns
 
-| Anti-Pattern | Was statt dessen |
+| Anti-Pattern | What to do instead |
 |---|---|
-| `cmd > /tmp/x.txt && cat /tmp/x.txt` | File-Write OK, danach `Read offset+limit` oder `tail/head` direkt |
-| Re-Run desselben Commands „weil ich's nochmal sehen will" | Output ist in History — recall, nicht re-run |
-| `docker logs container \| less` | `less` macht nichts für Token-Context (kein interactive Reader im Bash-Tool) |
-| `find / -name "X"` ohne Cap | IMMER `\| head`, oder besser Glob-Tool |
-| `psql -c "SELECT *"` | `LIMIT` oder `count` — sonst Memory + Token-Burn |
-| Verlassen auf User-Confirm „passt, kannst du die letzten 10 zeigen?" | Pre-Filtern, dann ggf. „weitere bei Bedarf"-Note |
-| Fünf SSH+docker exec-Calls statt 1 HTTP-Aggregator-Call | wenn MCP/Health-Aggregator existiert: nutzen statt SSH-Chain |
-| Output `2>&1` ohne Stderr-Need | Stderr nur dann mergen wenn man Errors mitlesen will |
+| `cmd > /tmp/x.txt && cat /tmp/x.txt` | File-write OK, then `Read offset+limit` or `tail/head` directly |
+| Re-running the same command "because I want to see it again" | Output is in history — recall, don't re-run |
+| `docker logs container \| less` | `less` does nothing for token-context (no interactive reader in Bash tool) |
+| `find / -name "X"` without cap | ALWAYS `\| head`, or better Glob tool |
+| `psql -c "SELECT *"` | `LIMIT` or `count` — otherwise memory + token burn |
+| Relying on user-confirm "ok, can you show the last 10?" | Pre-filter, then optionally "more on request"-note |
+| Five SSH+docker exec calls instead of 1 HTTP aggregator call | If MCP/health aggregator exists: use it instead of SSH chain |
+| Output `2>&1` without stderr-need | Stderr only merge when you want to read errors along |
 
 ## Cost-of-Skipping
 
-Empirie aus Wolf-Sessions 06/2026 (geschätzt):
+Empirical estimates from work sessions:
 
-| Operation | ohne Skill (typisch) | mit Skill | Saving |
+| Operation | without skill (typical) | with skill | Saving |
 |---|---|---|---|
-| Container-Health-Check (5 Container) | ~3-5k (`docker ps -a` + 5× `docker inspect`) | ~200 (`docker ps --format "..."`) | **~95%** |
-| Recent-Error-Sweep | ~5-8k (`docker logs` ungefiltert × N Container) | ~500-800 (`docker logs --since 30m \| grep ERROR \| tail -20`) | **~90%** |
-| Git-Log-Review pro Repo | ~2-3k | ~200 (`git log --oneline -n 10`) | **~93%** |
-| Find-Suche im großen Tree | ~3-10k | ~300 (`\| head -20` oder Glob-Tool) | **~95%** |
-| DB-Trade-Statistik | ~800-2000 (`SELECT *`) | ~50-100 (`count(*)`) | **~95%** |
+| Container health check (5 containers) | ~3-5k (`docker ps -a` + 5× `docker inspect`) | ~200 (`docker ps --format "..."`) | **~95%** |
+| Recent-error sweep | ~5-8k (`docker logs` unfiltered × N containers) | ~500-800 (`docker logs --since 30m \| grep ERROR \| tail -20`) | **~90%** |
+| Git-log review per repo | ~2-3k | ~200 (`git log --oneline -n 10`) | **~93%** |
+| Find search in large tree | ~3-10k | ~300 (`\| head -20` or Glob tool) | **~95%** |
+| DB trade statistic | ~800-2000 (`SELECT *`) | ~50-100 (`count(*)`) | **~95%** |
 
-**Hochrechnung**: 30 Trading-Sessions/Monat × 3-5 dieser Operations pro Session × 5k saved = **~450-750k Tokens/Monat strukturell vermieden**. Bei Fable-Pay-per-Use (ab 23.06.) ≈ $5-8/Monat saved. Bei Opus im Plan: bewahrt Plan-Limit vor Boilerplate-Burn.
+**Projection**: 30 sessions/month × 3-5 of these operations per session × 5k saved = **~450-750k tokens/month structurally avoided**.
 
 ## Connection to other Skills
 
-- **`db-telemetry-primary-docker-logs-secondary`** (GA): Skill predigt Vault-DB-Telemetry **statt** Docker-Logs als primary. Dieses Skill ist die ergänzende Disziplin **wenn** Docker-Logs gebraucht werden (secondary).
-- **`Sub-Agent-Modell-Matrix`** (Vault-Notiz): Bulk-Smoketest-Subagents nutzen Haiku — wenn Bash-Output groß bleibt, multipliziert sich der Token-Cost pro Subagent. Filter-Disziplin reduziert Subagent-Cost ebenfalls.
-- **`reporting-artefact-detection-before-claiming-anomaly`** (GA): bevor Anomalie behauptet wird, prüfe ob die Bash-Output-Sample groß genug war (Anti-Pattern: aus 5 grep-Treffern Anomalie ableiten).
-- **`code-review-chunk-dispatch`** (GA): Code-Review-Subagents geben Output zurück — wenn jeder Subagent Bash-Output rohgreift, mehrfacher Token-Burn.
-- **`enum-known-values-via-insert-grep`** (GA): wenn dieser Skill `grep -rn ... | head -20` macht (statt all), bleibt sein eigener Cost klein.
+- **`db-telemetry-primary-docker-logs-secondary`** (GA): preaches DB-telemetry as primary **instead of** Docker logs. This skill is the complementary discipline **when** Docker logs are needed (secondary).
+- **Sub-Agent model matrix**: bulk-smoketest subagents use lightweight models — if Bash-output stays large, token-cost multiplies per subagent. Filter discipline reduces subagent cost too.
+- **`reporting-artefact-detection-before-claiming-anomaly`** (GA): before claiming an anomaly, check whether the Bash-output sample was large enough (anti-pattern: deriving anomaly from 5 grep hits).
+- **`code-review-chunk-dispatch`** (GA): code-review subagents return output — if each subagent dumps raw Bash-output, multiplied token burn.
+- **`enum-known-values-via-insert-grep`** (GA): when this skill does `grep -rn ... | head -20` (instead of all), its own cost stays small.
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing-Log)
 
-### Cycle 1 — 2026-06-12 (PASS — 98% Token-Saving validiert)
+### Cycle 1 — PASS (98% Token-Saving validated)
 
-- **RED-Subagent** (ohne Skill, Scenario: Health-Check 5 ultimative-Container auf swatserver via SSH): Schrieb 5 sequenzielle SSH-Calls (`docker logs --since 30m | grep error` ohne `| head`, `--tail 100` „falls Wolf nachfragt" Reflex), schätzte 6k-28k Token-Verbrauch. Self-Assessment: „deutlich nicht token-effizient — 20-50× mehr Tokens als der effiziente Approach". Hat selbst den korrekten Approach formuliert („`for c in ...; do ... done` in EINEM SSH-Call") — aber **nur als nachträgliche Reflexion**, nicht als Default.
+- **RED-Subagent** (without skill, scenario: health-check 5 containers on a server via SSH): wrote 5 sequential SSH calls (`docker logs --since 30m | grep error` without `| head`, `--tail 100` "in case user asks" reflex), estimated 6k-28k token consumption. Self-assessment: "significantly not token-efficient — 20-50x more tokens than the efficient approach". Itself formulated the correct approach ("`for c in ...; do ... done` in ONE SSH call") — but **only as retrospective reflection**, not as default.
 
-- **GREEN-Subagent** (mit Skill via Read-Tool, gleiche Aufgabe): 1 SSH-Call mit server-side `for`-Loop, `docker ps --format "{{.Names}}: {{.Status}}"`, `--since 30m | grep -iE "error|critical" | tail -5`. Token-Verbrauch ~500 Tokens vs ~50k naiv = **~98% Saving empirisch**. Identifizierte Skill-Lücke: SSH-Multiplex-Pattern nicht explizit dokumentiert (aus Anti-Pattern abgeleitet).
+- **GREEN-Subagent** (with skill via Read tool, same task): 1 SSH call with server-side `for`-loop, `docker ps --format "{{.Names}}: {{.Status}}"`, `--since 30m | grep -iE "error|critical" | tail -5`. Token consumption ~500 tokens vs ~50k naïve = **~98% saving empirically**. Identified skill gap: SSH-multiplex pattern not explicitly documented (derived from anti-pattern).
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2-Backlog (Polish, non-blocking)
 
-1. **SSH-Multiplex-Pattern als Item #13** — `ssh host 'for ...; do ...; done'` statt 5× `ssh host '...'`. SSH-Connection-Setup-Cost vermeiden
-2. **`docker compose ps`-Variante** als Alternative zu `docker ps --format`
-3. **Health-Check via curl**: `curl -sf http://host:port/healthz` wenn Container `/healthz` exposed — billiger als Logs lesen. Cross-Link zu `traefik-internal-route-probe`
-4. **Container-Set-Prefix-Filter** wenn `docker ps` >50 Container zeigt (Swarm-Node-Edge-Case)
+1. **SSH-multiplex pattern as Item #13** — `ssh host 'for ...; do ...; done'` instead of 5× `ssh host '...'`. Avoid SSH-connection-setup cost
+2. **`docker compose ps`-variant** as alternative to `docker ps --format`
+3. **Health-check via curl**: `curl -sf http://host:port/healthz` when container exposes `/healthz` — cheaper than reading logs. Cross-link to `traefik-internal-route-probe`
+4. **Container-set prefix filter** when `docker ps` shows >50 containers (swarm-node edge case)
 
-## Quell-Triggers
+## Source triggers
 
-- Wolf-Token-Optimierung Sprint 1 Item 3 (11.06.2026) — Brain-Dump-Item „kritische Analyse der Token-Nutzung"
-- Empirie aus Vormittag-Session 11.06.: ~30k Tokens nur Bash-Outputs (Cockpit + Container-Status + docker logs)
-- Pattern-Sammlung aus 145-Session-Workflow-Review (`AI & Machine Learning.md` Lessons-Sektion)
-
----
-
-_Erstellt 2026-06-11 ~Abend nach Sub-Agent-Modell-Matrix (Sprint 1 Item 2 erledigt). Status DRAFT, Promotion via `skill-tdd-promotion-workflow` als Backlog-Item Sprint 3._
+- Token-optimization sprint item: critical analysis of token usage
+- Empirical observation: ~30k tokens just for Bash outputs in a single morning session (cockpit + container status + docker logs)
+- Pattern collection from a long-running workflow review

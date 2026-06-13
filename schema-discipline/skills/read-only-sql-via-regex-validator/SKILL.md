@@ -1,6 +1,6 @@
 ---
 name: read-only-sql-via-regex-validator
-description: Use when exposing a read-only SQL endpoint to a less-trusted caller (Browser via HTTP, MCP-Tool to LLM, internal Dashboard with copy-paste-able query box, future API consumer). The endpoint accepts a SQL string and must reject all mutating statements before executing. Encodes the regex-based denylist+allowlist pattern from 2026-06-11 ultimative-health Phase-G `/health/sql` endpoint: (1) strip SQL comments (`--` and `/* */`) BEFORE matching to prevent comment-smuggle bypass, (2) normalize whitespace + uppercase, (3) denylist regex for INSERT/UPDATE/DELETE/DROP/CREATE/ALTER/TRUNCATE/CALL, (4) allowlist regex for SELECT/WITH/EXPLAIN/ANALYZE start-token. Trigger phrases like "read-only SQL endpoint", "SELECT-only API", "SQL escape hatch", "DB-Query als HTTP-Endpoint", "ad-hoc query interface", "MCP-tool exposes raw SQL", "Postgres read API". Do NOT load if you have a real SQL parser available (e.g. sqlparse, pglast) — use that for production-grade enforcement; this skill is the naive-but-fast-enough pattern for low-stakes internal tools. Do NOT use for write-allowed endpoints (parameterize the writes, don't expose raw SQL), for stored-procedure invocation (regex doesn't reason about side-effects of CALL), or for databases where SELECT itself has side-effects (e.g. SELECT pg_terminate_backend(...) — see Anti-patterns below).
+description: Use when exposing a read-only SQL endpoint to a less-trusted caller (Browser via HTTP, MCP-Tool to LLM, internal Dashboard with copy-paste-able query box, future API consumer). The endpoint accepts a SQL string and must reject all mutating statements before executing. Encodes the regex-based denylist+allowlist pattern from a `/health/sql` endpoint: (1) strip SQL comments (`--` and `/* */`) BEFORE matching to prevent comment-smuggle bypass, (2) normalize whitespace + uppercase, (3) denylist regex for INSERT/UPDATE/DELETE/DROP/CREATE/ALTER/TRUNCATE/CALL, (4) allowlist regex for SELECT/WITH/EXPLAIN/ANALYZE start-token. Trigger phrases like "read-only SQL endpoint", "SELECT-only API", "SQL escape hatch", "DB query as HTTP endpoint", "ad-hoc query interface", "MCP tool exposes raw SQL", "Postgres read API". Do NOT load if you have a real SQL parser available (e.g. sqlparse, pglast) — use that for production-grade enforcement; this skill is the naive-but-fast-enough pattern for low-stakes internal tools. Do NOT use for write-allowed endpoints (parameterize the writes, don't expose raw SQL), for stored-procedure invocation (regex doesn't reason about side-effects of CALL), or for databases where SELECT itself has side-effects (e.g. SELECT pg_terminate_backend(...) — see Anti-patterns below).
 ---
 
 # Read-Only SQL Endpoint via Regex Validator
@@ -18,7 +18,7 @@ For low-stakes internal SQL escape hatches (Dashboard, MCP-tool, Companion-Servi
 
 - Write-allowed endpoints — never expose mutation via raw SQL; parameterize specific updates instead
 - Public/Internet-facing endpoints — use a real SQL parser (sqlparse, pglast) and probably an SQL-permissions-restricted DB role
-- Production trading systems where a malicious SELECT could affect performance (long table scan, `pg_sleep`, ...) — add timeout + query-cost budget on top
+- Production systems where a malicious SELECT could affect performance (long table scan, `pg_sleep`, ...) — add timeout + query-cost budget on top
 - Stored-procedure invocation that has side-effects despite being syntactically read-only
 
 ## The validator (Python, 30 lines)
@@ -89,11 +89,11 @@ URL-safe transport for query-string params with special chars (quotes, semicolon
 ## Defense layers (beyond the validator)
 
 1. **DB-side**: dedicated read-only user/role with `GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly_user`. Even if the regex misses, the DB rejects.
-2. **Network**: endpoint reachable only via Tailscale TLS-cert → already gates external attackers
+2. **Network**: endpoint reachable only via private TLS cert → already gates external attackers
 3. **Audit-log**: every `/sql` call logged JSONL (timestamp + query-hash + caller-IP + outcome). Forensic trail for misuse.
 4. **Timeout**: `pool.fetch(sql, timeout=10.0)` so a runaway query can't DoS the service.
 
-## Test cases (Wolf 2026-06-11, 5 cases all passed)
+## Test cases (5 cases all passed)
 
 ```bash
 # 1. Valid SELECT → 200
@@ -130,7 +130,7 @@ curl /sql?q=INVALID  # → 400 {"_error":"invalid_query_encoding"}
           return False
   ```
 - ❌ **`SELECT … INTO new_table` bypassed allowlist**: `SELECT * INTO new_table FROM v3_trades` starts with SELECT but creates a table. Skill-Step 4 must explicitly check for `\bINTO\b` keyword after the prefix-match. Distinction: `INSERT INTO` is already denied; `SELECT INTO` needs separate handling.
-- ❌ **`SELECT … FOR UPDATE` row-lock side-effect**: syntactically SELECT, semantically locks rows + can block other sessions. For trading-DB high-stakes: deny `\bFOR\s+(UPDATE|SHARE|NO\s+KEY\s+UPDATE|KEY\s+SHARE)\b`.
+- ❌ **`SELECT … FOR UPDATE` row-lock side-effect**: syntactically SELECT, semantically locks rows + can block other sessions. For high-stakes production DB: deny `\bFOR\s+(UPDATE|SHARE|NO\s+KEY\s+UPDATE|KEY\s+SHARE)\b`.
 - ❌ **CTE-mutation via `RETURNING`**: `WITH x AS (INSERT INTO t VALUES (1) RETURNING id) SELECT * FROM x` — starts with WITH (allowed prefix), contains INSERT (denylist catches it). But also add **global `\bRETURNING\b` denylist** for safety because RETURNING outside CTE shouldn't appear in pure read queries anyway.
 - ❌ **Multi-statement reject missing**: `SELECT 1; DELETE FROM v3_trades` could bypass if validator only checks first statement. Strip trailing `;` then reject if any `;` remains in body:
   ```python
@@ -151,32 +151,32 @@ When the naive regex isn't enough (e.g. moving from internal dashboard to extern
 3. Move to a query-budget approach: estimate-via-EXPLAIN, reject if cost > threshold
 4. Per-caller rate-limit + concurrent-query-quota
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD progress (Bulletproofing Log)
 
-### Cycle 1 — 2026-06-12 (PASS mit Polish)
+### Cycle 1 — PASS with Polish
 
-- **RED-Subagent** (ohne Skill, Flask + psycopg2 für `POST /sql`): Schrieb umfangreichen Validator mit Multi-Layer-Defense (regex + `set_session(readonly=True)` + statement_timeout + read-only PG-Role). **Deckte selbst 7 Lücken im eigenen Code auf**: SELECT INTO bypass, dollar-quoting nicht behandelt, string-literal-mit-`--` false-positive, SELECT FOR UPDATE row-lock side-effect, CTE-RETURNING, identifier-collisions (`"drop"`-Spalte), unicode-whitespace. Sehr ehrlicher Self-Assessment.
+- **RED-Subagent** (without skill, Flask + psycopg2 for `POST /sql`): Wrote extensive validator with multi-layer defense (regex + `set_session(readonly=True)` + statement_timeout + read-only PG role). **Found 7 gaps in its own code**: SELECT INTO bypass, dollar-quoting not handled, string-literal-with-`--` false-positive, SELECT FOR UPDATE row-lock side-effect, CTE-RETURNING, identifier collisions (`"drop"` column), unicode whitespace. Very honest self-assessment.
 
-- **GREEN-Subagent** (mit Skill via Read-Tool, gleiche Aufgabe): 4-Step-Pattern angewandt + zusätzlich Multi-Statement-Defense (Semikolon-Detection) + RETURNING-Denylist + Audit-Log mit decoded SQL. Identifizierte Skill-Adaption von FastAPI/asyncpg auf Flask/psycopg2 als trivial. Fand das EXECUTE-Anti-Pattern besonders wertvoll („klingt wie ‚Query ausführen', ist aber prepared-statement-Mutation").
+- **GREEN-Subagent** (with skill via Read tool, same task): Applied 4-step pattern + additionally multi-statement defense (semicolon detection) + RETURNING denylist + audit log with decoded SQL. Identified skill adaptation from FastAPI/asyncpg to Flask/psycopg2 as trivial. Found the EXECUTE anti-pattern particularly valuable ("sounds like 'execute query', but is prepared-statement mutation").
 
-- **Refactor angewendet vor PROMOTE** (basierend auf RED-Selbst-Befunden):
-  - **Polish-1**: `pg_sleep/pg_terminate_backend` mit konkretem Code-Snippet als Function-Denylist
-  - **Polish-2**: `SELECT INTO`-Bypass als eigenes Anti-Pattern dokumentiert (Skill-Step 4 muss `\bINTO\b` explizit prüfen)
-  - **Polish-3**: `SELECT … FOR UPDATE` als Row-Lock-Side-Effect-Pattern hinzugefügt
-  - **Polish-4**: Multi-Statement-Defense als eigenes Anti-Pattern mit Code-Snippet
-  - **Polish-5**: `RETURNING`-Global-Denylist (nicht nur in CTE-Kontext)
-  - **Polish-6**: Naive `--` Comment-Strip false-positive bei String-Literals als bekannte Edge-Case
-  - **Polish-7**: Dollar-Quoting-Limitation als „needs AST" markiert
+- **Refactor applied before PROMOTE** (based on RED self-findings):
+  - **Polish-1**: `pg_sleep/pg_terminate_backend` with concrete code snippet as function denylist
+  - **Polish-2**: `SELECT INTO` bypass as own anti-pattern documented (skill-step 4 must explicitly check `\bINTO\b`)
+  - **Polish-3**: `SELECT … FOR UPDATE` as row-lock side-effect pattern added
+  - **Polish-4**: Multi-statement defense as own anti-pattern with code snippet
+  - **Polish-5**: `RETURNING` global denylist (not just in CTE context)
+  - **Polish-6**: Naive `--` comment-strip false-positive on string literals as known edge case
+  - **Polish-7**: Dollar-quoting limitation marked as "needs AST"
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2 Backlog (Polish, non-blocking)
 
-1. **Wirklicher sqlparse-AST-Walker** als production-grade Alternative dokumentieren mit Code-Beispiel
-2. **Identifier-Kollisions**: bei DB mit reservierten-Wort-Spalten (`"drop"`, `"delete"`) — quoted-identifier-Detection erwähnen
-3. **GROUP BY/ORDER BY edge-cases** mit Function-Calls (`ORDER BY pg_sleep(1)`) — function-denylist in vollem SQL nicht nur prefix
-4. **Beispiel-DB-Role-Setup** mit konkretem SQL (`CREATE ROLE readonly_wolf WITH LOGIN PASSWORD '...'; GRANT pg_read_all_data TO readonly_wolf;`)
-5. **Real-Use-Case-Test**: in next Stock3-MCP-Server oder Dashboard-Ad-hoc-Query anwenden
+1. **Real sqlparse-AST-Walker** as production-grade alternative documented with code example
+2. **Identifier collisions**: with DB columns named after reserved words (`"drop"`, `"delete"`) — mention quoted-identifier detection
+3. **GROUP BY/ORDER BY edge cases** with function calls (`ORDER BY pg_sleep(1)`) — function denylist in full SQL not just prefix
+4. **Example DB-role setup** with concrete SQL (`CREATE ROLE readonly_user WITH LOGIN PASSWORD '...'; GRANT pg_read_all_data TO readonly_user;`)
+5. **Real-use-case test**: apply in next MCP server or dashboard ad-hoc query
 
-## Cross-Skill-Connections
+## Cross-skill connections
 
 - `subprocess-ssh-arg-quoting-via-shlex` (GA): sibling skill on argument-safety
 - `enum-known-values-via-insert-grep` (GA): cross-table constants-set discovery

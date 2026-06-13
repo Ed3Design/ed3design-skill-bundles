@@ -1,6 +1,6 @@
 ---
 name: asyncio-fire-and-forget-loop-exit-await
-description: Use when writing or reviewing Python code that uses `asyncio.run(...)` as entry-point AND inside the entry-coroutine uses `asyncio.create_task(...)` for fire-and-forget background work (notifications, telemetry, advisor-calls, fan-out HTTP/DB-writes). Without an explicit `await asyncio.gather(*pending_tasks)` before the entry-coroutine returns, `asyncio.run()` closes the event-loop and CANCELS any still-pending tasks → silent data-loss (0-50% of background work lost depending on task duration vs main-coroutine duration). Trigger on phrases like "asyncio.run + create_task", "fire-and-forget cancelled at loop-exit", "background tasks not running", "telemetry/notification silent dropping", "Advisor-Calls werden cancelled", "pending tasks cancelled at shutdown", "asyncio task silently lost", "Loop closed before task finished". Do NOT load for asyncio.Runner / asyncio.gather-as-entry patterns (loop stays open until gather completes — no fire-and-forget issue), for long-running daemons (uvicorn/asyncio.Event.wait — loop never exits in normal-path), for sync code with threading.Thread (different cancellation model), or for non-Python async (JS/Go have different semantics). Technology-specific: Python 3.8+ asyncio. This skill encodes a 27.05.2026 Wolf-Code-Review finding: a Per-Signal-Advisor in `scripts/v3_orchestrator.py` was fire-and-forget-dispatched via `asyncio.create_task(advisor_consult(signal))` after `send_signal_alert`; the orchestrator did sequential per-symbol-processing and returned. Code-Review caught it pre-deploy — without the fix, 0-50% of Advisor-calls would have been silently cancelled because Claude-API takes 5-30s and the orchestrator's remaining work (stage-monitor + PnL-update) takes <2s.
+description: Use when writing or reviewing Python code that uses `asyncio.run(...)` as entry-point AND inside the entry-coroutine uses `asyncio.create_task(...)` for fire-and-forget background work (notifications, telemetry, advisor-calls, fan-out HTTP/DB-writes). Without an explicit `await asyncio.gather(*pending_tasks)` before the entry-coroutine returns, `asyncio.run()` closes the event-loop and CANCELS any still-pending tasks → silent data-loss (0-50% of background work lost depending on task duration vs main-coroutine duration). Trigger on phrases like "asyncio.run + create_task", "fire-and-forget cancelled at loop-exit", "background tasks not running", "telemetry/notification silent dropping", "advisor calls cancelled", "pending tasks cancelled at shutdown", "asyncio task silently lost", "Loop closed before task finished". Do NOT load for asyncio.Runner / asyncio.gather-as-entry patterns (loop stays open until gather completes — no fire-and-forget issue), for long-running daemons (uvicorn/asyncio.Event.wait — loop never exits in normal-path), for sync code with threading.Thread (different cancellation model), or for non-Python async (JS/Go have different semantics). Technology-specific: Python 3.8+ asyncio. This skill encodes a code-review finding: a Per-Signal-Advisor in an orchestrator was fire-and-forget-dispatched via `asyncio.create_task(advisor_consult(signal))` after sending an alert; the orchestrator did sequential per-symbol-processing and returned. Code-Review caught it pre-deploy — without the fix, 0-50% of Advisor-calls would have been silently cancelled because the Claude API takes 5-30s and the orchestrator's remaining work takes <2s.
 ---
 
 # asyncio fire-and-forget loop-exit-await pattern
@@ -17,7 +17,7 @@ The bug is **silent and partial**:
 
 Typical victim pattern: `main()` does N iterations, each iteration dispatches a quick fire-and-forget task. The Nth iteration's task starts a 10s Claude-API-call, then `main()` returns immediately → that last task is killed mid-flight. Earlier tasks may also be partially incomplete.
 
-In Wolf's 27.05.2026 case: a Per-Signal-Advisor calling Claude API (5-30s) was dispatched after each v3-signal in an orchestrator loop that completed in ~2-5s. Estimated 0-50% silent task-cancellation depending on signal-count and API-latency.
+In the real-world case: a Per-Signal-Advisor calling the Claude API (5-30s) was dispatched after each signal in an orchestrator loop that completed in ~2-5s. Estimated 0-50% silent task-cancellation depending on signal-count and API-latency.
 
 ## The 3-Step Fix
 
@@ -84,41 +84,41 @@ When reviewing a Python file with `asyncio.run(...)` as entry-point:
 
 - Python docs: [asyncio.run](https://docs.python.org/3/library/asyncio-runner.html#asyncio.run) — note the "Closes the loop and finalizes asynchronous generators" line, which is exactly what cancels pending tasks.
 - Sibling skill: `code-review-chunk-dispatch` (for catching this class of bug via subagent-review).
-- Wolf-Maxime „Code-Review als Standard" (CLAUDE.md): this bug was caught Day 2 in a row by the subagent-review pattern.
+- The maxim "Code-Review as standard": this bug was caught Day 2 in a row by the subagent-review pattern.
 
-## Edge-Cases & Verschärfer
+## Edge-Cases & Aggravators
 
-- **Sync-IO im async-Context**: wenn die Symbol-Loop blocking-Calls macht (yfinance ohne await, blocking psycopg2-Cursor), blockiert das den Event-Loop und verhindert dass parallele Advisor-Tasks Fortschritt machen — die silent-cancel-Quote steigt. Check beim Review: alle IO-Calls async? Sonst eskaliert der Bug zusätzlich.
-- **Extended-Thinking-Timeouts**: das Default-`timeout=60s` ist für Claude Sonnet ohne Extended-Thinking-Modus dimensioniert. Bei `thinking_enabled=True` mit hohem token-budget können Calls 60-180s gehen — Timeout-Wert hochziehen oder Pattern-Architektur überdenken (Background-Worker statt fire-and-forget).
-- **uvicorn-Reload-Modus**: in Dev mit `--reload` startet uvicorn periodisch neu — pending tasks werden bei jedem Reload gecancelt. In Prod (kein Reload) ist das nicht das Problem, aber Dev-Tests können den Bug maskieren wenn sie über einen Reload-Cycle hinweg laufen.
+- **Sync-IO in async context**: if the symbol loop makes blocking calls (yfinance without await, blocking psycopg2 cursor), it blocks the event loop and prevents parallel Advisor-tasks from making progress — the silent-cancel rate rises. Check during review: are all IO calls async? Otherwise the bug escalates further.
+- **Extended-Thinking-Timeouts**: the default `timeout=60s` is sized for Claude Sonnet without Extended-Thinking. With `thinking_enabled=True` and a high token budget, calls can take 60-180s — raise the timeout or rethink the pattern architecture (background worker instead of fire-and-forget).
+- **uvicorn reload mode**: in dev with `--reload`, uvicorn periodically restarts — pending tasks are cancelled on each reload. In prod (no reload) this is not the problem, but dev tests can mask the bug if they straddle a reload cycle.
 
-## Background: 27.05.2026 Real-World-Case
+## Background: Real-World Case
 
-Per-Signal-Advisor in `scripts/v3_orchestrator.py` of ultimative-platform:
+A Per-Signal-Advisor in `scripts/v3_orchestrator.py` of your-app:
 - `_orchestrate(args)` loops over symbols, each iteration: scan_signal + persist + send_telegram + `asyncio.create_task(advisor_consult(signal))`
-- After loop: stage-monitor + PnL-update (~2s) → `return 0`
-- `asyncio.run(_orchestrate(args))` closes loop → all create_task'd Advisor-Calls cancelled
-- Advisor-Calls take 5-30s (Claude Sonnet API)
-- Silent data-loss estimated 0-50% of Advisor-verdicts (depending on signal-count and order)
+- After the loop: stage-monitor + PnL-update (~2s) → `return 0`
+- `asyncio.run(_orchestrate(args))` closes the loop → all create_task'd Advisor-calls cancelled
+- Advisor-calls take 5-30s (Claude Sonnet API)
+- Silent data-loss estimated 0-50% of Advisor verdicts (depending on signal-count and order)
 
-Fix: tasks tracked in `advisor_tasks: list[asyncio.Task]`, `await asyncio.wait_for(asyncio.gather(*advisor_tasks, return_exceptions=True), timeout=60.0)` before `return 0`. Caught by code-review-subagent in Spec→Plan→Implementation→Review-cycle before any deploy. Commit `ee26365`.
+Fix: tasks tracked in `advisor_tasks: list[asyncio.Task]`, `await asyncio.wait_for(asyncio.gather(*advisor_tasks, return_exceptions=True), timeout=60.0)` before `return 0`. Caught by code-review subagent in a Spec→Plan→Implementation→Review cycle before any deploy.
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD Log (Bulletproofing)
 
-### Cycle 1 — 2026-05-27 (PASS via Subagent-Pair-Dispatch, Tempo-Booster-Class)
+### Cycle 1 — PASS via Subagent-Pair-Dispatch (Tempo-Booster class)
 
-- **RED-Subagent** (ohne Skill, Prompt: Review eines v3_orchestrator-Snippets mit `create_task(advisor_consult)` + asyncio.run): **fand den Critical-Bug eigenständig**! Schrieb präzisen Fix mit `await asyncio.gather(*advisor_tasks, return_exceptions=True)` — fast identisch zum Skill-3-Step-Fix. RED war überraschend smart, Skill ist hier nicht „Bug-Verhinderer" sondern „Tempo-Booster + Konsistenz-Garantie".
+- **RED-Subagent** (without skill, prompt: review a v3_orchestrator snippet with `create_task(advisor_consult)` + asyncio.run): **found the critical bug on its own**! Wrote a precise fix with `await asyncio.gather(*advisor_tasks, return_exceptions=True)` — nearly identical to the skill's 3-step fix. RED was surprisingly smart; the skill here is not a "bug preventer" but a "tempo booster + consistency guarantee".
 
-- **GREEN-Subagent** (mit Skill, identisches Prompt): strukturierter Output, Impact-Quote 0-50% explizit berechnet, `wait_for + timeout` zusätzlich, `return_exceptions=True`-Begründung sauber. Zusätzlich Important-Issue „sync-IO im async-Context als Verschärfer" entdeckt — das hätte RED ohne Skill nicht in Review aufgenommen.
+- **GREEN-Subagent** (with skill, identical prompt): structured output, impact quote 0-50% explicitly computed, `wait_for + timeout` added, `return_exceptions=True` rationale clean. Additionally discovered an important issue "sync-IO in async context as an aggravator" — RED without the skill would not have included that in the review.
 
-- **Refactor angewendet**: Sektion „Edge-Cases & Verschärfer" hinzugefügt (sync-IO, Extended-Thinking-Timeouts, uvicorn-Reload-Modus) — aus GREEN-Self-Reflection. Verbessert die Detection-Checklist-Tiefe.
+- **Refactor applied**: section "Edge-Cases & Aggravators" added (sync-IO, Extended-Thinking-Timeouts, uvicorn reload mode) — from GREEN self-reflection. Improves the depth of the detection checklist.
 
-### Polish-vs-Promote-Verdict
+### Polish-vs-Promote verdict
 
-Vergleichbar mit `pytest-venv-first-triage` aus 27.05.-Promotion-Session: smart-RED erkennt den Bug, Skill bringt Tempo + Konsistenz + Vermeidung von Alternative-Anti-Patterns (`time.sleep`, `ensure_future`, `CancelledError`-catch). Promote-Argument: bei Reviews mit kognitiver Last (multi-bug-File) ist Konsistenz wertvoller als Hit-Rate auf einzelne Bugs.
+Comparable to `pytest-venv-first-triage`: smart-RED finds the bug, the skill provides tempo + consistency + avoidance of alternative anti-patterns (`time.sleep`, `ensure_future`, `CancelledError`-catch). Promote argument: in reviews with cognitive load (multi-bug file) consistency is more valuable than per-bug hit rate.
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2 Backlog (Polish, non-blocking)
 
-1. **AnyIO-Variant**: dasselbe Pattern für `anyio.run(...)` + `anyio.create_task_group()` — anyio macht structured concurrency aber Pattern-Drift in Codebases ist möglich
-2. **TaskGroup-PEP-654**: Python 3.11+ `asyncio.TaskGroup` als idiomatischer Ersatz für manuelles `gather` — wenn breit verbreitet, eigene Sektion „Modern Alternative"
-3. **Telemetry-Integration**: Logging-Hook für die `n_errors`/`n_pending`-Counters in ein zentrales Trading-Telemetry-System (statt nur log.warning) — projekt-spezifisch für ultimative-platform
+1. **AnyIO variant**: same pattern for `anyio.run(...)` + `anyio.create_task_group()` — anyio enforces structured concurrency but pattern drift in codebases is possible
+2. **TaskGroup PEP-654**: Python 3.11+ `asyncio.TaskGroup` as the idiomatic replacement for manual `gather` — once widely adopted, add a dedicated "Modern Alternative" section
+3. **Telemetry integration**: logging hook for the `n_errors`/`n_pending` counters into a central telemetry system (instead of only log.warning) — application-specific

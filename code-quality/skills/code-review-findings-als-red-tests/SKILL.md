@@ -1,141 +1,141 @@
 ---
 name: code-review-findings-als-red-tests
-description: Use when a code-review-subagent (z.B. feature-dev:code-reviewer) has returned Critical/Important findings on a feature-commit and you're about to write fixes. Standard-default is "direkt-fix, kein neuer Test". This skill says: jedes Finding ist selbst ein Test-Case — schreibe einen RED-Test der das Bug-Verhalten zeigt, dann GREEN-Fix. Verhindert Regressions + dokumentiert das Bug-Pattern für künftige Reviews. Trigger on phrases like "Code-Review-Findings fixen", "Critical-Fix einbauen", "Review-Subagent fand C1/I1/I2", "Sonnet-Subagent-Output zu Fix umwandeln", "Review-Cycle abschließen". Do NOT load for trivial style-Findings (typo, unused-import), for Findings ohne reproducible code-path (perf-Hints, future-proofing), for Code wo TDD bewusst skipped wurde (user-confirmed), or wenn der Subagent KEINE Findings hatte.
+description: Use when a code-review subagent (e.g. feature-dev:code-reviewer) has returned Critical/Important findings on a feature commit and you're about to write fixes. Standard default is "direct-fix, no new test". This skill says: each finding is itself a test case — write a RED test that shows the bug behavior, then GREEN fix. Prevents regressions + documents the bug pattern for future reviews. Trigger on phrases like "fix code-review findings", "implement Critical fix", "review subagent found C1/I1/I2", "convert reviewer output to fix", "close review cycle". Do NOT load for trivial style findings (typo, unused-import), for findings without a reproducible code path (perf hints, future-proofing), for code where TDD was consciously skipped (user-confirmed), or when the subagent had NO findings.
 ---
 
-# Code-Review-Findings als RED-Tests
+# Code-Review Findings as RED-Tests
 
-> ✅ **PROMOTED 2026-06-12** — TDD-Pressure-Test PASS. RED zeigte „Direct-Edit + Spot-Check" als Default, kein Regression-Schutz, ~45min total; GREEN schrieb 4 bug-pattern-Tests (test_sl_knocked_out_renders_warning_not_zero_eur etc.) mit RED-Verify-Pflicht, +19min für Regression-Schutz. Cycle 2 Polish: Decision-Tree „RED-Test passt unexpected", Finding-Cluster-Heuristik (zusammen-Commit vs getrennt).
+> ✅ **PROMOTED** — TDD pressure-test PASS. RED showed "direct-edit + spot-check" as default, no regression protection, ~45min total; GREEN wrote 4 bug-pattern tests (test_sl_knocked_out_renders_warning_not_zero_eur etc.) with RED-verify obligation, +19min for regression protection. Cycle 2 polish: decision tree "RED-test passes unexpectedly", finding-cluster heuristic (combined-commit vs separated).
 
 ## Overview
 
-Code-Review-Subagent (Sonnet) returnt typisch Findings als:
-- **Critical/Important/Minor** mit Confidence-Score
-- File-Path + Line-Number  
-- „Befund + Was statt dessen"-Erklärung
+A code-review subagent (e.g. Sonnet) typically returns findings as:
+- **Critical/Important/Minor** with confidence score
+- File-path + line-number  
+- "Finding + What to do instead" explanation
 
-Standard-Default beim Empfangen: direkt fix-Commit mit Edit. **Problem**: ohne Regression-Test kann der gleiche Bug nach Refactoring wieder auftauchen. Plus: das Bug-Pattern wird nicht für künftige Reviews lernbar dokumentiert.
+Standard default on receipt: direct fix-commit with Edit. **Problem**: without a regression test, the same bug can reappear after refactoring. Plus: the bug pattern is not made learnable for future reviews.
 
-**Fix-Pattern dieser Skill**: jedes Finding zu RED-Test umwandeln, dann GREEN-Implementation. Drei Outcomes:
+**Fix-pattern of this skill**: convert each finding to a RED-test, then GREEN-implementation. Three outcomes:
 
-1. **Regression-Schutz**: künftiges Refactoring kann nicht den gleichen Bug wieder einführen
-2. **Bug-Pattern-Dokumentation**: der Test-Name + Docstring macht den Bug-Pattern referenzierbar
-3. **Confidence-Verifikation**: schreibt der RED-Test fail wirklich genau das was Sonnet beschrieben hat? Wenn nicht — Finding ist unklar oder Sonnet hat überreagiert
+1. **Regression protection**: future refactoring cannot reintroduce the same bug
+2. **Bug-pattern documentation**: the test name + docstring makes the bug-pattern referenceable
+3. **Confidence verification**: does the RED test fail for exactly what the reviewer described? If not — finding is unclear or reviewer over-reacted
 
 ## When to use
 
-Trigger-Phrasen:
-- „Code-Review-Findings fixen"
-- „Critical-Fix einbauen"
-- „Review-Subagent fand C1 / I1 / I2"
-- „Sonnet-Subagent-Output zu Fix umwandeln"
-- „Review-Cycle abschließen"
+Trigger phrases:
+- "fix code-review findings"
+- "implement Critical fix"
+- "review subagent found C1 / I1 / I2"
+- "convert reviewer output to fix"
+- "close review cycle"
 
-Konkrete Signale:
-- Subagent hat strukturierte Findings retourniert (nicht nur Vibes)
-- Mindestens 1 Critical oder Important
-- Findings haben reproducible Code-Paths (File + Line)
-- Code unter Test (nicht throwaway-Script)
+Concrete signals:
+- Subagent returned structured findings (not just vibes)
+- At least 1 Critical or Important
+- Findings have reproducible code paths (file + line)
+- Code under test (not throwaway script)
 
 ## When NOT to use
 
-- **Trivial Style-Findings**: Typo, unused-Import → einfach fixen
-- **Future-Proofing-Hints**: „bei skalierung wäre Y besser" → kein reproducible Bug
-- **Perf-Hints ohne Benchmark-Test**: „könnte schneller sein" → nicht testbar
-- **TDD bewusst skipped**: User-Override „kein Test, direkt fix"
-- **Keine Findings**: Subagent gab grünes Licht
+- **Trivial style findings**: typo, unused-import → just fix
+- **Future-proofing hints**: "at scale Y would be better" → no reproducible bug
+- **Perf hints without benchmark test**: "could be faster" → not testable
+- **TDD deliberately skipped**: user override "no test, direct fix"
+- **No findings**: subagent gave green light
 
 ## How to use
 
-### Step 1 — Findings parsen + priorisieren
+### Step 1 — Parse + prioritize findings
 
-Pro Finding:
-- **Schwere**: C/I/M
-- **File + Line**: konkret
-- **Pattern-Name**: extrahiere „was war der Bug" (z.B. „Knockout-SL-als-0.00-EUR-gerendert")
-- **Reproducible**: kann ich das in einem Test reproduzieren? (Wenn nein → Anti-Pattern)
+Per finding:
+- **Severity**: C/I/M
+- **File + line**: concrete
+- **Pattern name**: extract "what was the bug" (e.g. "knockout-SL-rendered-as-0.00-EUR")
+- **Reproducible**: can I reproduce this in a test? (If no → anti-pattern)
 
-### Step 2 — RED-Test pro Finding schreiben
+### Step 2 — Write a RED test per finding
 
-Test-Struktur:
-- **Test-Name**: bug-pattern-beschreibend (z.B. `test_sl_knocked_out_renders_warning_not_zero_eur`)
-- **Docstring**: Sonnet-Befund + Wolf-Impact zitieren
-- **Assert**: das Anti-Pattern muss NICHT auftauchen (z.B. `assert "0.00 EUR" not in sl_line`)
+Test structure:
+- **Test name**: bug-pattern descriptive (e.g. `test_sl_knocked_out_renders_warning_not_zero_eur`)
+- **Docstring**: quote the reviewer finding + user impact
+- **Assert**: the anti-pattern must NOT appear (e.g. `assert "0.00 EUR" not in sl_line`)
 
 ### Step 3 — Verify RED
 
-Run die neuen Tests gegen aktuelles Production-Code → MUST fail. Wenn nicht:
-- Finding war fälschlich (Subagent-Halluzination)
-- Test-Assertion ist zu weich
-- Bug-Pattern war nicht so wie beschrieben
+Run the new tests against current production code → MUST fail. If not:
+- Finding was incorrect (reviewer hallucination)
+- Test assertion is too soft
+- Bug pattern was not as described
 
-In allen 3 Fällen: NICHT GREEN schreiben — stattdessen mit Subagent oder User klären.
+In all 3 cases: DO NOT write GREEN — instead clarify with the subagent or user.
 
-### Step 4 — GREEN-Implementation
+### Step 4 — GREEN implementation
 
-Minimaler Fix der die Tests grün macht. Pattern wie `superpowers:test-driven-development`.
+Minimal fix that makes the tests green. Pattern like `superpowers:test-driven-development`.
 
-### Step 5 — Commit-Message dokumentiert Findings
+### Step 5 — Commit message documents findings
 
 ```
-fix(<scope>): Code-Review-Findings — <kurz-Liste>
+fix(<scope>): code-review findings — <short list>
 
-C1 (Critical) — <Befund kurz>
-Fix: <Was geändert>
+C1 (Critical) — <finding short>
+Fix: <what was changed>
 
-I1 (Important) — <Befund>
-Fix: <Was geändert>
+I1 (Important) — <finding>
+Fix: <what was changed>
 
-TDD: N neue RED→GREEN-Tests in <test-file>.
+TDD: N new RED→GREEN tests in <test-file>.
 ```
 
-Macht den Fix-Commit reviewable + zeigt dass Review-Findings systematisch verarbeitet wurden.
+Makes the fix-commit reviewable + shows that review findings were processed systematically.
 
 ## Anti-patterns
 
-| Anti-Pattern | Was statt dessen |
+| Anti-Pattern | What to do instead |
 |---|---|
-| Direkt-fix ohne Test | RED-Test pro Finding |
-| Test schreiben aber Sonnet-Befund nicht zitieren | Docstring mit Sonnet-Befund-Auszug |
-| Generischer Test-Name (`test_fix_critical_1`) | Bug-Pattern-beschreibend (`test_sl_knocked_out_renders_warning_not_zero_eur`) |
-| Mehrere Findings in einem Test bündeln | Pro Finding ein Test (oder eine Test-Klasse) |
-| RED-Phase überspringen („Test passes immediately") | Run Tests gegen aktuelles Code MUST fail vor Fix |
-| Findings ignorieren weil „Sonnet überreagiert" | Klären statt skippen — Subagent-Output diskutieren |
+| Direct fix without test | RED test per finding |
+| Write test but don't quote reviewer finding | Docstring with reviewer finding excerpt |
+| Generic test name (`test_fix_critical_1`) | Bug-pattern descriptive (`test_sl_knocked_out_renders_warning_not_zero_eur`) |
+| Bundle multiple findings into one test | One test per finding (or one test class) |
+| Skip RED phase ("test passes immediately") | Run tests against current code MUST fail before fix |
+| Ignore findings because "reviewer over-reacted" | Clarify instead of skipping — discuss the subagent output |
 
-## Real-world impact (12.06.2026)
+## Real-world impact
 
-Phase-B+C+D-Session: Sonnet-Subagent fand C1 + I1 + I2.
+Phase-B+C+D session: reviewer subagent found C1 + I1 + I2.
 
-**Ohne Skill**: 3 direkt-fixes per Edit, kein Regression-Test, kein Bug-Pattern-Doku.
+**Without skill**: 3 direct fixes per Edit, no regression test, no bug-pattern doc.
 
-**Mit Skill** (heute angewandt):
-- 4 neue RED-Tests in `test_v3_combo_order.py` (C1 + I1 + Edge-Case)
-- RED-Phase verifiziert: alle 4 fail gegen Production-Code
-- GREEN-Implementation in Commit `b634bb8`
-- Test-Suite 13/13 (war 9 vor Fix) — Regression-Schutz gegen Re-Introduction
+**With skill**:
+- 4 new RED tests in `test_v3_combo_order.py` (C1 + I1 + edge case)
+- RED phase verified: all 4 fail against production code
+- GREEN implementation in commit `b634bb8`
+- Test suite 13/13 (was 9 before fix) — regression protection against re-introduction
 
-Counterfactual: bei Refactoring später wäre der Knockout-Render-Trap (C1) leicht wieder reinrutschen ohne den `test_sl_knocked_out_renders_warning_not_zero_eur`-Test.
+Counterfactual: in a later refactor, the knockout-render-trap (C1) could easily have slipped in again without the `test_sl_knocked_out_renders_warning_not_zero_eur` test.
 
-## Cross-References
+## Cross-references
 
-- `superpowers:requesting-code-review` — Vorgänger-Step (Review-Dispatch)
-- `superpowers:receiving-code-review` — verwandt für User-Review-Feedback
-- `superpowers:test-driven-development` — die TDD-Disziplin im RED→GREEN-Zyklus
-- `code-review-chunk-dispatch` — für große Review-Backlogs
+- `superpowers:requesting-code-review` — predecessor step (review dispatch)
+- `superpowers:receiving-code-review` — related for user-review feedback
+- `superpowers:test-driven-development` — the TDD discipline in the RED→GREEN cycle
+- `code-review-chunk-dispatch` — for large review backlogs
 
 ## Background
 
-Pattern formalisiert 12.06.2026 nach Phase-B+C+D-Review-Cycle. Verstärkt Wolf-Maxime „Code-Review als Standard" (26.05.) um den **systematischen-Test-Aspekt** — Review-Findings sind Tests-in-Verkleidung.
+Pattern formalized after a Phase-B+C+D review cycle. Reinforces the maxim "code review as standard" with the **systematic-test aspect** — review findings are tests-in-disguise.
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing-Log)
 
-### Cycle 1 — 2026-06-12 (PASS)
+### Cycle 1 — PASS
 
-- **RED-Subagent** (ohne Skill): Direct-Edit + Spot-Check, ~45min. Self-Reflection erkannte die Risiken (kein Regression-Test, Bug-Klassen unbedeckt, „done" ist Behauptung statt Beweis) — aber Default war Direct-Edit.
-- **GREEN-Subagent** (mit Skill): 4 bug-pattern-Tests (test_sl_knocked_out_renders_warning_not_zero_eur, test_sl_above_ko_ask_rejected_no_positive_pnl, test_sl_equals_ko_ask_rejected, test_quantity_fallback_raises_not_silently_defaults_to_100) + RED-Verify-Pflicht. Bonus: GREEN ergänzte Edge-Case-Test (sl == ko_ask) den Skill nicht explizit verlangt. ~31min total (+19min vs RED für Regression-Schutz).
-- **Refactor**: keiner blocker.
+- **RED-Subagent** (without skill): direct-edit + spot-check, ~45min. Self-reflection acknowledged the risks (no regression test, bug classes uncovered, "done" is claim rather than proof) — but default was direct-edit.
+- **GREEN-Subagent** (with skill): 4 bug-pattern tests (test_sl_knocked_out_renders_warning_not_zero_eur, test_sl_above_ko_ask_rejected_no_positive_pnl, test_sl_equals_ko_ask_rejected, test_quantity_fallback_raises_not_silently_defaults_to_100) + RED-verify obligation. Bonus: GREEN added edge-case test (sl == ko_ask) that the skill didn't explicitly require. ~31min total (+19min vs RED for regression protection).
+- **Refactor**: none blocking.
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2-Backlog (Polish, non-blocking)
 
-- **Decision-Tree „RED-Test passt unexpected"**: wenn Test gegen Production-Code passt statt zu failen, lese Production-Code → Test-Assertion verschärfen, sonst Subagent-Re-Dispatch zur Finding-Klärung
-- **Finding-Cluster-Heuristik**: wenn C1 + I1 im selben Datei-Abschnitt sitzen → zusammen-Commit, sonst getrennt. Decision-Heuristik dokumentieren.
+- **Decision tree "RED-test passes unexpectedly"**: if the test passes against production code rather than failing, read production code → tighten test assertion, otherwise re-dispatch subagent to clarify finding
+- **Finding-cluster heuristic**: when C1 + I1 sit in the same file section → combined commit, otherwise separated. Document decision heuristic.

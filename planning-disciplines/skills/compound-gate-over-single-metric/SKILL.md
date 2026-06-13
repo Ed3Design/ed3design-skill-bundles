@@ -1,11 +1,11 @@
 ---
 name: compound-gate-over-single-metric
-description: Use when designing or reviewing a Go/No-Go-Gate, Backtest-Acceptance-Threshold, ML-Model-Promotion-Criterion, A/B-Test-Verdict, or any binary-decision-rule that triggers a downstream-action (deploy, promote, ship, reject) based on a single metric (especially WR/Accuracy/Recall/F1/CTR). Single-metric gates have a well-documented failure mode: false-positive accepts — the system clears the gate while a hidden dimension regresses catastrophically. Compound-Gate (≥2 metrics with AND-conjunction) closes this hole. Trigger phrases like "WR-Gate-Verdict", "Backtest-Go-No-Go", "Accuracy-Threshold", "Recall-Gate", "55%-Schwelle", "Model-Promotion-Criterion", "A/B-Verdict-Rule", "single-metric Acceptance". Do NOT load for domain-establishment where single-metric meaningfulness is established and unambiguous (e.g. medical-test-sensitivity for binary screening, latency-SLO for infrastructure), for theoretical-discussions without downstream-action-consequence, or for cases where the second-dimension is already implicitly captured in the metric (e.g. precision-recall-F1 already trades off two dimensions).
+description: Use when designing or reviewing a Go/No-Go-Gate, Backtest-Acceptance-Threshold, ML-Model-Promotion-Criterion, A/B-Test-Verdict, or any binary-decision-rule that triggers a downstream-action (deploy, promote, ship, reject) based on a single metric (especially WR/Accuracy/Recall/F1/CTR). Single-metric gates have a well-documented failure mode: false-positive accepts — the system clears the gate while a hidden dimension regresses catastrophically. Compound-Gate (≥2 metrics with AND-conjunction) closes this hole. Trigger phrases like "WR-Gate-Verdict", "Backtest-Go-No-Go", "Accuracy-Threshold", "Recall-Gate", "55% threshold", "Model-Promotion-Criterion", "A/B-Verdict-Rule", "single-metric Acceptance". Do NOT load for domain-establishment where single-metric meaningfulness is established and unambiguous (e.g. medical-test-sensitivity for binary screening, latency-SLO for infrastructure), for theoretical-discussions without downstream-action-consequence, or for cases where the second-dimension is already implicitly captured in the metric (e.g. precision-recall-F1 already trades off two dimensions).
 ---
 
 # compound-gate-over-single-metric
 
-> ✅ **PROMOTED 2026-06-08**: RED-Subagent erkannte Sample-Size-Problem und fehlende Metriken unabhängig — gutes Baseline. GREEN-Subagent wendete alle 3 Compound-Dimensionen explizit an, identifizierte fehlendes AvgPnL/Throughput als auto-NO-GO wegen unvollständiger Datenbasis, und gab Attribution "warum NO-GO" statt nur "NO-GO".
+> ✅ **PROMOTED**: RED-Subagent recognized the sample-size problem and missing metrics independently — good baseline. GREEN-Subagent explicitly applied all 3 compound dimensions, identified missing AvgPnL/Throughput as auto-NO-GO due to incomplete data basis, and gave attribution "why NO-GO" instead of just "NO-GO".
 
 ## What this skill does
 
@@ -13,11 +13,11 @@ When designing or evaluating a binary acceptance-gate, force at least 2 dimensio
 
 ## Incomplete Data → Auto-NO-GO
 
-**Wenn eine Pflicht-Dimension fehlt (kein AvgPnL angegeben, kein Throughput-Baseline):**
+**When a required dimension is missing (no AvgPnL given, no throughput baseline):**
 
-→ **NO-GO wegen unvollständiger Datenbasis.** Nicht "Conditional-Go" — das Gate kann nicht gecleared werden mit unbekannten Dimensionen.
+→ **NO-GO due to incomplete data basis.** Not "Conditional-Go" — the gate cannot be cleared with unknown dimensions.
 
-Grund: AND-Konjunktion bedeutet `PASS AND PASS AND PASS`. Ein `UNKNOWN` ist nicht `PASS`. Die fehlenden Dimensionen müssen erst erhoben werden, bevor das Gate evaluiert werden kann.
+Reason: AND-conjunction means `PASS AND PASS AND PASS`. An `UNKNOWN` is not `PASS`. The missing dimensions must be collected first before the gate can be evaluated.
 
 ## The 3 failure modes of single-metric gates
 
@@ -68,9 +68,9 @@ Compound: Effectiveness ≥ X **AND** Economic ≥ Y **AND** Frequency ≥ Z.
 
 Always emit per-dimension attribution, not just GO/NO-GO.
 
-## The 2026-06-02 Genesis-Case
+## The Genesis-Case
 
-**Setup:** ultimative-platform Phase Z.1, Spec-Q4-Gate = WR ≥ 55%.
+**Setup:** your-app Phase Z.1, Spec-Q4-Gate = WR ≥ 55%.
 
 **Result:** WR-Median 39.98% (FAIL), Throughput 29.70% (PASS), AvgPnL −4.99%.
 
@@ -87,16 +87,16 @@ Two verdicts agree on REJECT but disagree on **WHY**. The attribution drives the
 - ❌ **No per-dimension attribution** — "FAIL" without "because X = value vs threshold Y" loses diagnostic value.
 - ❌ **Cargo-culting genesis-case-thresholds (40/2/30)** — those are empirically tied to trading-KO-strategies. Re-derive for your domain.
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD log (Bulletproofing-Log)
 
-### Cycle 1 — 2026-06-08 (PASS)
+### Cycle 1 (PASS)
 
-- **RED-Subagent** (ohne Skill): Erkannte Sample-Size-Problem bei n=89 selbständig. Forderte Profit-Factor, Drawdown, Slippage. Verdict: NO-GO. Begründung richtig, aber strukturell unvollständig (keine formale 3-Klassen-Dimension, keine AND-Konjunktion-Anforderung).
-- **GREEN-Subagent** (mit Skill): Wendete alle 3 Compound-Dimensionen explizit an. AvgPnL und Throughput fehlen → auto-NO-GO (DATEN FEHLEN = nicht `PASS`). Emittierte Attribution mit PASS/FAIL/DATEN-FEHLEN pro Dimension. Erkannte Genesis-Case-Analogie und schrieb Anti-Pattern-Warnung.
-- **Refactor**: "Incomplete Data → Auto-NO-GO" Sektion als ersten Block eingefügt. Fehlte im Original.
+- **RED-Subagent** (without skill): Recognized the sample-size problem at n=89 independently. Requested profit-factor, drawdown, slippage. Verdict: NO-GO. Reasoning correct, but structurally incomplete (no formal 3-class dimension, no AND-conjunction requirement).
+- **GREEN-Subagent** (with skill): Explicitly applied all 3 compound dimensions. AvgPnL and Throughput missing → auto-NO-GO (DATA MISSING = not `PASS`). Emitted attribution with PASS/FAIL/DATA-MISSING per dimension. Recognized genesis-case analogy and wrote anti-pattern warning.
+- **Refactor**: "Incomplete Data → Auto-NO-GO" section inserted as first block. Was missing in original.
 
-### Cycle-2-Backlog (nicht-blocking)
+### Cycle-2 backlog (non-blocking)
 
-1. Callable evaluation-helper: `evaluate_compound_gate(metric_dict, gates_dict) -> CompoundVerdict` mit per-dimension Attribution
-2. Threshold-derivation-Methodology für 3 Domains (Trading, ML-Promotion, A/B-Test)
-3. 2-of-3-PASS-Pressure-Test (Refine-Fall — interessanteste Kalibrierungsgrenze)
+1. Callable evaluation helper: `evaluate_compound_gate(metric_dict, gates_dict) -> CompoundVerdict` with per-dimension attribution
+2. Threshold-derivation methodology for 3 domains (trading, ML promotion, A/B test)
+3. 2-of-3-PASS pressure test (refine case — most interesting calibration boundary)

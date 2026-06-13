@@ -1,28 +1,28 @@
 ---
 name: db-telemetry-primary-docker-logs-secondary
-description: Use when investigating missing or unexplained behavior in a containerized stack where a high-volume job (MQTT ingester, 5m-fetcher, scraper) runs in the same container as diagnostic jobs, and Docker logs show nothing for the time period in question. Symptom: `docker logs --since 72h` returns only recent lines; older diagnostic entries are gone despite the container running continuously. Root cause: Docker's default JSON log driver rotates files at ~10MB — a high-volume sibling process pushes out older, low-frequency diagnostic log lines within hours. Fix pattern: query DB-side telemetry (tick_log, job_log, metrics tables) as the primary source; Docker logs are only reliable for the last 30–60 minutes. Trigger on phrases like "docker logs zeigt nichts", "keine Logs von gestern", "Log-Rotation", "kann nicht finden was der Job gemacht hat", "Scheduler-History weg", "ich sehe nur heutige Logs", "wo sind die Logs von Freitag". Do NOT load for fresh containers without DB telemetry infrastructure, for single-process containers where log rotation isn't an issue, or for log-streaming setups (Loki, CloudWatch, Datadog) that aggregate externally.
+description: Use when investigating missing or unexplained behavior in a containerized stack where a high-volume job (MQTT ingester, 5m-fetcher, scraper) runs in the same container as diagnostic jobs, and Docker logs show nothing for the time period in question. Symptom: `docker logs --since 72h` returns only recent lines; older diagnostic entries are gone despite the container running continuously. Root cause: Docker's default JSON log driver rotates files at ~10MB — a high-volume sibling process pushes out older, low-frequency diagnostic log lines within hours. Fix pattern: query DB-side telemetry (tick_log, job_log, metrics tables) as the primary source; Docker logs are only reliable for the last 30–60 minutes. Trigger on phrases like "docker logs shows nothing", "no logs from yesterday", "log rotation", "can't find what the job did", "scheduler history gone", "I only see today's logs", "where are Friday's logs". Do NOT load for fresh containers without DB telemetry infrastructure, for single-process containers where log rotation isn't an issue, or for log-streaming setups (Loki, CloudWatch, Datadog) that aggregate externally.
 ---
 
 # db-telemetry-primary-docker-logs-secondary
 
-> ✅ **PROMOTED 2026-06-08**: RED-Subagent kam zur gleichen Log-Rotation-Hypothese (H1), startete aber mit Docker-Diagnosis-Versuchen. GREEN-Subagent: DB-Telemetrie (`tick_log`) zuerst, fand die Log-Rotation-Bestätigung + zwei Bonus-Befunde (Quarantäne-Logik, fehlendes TOUCH-Pattern) die Docker-Logs nie gezeigt hätten.
+> ✅ **PROMOTED**: RED-Subagent arrived at the same log-rotation hypothesis (H1) but started with Docker-diagnosis attempts. GREEN-Subagent: DB telemetry (`tick_log`) first, found the log-rotation confirmation + two bonus findings (quarantine logic, missing TOUCH pattern) that Docker logs would never have shown.
 
 ## Core Problem
 
 In containerized stacks with mixed job frequencies, a high-volume process destroys diagnostic history:
 
-- **5m-Fetcher** → 600k log lines / 72h → rotiert Docker-Log-Buffer in Stunden
-- **v3_live_monitor** (alle 15 min) → ~288 Einträge / 72h → von Rotation verdrängt
-- **Ergebnis**: `docker logs --since 72h | grep "live_monitor"` → 4 Einträge statt 288
+- **5m-fetcher** → 600k log lines / 72h → rotates the Docker log buffer in hours
+- **v3_live_monitor** (every 15 min) → ~288 entries / 72h → displaced by rotation
+- **Result**: `docker logs --since 72h | grep "live_monitor"` → 4 entries instead of 288
 
-**Root Cause gefunden 08.06.2026**: 2.5d Watcher-Gap konnte nicht rekonstruiert werden, weil relevante Logs seit 3 Tagen rotiert waren. Diagnose-Quelle war `tick_log` in der DB (vollständige History seit Container-Start).
+**Root cause example**: a 2.5d watcher gap could not be reconstructed because the relevant logs had rotated for 3 days. The diagnostic source was `tick_log` in the DB (full history since container start).
 
-## Diagnose-Reihenfolge
+## Diagnosis Order
 
-### Schritt 1 — DB-Telemetrie zuerst
+### Step 1 — DB telemetry first
 
 ```sql
--- Job-History: Alle Runs eines Services mit Fehler-Details
+-- Job history: all runs of a service with error detail
 SELECT
   ts_started::timestamptz AT TIME ZONE 'UTC' as started,
   exit_status,
@@ -36,55 +36,55 @@ ORDER BY ts_started DESC
 LIMIT 50;
 ```
 
-JSONB-Meta enthält oft per-run Details (`errors[]`, Zähler, Symbole). **Schema vor Query verifizieren**: `\d tick_log` — Spalten können projektspezifisch abweichen (`ts_started` vs `created_at`, `service_name` vs `job_name`).
+JSONB meta often contains per-run details (`errors[]`, counters, symbols). **Verify schema before query**: `\d tick_log` — columns can vary by project (`ts_started` vs `created_at`, `service_name` vs `job_name`).
 
-### Schritt 2 — Docker-Logs nur für aktuelle Events
+### Step 2 — Docker logs only for current events
 
 ```bash
-# Sicher: nur die letzten 30 Minuten
+# Safe: only the last 30 minutes
 docker logs <container> --since 30m
 
-# Unsicher bei High-Volume-Siblings: "since 72h" kann leer sein
-docker logs <container> --since 72h  # ← kann leer sein obwohl Container 3 Tage läuft
+# Unsafe with high-volume siblings: "since 72h" can be empty
+docker logs <container> --since 72h  # ← may be empty even though container ran 3 days
 ```
 
-### Schritt 3 — Log-Rotation erkennen
+### Step 3 — Detect log rotation
 
 ```bash
-# Zeigt ob logs wirklich nur heute beginnen:
+# Shows whether logs really start today:
 docker logs <container> --since 72h 2>&1 | head -1
-# Wenn erster Eintrag < 2h alt → Rotation hat ältere Einträge verdrängt
+# If the first entry is < 2h old → rotation has displaced older entries
 
-# Log-Config prüfen:
+# Check log config:
 docker inspect <container> --format '{{json .HostConfig.LogConfig}}'
-# {"Type":"json-file","Config":{"max-file":"1","max-size":"10m"}} → Rotation bestätigt
+# {"Type":"json-file","Config":{"max-file":"1","max-size":"10m"}} → rotation confirmed
 ```
 
-## Präventiv: DB-Telemetrie aufbauen
+## Preventive: build DB telemetry
 
-Für jeden Scheduled-Job:
-1. `tick_log` INSERT am Start mit `ts_started`
-2. `tick_log` UPDATE am Ende mit `exit_status`, `error_message`, `meta JSONB`
-3. Zähler in `meta`: `n_processed`, `n_skipped`, `n_errors`, `errors: []`
+For every scheduled job:
+1. `tick_log` INSERT at start with `ts_started`
+2. `tick_log` UPDATE at end with `exit_status`, `error_message`, `meta JSONB`
+3. Counters in `meta`: `n_processed`, `n_skipped`, `n_errors`, `errors: []`
 
-Pattern aus ultimative-platform `_tick_log_start()` / `_tick_log_finish()`.
+Pattern from your-app `_tick_log_start()` / `_tick_log_finish()`.
 
-## Wann Docker-Logs zuverlässig sind
+## When Docker logs are reliable
 
-- Letzte ~30 Minuten (vor Rotation)
-- Low-volume Container ohne High-Frequency-Siblings
-- Container mit konfiguriertem externem Log-Driver (Loki, Fluentd, CloudWatch)
-- `docker run --log-opt max-size=100m --log-opt max-file=10` (explizit größerer Buffer)
+- Last ~30 minutes (before rotation)
+- Low-volume containers without high-frequency siblings
+- Containers with a configured external log driver (Loki, Fluentd, CloudWatch)
+- `docker run --log-opt max-size=100m --log-opt max-file=10` (explicitly larger buffer)
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD Log (Bulletproofing)
 
-### Cycle 1 — 2026-06-08 (PASS)
+### Cycle 1 — PASS
 
-- **RED-Subagent** (ohne Skill): Kam zur Log-Rotation-Hypothese, aber nach mehreren alternativen Hypothesen (Code-Silence, Container-Restart, Timezone). Schlug DB-Query `last_zone_check_at` als "entscheidenden Test" vor — aber erst nach 3 docker-Diagnose-Versuchen. Die ORDER war falsch (Docker-first, DB-second).
-- **GREEN-Subagent** (mit Skill): Schritt 1 (DB-Telemetrie) sofort ausgeführt. Fand Log-Rotation-Bestätigung (609k Zeilen, 10MB-Buffer). Bonus: entdeckte Quarantäne-Logik (CL=F nicht mehr gecheckt) + fehlendes TOUCH-Pattern (BAS.DE nie upgedated trotz erfolgreicher Scans). Beide Befunde wären mit Docker-Logs-only nicht auffindbar gewesen.
-- **Refactor**: Schema-Verify-Hinweis für `tick_log` hinzugefügt (Spalten projektspezifisch), Log-Config-Inspect-Befehl ergänzt.
+- **RED-Subagent** (without skill): arrived at the log-rotation hypothesis, but after several alternative hypotheses (code silence, container restart, timezone). Proposed DB query `last_zone_check_at` as the "decisive test" — but only after 3 docker-diagnosis attempts. The ORDER was wrong (Docker-first, DB-second).
+- **GREEN-Subagent** (with skill): Step 1 (DB telemetry) executed immediately. Found log-rotation confirmation (609k lines, 10MB buffer). Bonus: discovered quarantine logic (CL=F no longer checked) + missing TOUCH pattern (BAS.DE never updated despite successful scans). Both findings would have been undiscoverable with Docker-logs only.
+- **Refactor**: schema-verify hint for `tick_log` added (columns vary by project), log-config-inspect command added.
 
-### Cycle-2-Backlog (nicht-blocking)
+### Cycle-2 Backlog (non-blocking)
 
-1. No-TOUCH-Pattern: wenn DB-Telemetrie success zeigt aber Trade-Updates fehlen → prüfe ob Monitor nur bei `stage_change` updated (nicht bei jedem Scan). Eigenes Sub-Skill kandidat.
-2. Tick-Gap-Detection: Helper-Query der die maximale Lücke zwischen Runs berechnet (erwartet: ≤15min für v3_live_monitor).
+1. No-TOUCH pattern: if DB telemetry shows success but trade-updates are missing → check whether the monitor only updates on `stage_change` (not on every scan). Sub-skill candidate.
+2. Tick-Gap detection: helper query that computes the maximum gap between runs (expected: ≤15min for v3_live_monitor).

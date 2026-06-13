@@ -1,18 +1,18 @@
 ---
 name: post-session-skill-review
-description: Use at the end of any productive session, when writing a Daily Note, when the user says "Session abschließen" / "remember" / "wrap up", or proactively after observing repeated workflow patterns within a session. Trigger on phrases like "Session zu Ende", "lass uns abschließen", "Tagesabschluss", "session wrap-up", "end of day review", "was haben wir heute gelernt", "ist hier ein Skill drin?", "post-session review", "skill candidate review". Do NOT load mid-session for active task work, for single-task sessions with nothing repeatable, or when the user is in mid-debug (they need closure, not meta-reflection). This skill encodes Wolf's maxim (23.05.2026): "Am Ende aller erfolgreichen Sessions zu prüfen, ob die Entwicklung eines Skill sinnvoll ist, ist eine der größten Stärken des Systems." Skills compound; finding them at end-of-session is the highest-leverage moment.
+description: Use at the end of any productive session, when writing a Daily Note, when the user says "wrap up" / "remember" / "session done", or proactively after observing repeated workflow patterns within a session. Trigger on phrases like "end of session", "let's wrap up", "end of day", "session wrap-up", "end of day review", "what did we learn today", "is there a skill in here?", "post-session review", "skill candidate review". Do NOT load mid-session for active task work, for single-task sessions with nothing repeatable, or when the user is in mid-debug (they need closure, not meta-reflection). This skill encodes the maxim: "Checking at the end of every successful session whether developing a skill is worthwhile is one of the greatest strengths of the system." Skills compound; finding them at end-of-session is the highest-leverage moment.
 ---
 
 # Post-Session Skill Review
 
 At session-end, take 5 minutes to ask: **did any pattern repeat today that future-me would want as a Skill?** Most sessions: no. Some sessions: yes, and missing it means re-discovering the pattern next time, often worse.
 
-This skill is the systematic version of "Was haben wir gelernt?" — applied with three filters that distinguish genuine skill candidates from one-off solutions.
+This skill is the systematic version of "What did we learn?" — applied with three filters that distinguish genuine skill candidates from one-off solutions.
 
 ## When to use
 
 - End of a productive session — especially when a Daily Note is being written
-- User explicitly asks "remember", "session wrap-up", "Tagesabschluss"
+- User explicitly asks "remember", "session wrap-up", "end of day"
 - Mid-session, when the same workflow pattern has appeared a 3rd time and you start to suspect "we should formalize this"
 - After a hard-won debugging session that took unreasonably long — there's likely a skill in the "what we wish we'd known first"
 
@@ -26,7 +26,7 @@ This skill is the systematic version of "Was haben wir gelernt?" — applied wit
 ## The three-filter test
 
 Every candidate pattern passes ALL three filters or it's not a skill. Some are better captured as:
-- **Memory entry** in `.remember/core-memories.md` (Wolf-specific maxims, lessons)
+- **Memory entry** in `.remember/core-memories.md` (user-specific maxims, lessons)
 - **CLAUDE.md update** (project-specific structure, conventions)
 - **Hook in settings.json** (mechanical/automatic enforcement — use `update-config` skill)
 
@@ -44,7 +44,7 @@ Every candidate pattern passes ALL three filters or it's not a skill. Some are b
 
 ### Filter C — Is it transferable beyond a single project?
 - ✅ Pattern applies to >1 project or >1 domain
-- ✅ Technology-specific but the tech is used across multiple Wolf-projects (Tailscale, Obsidian, ESP32 ecosystems)
+- ✅ Technology-specific but the tech is used across multiple projects (Tailscale, Obsidian, ESP32 ecosystems)
 - ❌ Project-specific naming, file-paths, business-logic → CLAUDE.md update
 - ❌ One-time refactor specific to one codebase → commit message + Daily Note
 
@@ -62,13 +62,13 @@ Look for in today's work:
 - Debugging dead-ends ("turned out to be Y, not X/W/V/U/T as I guessed")
 - Multi-step procedures repeated successfully ("first git mv, then python fixer, then grep")
 - Hard-won insights stated as principles ("identity-layer first, tunnel-layer second")
-- User-stated maxims ("messen statt schätzen")
+- User-stated maxims ("measure, don't estimate")
 ```
 
-In Wolf's Daily Notes these often appear as:
+In Daily Notes these often appear as:
 - `★ Insight ─────` blocks
-- `## 💡 Maximen-Lehre des Tages` sections
-- `### Lehre` subsections at the end of debugging stories
+- `## Maxim of the day` sections
+- `### Lesson` subsections at the end of debugging stories
 
 ### Step 2: For each pattern, run the ABC-filter explicitly
 
@@ -79,7 +79,7 @@ Don't skip filter B — that's where most candidates fail honestly. "Could be us
 | Candidate type | Right home |
 |---|---|
 | ABC ✅✅✅ — repeatable, prevents error, transferable | New Skill in `~/.claude/skills/<name>/SKILL.md` |
-| A❌ — principle without steps | `.remember/core-memories.md` Wolf-Maxime |
+| A❌ — principle without steps | `.remember/core-memories.md` maxim |
 | B❌ — wouldn't have gotten it wrong | Daily Note insight + maybe `.remember/core-memories.md` |
 | C❌ — project-specific | `CLAUDE.md` of the project (or vault's CLAUDE.md) |
 | Mechanical / automatic enforcement needed | `update-config` skill → settings.json hook |
@@ -89,7 +89,7 @@ Don't skip filter B — that's where most candidates fail honestly. "Could be us
 ```
 Format:
 
-## Skill-Kandidaten aus dieser Session
+## Skill candidates from this session
 
 ### 🥇 ABC ✅✅✅ (skill-worthy)
 - **<candidate-name>** — <one-line trigger> — <one-line value>
@@ -101,7 +101,7 @@ Format:
 - <list>
 ```
 
-Then ask: "welche willst du jetzt bauen?" — never decide for the user.
+Then ask: "which one do you want to build now?" — never decide for the user.
 
 ### Step 5: If skills are built, also consider the meta-level
 
@@ -133,7 +133,7 @@ If you want to invoke this from your own internal monolog at session-end:
 
 ```
 Run post-session-skill-review:
-1. Scan today's Daily Note for ★ Insight blocks, Maximen-Lehre, and Lehre-sections
+1. Scan today's Daily Note for ★ Insight blocks, Maxim-of-the-day, and Lesson sections
 2. List every repeated pattern
 3. For each, run ABC-filter
 4. Output: skill-candidates / memory-entries / CLAUDE.md-updates / one-offs
@@ -142,8 +142,8 @@ Run post-session-skill-review:
 
 ## Real-world impact
 
-23.05.2026 evening session: applied this review (informally, before this skill existed) to a day with ~6 distinct workflow domains. Result: 4 ABC-pass skill candidates (embedded-ui-svg, obsidian-vault-restructure, tailscale-multi-account, brain-dump-to-roadmap) plus 2 borderlines (domain-defense as memory, daily-commit as hook). All 4 skills built in the same session in MVP form.
+A productive evening session applied this review (informally, before this skill existed) to a day with ~6 distinct workflow domains. Result: 4 ABC-pass skill candidates (embedded-ui-svg, obsidian-vault-restructure, tailscale-multi-account, brain-dump-to-roadmap) plus 2 borderlines (domain-defense as memory, daily-commit as hook). All 4 skills built in the same session in MVP form.
 
-Wolf-Quote: "Jeder Prozess durchläuft mehrere Phasen, die naturgemäß auch Fehler und Irrungen einschließen. Daraus für künftige Sessions zu lernen ist eine der größten Stärken des Systems. Skills zu Agents zusammenzufassen, MCP Server zu bauen und Hooks zu integrieren folgen. Aber Skills sind der Schlüssel zum Erfolg."
+User quote: "Every process goes through multiple phases that inevitably include errors and detours. Learning from them for future sessions is one of the greatest strengths of the system. Combining skills into agents, building MCP servers, and integrating hooks follow. But skills are the key to success."
 
 This skill IS that learning-loop, formalized.

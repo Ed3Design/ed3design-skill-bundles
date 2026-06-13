@@ -1,256 +1,256 @@
 ---
 name: skill-tdd-promotion-workflow
-description: Use when promoting an existing DRAFT/STUB skill (suffix `-DRAFT` or `-STUB` in `name:` field, OR description starts with "STUB —") to GA (auto-discoverable). Different from `superpowers:writing-skills` which covers CREATE-from-scratch — this skill covers the LIFECYCLE-STAGE from "skeleton-exists" to "production-ready". Requires Agent/Task-tool for parallel RED+GREEN-Subagent-Dispatch (Step 3) — if the caller does NOT have Agent-tool (e.g. running as a general-purpose-subagent themselves), STOP and report-up; do NOT silently fall back to name-rename-only. Trigger on phrases like "promote dieses DRAFT-Skill", "TDD für die verbleibenden STUBs", "auto-discoverable machen", "Skill-Promotion-Cycle", "Skill aus -DRAFT entlassen", "TDD-Promotion-Cycle für N Skills". Do NOT load for creating a new skill from scratch (use `superpowers:writing-skills`), for editing GA-skills (just edit), when no DRAFT/STUB-suffix exists (skill is already GA), or when target skill file does not exist (no work to do).
+description: Use when promoting an existing DRAFT/STUB skill (suffix `-DRAFT` or `-STUB` in `name:` field, OR description starts with "STUB —") to GA (auto-discoverable). Different from `superpowers:writing-skills` which covers CREATE-from-scratch — this skill covers the LIFECYCLE-STAGE from "skeleton-exists" to "production-ready". Requires Agent/Task-tool for parallel RED+GREEN-Subagent-Dispatch (Step 3) — if the caller does NOT have Agent-tool (e.g. running as a general-purpose-subagent themselves), STOP and report-up; do NOT silently fall back to name-rename-only. Trigger on phrases like "promote this DRAFT skill", "TDD for the remaining STUBs", "make it auto-discoverable", "skill promotion cycle", "release skill from -DRAFT", "TDD promotion cycle for N skills". Do NOT load for creating a new skill from scratch (use `superpowers:writing-skills`), for editing GA-skills (just edit), when no DRAFT/STUB-suffix exists (skill is already GA), or when target skill file does not exist (no work to do).
 ---
 
-# Skill TDD-Promotion-Workflow
+# Skill TDD Promotion Workflow
 
-> ✅ **PROMOTED 2026-05-27**: Pattern aus Wolf-Cleanup-Day-Session 26.05.2026 (5× erfolgreich angewendet), TDD-Pressure-Test in 27.05.-Promotion-Session bestanden. R1-R3-Refactor angewendet (Pre-Step-0, Caller-Context-STOP-Mode, konkretes Dispatch-Beispiel).
+> ✅ **PROMOTED**: Pattern from a cleanup-day session (applied 5× successfully), TDD pressure-test passed in a subsequent promotion session. R1-R3 refactor applied (Pre-Step-0, Caller-Context-STOP-Mode, concrete dispatch example).
 
-## Lifecycle-Position
+## Lifecycle position
 
-`superpowers:writing-skills` deckt **CREATE** ab (RED-GREEN-REFACTOR-Cycle für neue Skills). Dieses Skill deckt **PROMOTE** ab — die andere Lifecycle-Stage:
-
-```
-[Idee] → CREATE (writing-skills) → -DRAFT-Suffix → [Skeleton mit TDD-Aufgabe] → PROMOTE (dieses Skill) → GA (auto-discoverable)
-```
-
-**PROMOTE-Pflicht**: nicht jeder DRAFT wird zu GA. Manche bleiben deferred (Pattern bewahrt, Trigger nicht aktiv) bis genug Re-Use-Belege da sind.
-
-## Pre-Step-0: Caller-Context + Target-Existence-Check (PFLICHT)
-
-**STOP-Gate vor allem anderen.** Diese beiden Checks scheitern silent und führen zu invaliden Promotions wenn übersprungen.
-
-### Check A — Caller hat Agent/Task-Tool?
+`superpowers:writing-skills` covers **CREATE** (RED-GREEN-REFACTOR cycle for new skills). This skill covers **PROMOTE** — the other lifecycle stage:
 
 ```
-Hat der aktuelle Caller (= du, der dieses Skill lädt) Agent-Tool im Tool-Inventar?
-- TOP-LEVEL Claude Code Session  →  ja  →  weiter
-- general-purpose subagent       →  nein →  STOP, siehe „Fallback: No-Agent-Tool-Caller"
-- gsd-* spawned agent            →  meist nein →  STOP
+[Idea] → CREATE (writing-skills) → -DRAFT suffix → [Skeleton with TDD task] → PROMOTE (this skill) → GA (auto-discoverable)
 ```
 
-**Wenn nein → STOP**: Du kannst Step 3 (paralleler RED+GREEN-Dispatch) nicht ausführen. Single-Caller-Simulation ist KEIN Ersatz (du weißt schon was das Skill claimt, RED-Validity verloren). Report-up an den dispatching Caller mit:
+**PROMOTE is not automatic**: not every DRAFT becomes GA. Some remain deferred (pattern preserved, trigger not yet active) until enough re-use evidence exists.
 
-> „Cannot execute skill-tdd-promotion-workflow without Agent/Task-tool. Step 3 (parallel RED+GREEN-Subagent-Dispatch) is the validity-load-bearing step and cannot be substituted by single-caller simulation. Promotion-Cycle must be invoked from a top-level Claude Code session that has Agent-tool access."
+## Pre-Step-0: Caller-Context + Target-Existence Check (MANDATORY)
 
-Siehe „Fallback: No-Agent-Tool-Caller" unten für die einzig legitime Single-Caller-Aktion (Prep-Only-Mode).
+**STOP gate before everything else.** Both checks fail silently and lead to invalid promotions if skipped.
 
-### Check B — Target-Skill-Datei existiert?
+### Check A — Does the caller have the Agent/Task tool?
+
+```
+Does the current caller (= you, loading this skill) have Agent-tool in the tool inventory?
+- TOP-LEVEL Claude Code session  →  yes  →  continue
+- general-purpose subagent       →  no  →  STOP, see "Fallback: No-Agent-Tool-Caller"
+- gsd-* spawned agent            →  usually no →  STOP
+```
+
+**If no → STOP**: You cannot execute Step 3 (parallel RED+GREEN dispatch). Single-caller simulation is NOT a substitute (you already know what the skill claims, RED validity is lost). Report-up to the dispatching caller with:
+
+> "Cannot execute skill-tdd-promotion-workflow without Agent/Task-tool. Step 3 (parallel RED+GREEN-Subagent-Dispatch) is the validity-load-bearing step and cannot be substituted by single-caller simulation. Promotion-Cycle must be invoked from a top-level Claude Code session that has Agent-tool access."
+
+See "Fallback: No-Agent-Tool-Caller" below for the only legitimate single-caller action (Prep-Only mode).
+
+### Check B — Does the target skill file exist?
 
 ```bash
 test -f ~/.claude/skills/<SKILL-NAME>/SKILL.md && echo "exists" || echo "MISSING"
 ```
 
-Wenn `MISSING` → STOP und an Caller zurückmelden. Nicht synthetisch eine neue erfinden (das wäre CREATE-Workflow, falsches Skill).
+If `MISSING` → STOP and report back to the caller. Do not invent a new one synthetically (that would be the CREATE workflow, the wrong skill).
 
-### Check C — Skill ist wirklich DRAFT/STUB?
+### Check C — Is the skill actually DRAFT/STUB?
 
 ```bash
 head -3 ~/.claude/skills/<SKILL-NAME>/SKILL.md | grep -E "name:.*-DRAFT|name:.*-STUB|description:.*STUB —"
 ```
 
-Wenn keine Match → Skill ist bereits GA, keine PROMOTE-Arbeit nötig. STOP, ggf. Edit-Mode-Skill verwenden.
+If no match → skill is already GA, no PROMOTE work needed. STOP, use an edit-mode skill if appropriate.
 
 ## Pattern (10 Steps)
 
-Pro DRAFT/STUB-Skill (nach bestandenem Pre-Step-0):
+Per DRAFT/STUB skill (after passing Pre-Step-0):
 
-1. **Skill lesen** (Read-Tool, gesamte Datei) — verstehen was es claimt, welche Trigger-Phrasen, welche Anti-Patterns
-2. **RED + GREEN-Scenario designen** — identischer Prompt-Stem, einzige Variable = Skill-Access-Direktive. Scenario muss konkret genug sein dass das Anti-Pattern „natürlich" auftritt (Bait einbauen wenn nötig)
-3. **Beide Subagents in EINEM Message-Block parallel dispatchen** — Agent-Tool, `general-purpose`-Subagents (siehe Konkretes Beispiel unten)
-4. **Analyse**: gibt RED den natürlichen Anti-Pattern wieder (Failure-Mode), reagiert GREEN compliant? Vergleich entlang der Self-Reflection-Antworten
-5. **Refactor wenn nötig** — Caller-Context-Bias-Check ist kritischer Loophole: Subagents haben ggf. weniger Tool-Inventar als Caller, Skill muss das antizipieren
-6. **Polish-Items aus Subagent-Self-Reflection** — entweder einbauen oder als Cycle-2-Backlog dokumentieren (siehe Polish-vs-Promote-Decision)
-7. **Marker-Strip**: `name:` von `*-DRAFT` / `*-STUB` auf clean umbenennen UND `description:` von STUB-Prefix säubern (BEIDE Felder — Auto-Discovery liest beide; Wolf-Pushback 26.05. Nachtrag 3)
-8. **Header-Banner**: ⚠️ DRAFT-STATUS-Block durch ✅ PROMOTED-Banner mit Test-Datum + Verdict ersetzen
-9. **TDD-Verlauf-Sektion** als Background appendieren (Cycle 1 Erkenntnisse + Cycle-2-Backlog)
-10. **Commit** als atomic `feat: promote <skill-name> ...` mit Test-Verdict
+1. **Read the skill** (Read tool, full file) — understand what it claims, which trigger phrases, which anti-patterns
+2. **Design RED + GREEN scenario** — identical prompt stem, only variable = skill-access directive. Scenario must be concrete enough that the anti-pattern arises "naturally" (build in bait if needed)
+3. **Dispatch both subagents in ONE message block in parallel** — Agent tool, `general-purpose` subagents (see concrete example below)
+4. **Analyze**: does RED reproduce the natural anti-pattern (failure mode)? Does GREEN behave compliantly? Compare via the self-reflection answers
+5. **Refactor if needed** — Caller-Context-Bias check is a critical loophole: subagents may have less tool inventory than the caller, the skill must anticipate that
+6. **Polish items from subagent self-reflection** — either incorporate or document as Cycle-2 backlog (see Polish-vs-Promote decision)
+7. **Marker strip**: rename `name:` from `*-DRAFT` / `*-STUB` to clean AND clean `description:` of STUB prefix (BOTH fields — Auto-Discovery reads both)
+8. **Header banner**: replace ⚠️ DRAFT-STATUS block with a ✅ PROMOTED banner including test date + verdict
+9. **TDD log section** appended as background (Cycle 1 findings + Cycle-2 backlog)
+10. **Commit** as atomic `feat: promote <skill-name> ...` with test verdict
 
-## Konkretes Dispatch-Beispiel (Step 3)
+## Concrete Dispatch Example (Step 3)
 
-So sieht ein RED+GREEN-Dispatch-Pair in einem Message-Block aus (gekürzt):
+This is what a RED+GREEN dispatch pair looks like in a single message block (abridged):
 
 ```python
-# RED-Subagent (ohne Skill)
+# RED subagent (without skill)
 Agent(
     subagent_type="general-purpose",
     description="RED-X <skill-shortname>",
     prompt="""
-Du bist Teil eines TDD-Pressure-Tests. Du bist die RED-Baseline (ohne Skill).
+You are part of a TDD pressure test. You are the RED baseline (without skill).
 
-**CONSTRAINT**: Du darfst KEINEN Skill mit dem Namen `<skill-name>` laden.
+**CONSTRAINT**: You may NOT load a skill named `<skill-name>`.
 
-**Scenario**: <konkrete Aufgabe mit eingebautem natural-Anti-Pattern-Bait>
+**Scenario**: <concrete task with embedded natural anti-pattern bait>
 
-**Honesty-Direktive**: Sei ehrlich wie du vorgehst. Wenn du heuristisch antwortest, sag das.
+**Honesty directive**: Be honest about how you proceed. If you answer heuristically, say so.
 
-**⚠️ NO-FILE-WRITE**: Schreibe KEINE Dateien auf Disk. Alle Code-Beispiele als Markdown-Code-Blocks in deiner Antwort — NICHT als Dateien im Working Directory. Der CWD kann ein Obsidian-Vault oder ein Produktions-Repo sein — Dateien dort erzeugen Ghost-Nodes oder Datenmüll.
+**⚠️ NO-FILE-WRITE**: Do NOT write any files to disk. All code examples go as Markdown code blocks in your reply — NOT as files in the working directory. The CWD may be an Obsidian vault or a production repo — creating files there produces ghost nodes or data garbage.
 
-Report-Format: <Aufgabe-spezifisch>
+Report format: <task-specific>
 """
 )
 
-# GREEN-Subagent (mit Skill) — IM SELBEN Message-Block parallel dispatched
+# GREEN subagent (with skill) — dispatched in parallel in the SAME message block
 Agent(
     subagent_type="general-purpose",
     description="GREEN-X <skill-shortname>",
     prompt="""
-Du bist GREEN-Subagent (mit Skill).
+You are the GREEN subagent (with skill).
 
-**SKILL-DIREKTIVE**: Lies ZUERST via Read-Tool die Datei `/Users/<user>/.claude/skills/<skill-name>/SKILL.md` (NICHT via Skill-Tool, da DRAFT-Status auto-discovery blockiert). Folge dann seinen Anweisungen.
+**SKILL DIRECTIVE**: First read via Read-Tool the file `/Users/<user>/.claude/skills/<skill-name>/SKILL.md` (NOT via Skill-Tool, since DRAFT status blocks auto-discovery). Then follow its instructions.
 
-**Scenario**: <identisch zu RED>
+**Scenario**: <identical to RED>
 
-**⚠️ NO-FILE-WRITE**: Schreibe KEINE Dateien auf Disk. Alle Code-Beispiele als Markdown-Code-Blocks in deiner Antwort — NICHT als Dateien im Working Directory. Der CWD kann ein Obsidian-Vault oder ein Produktions-Repo sein — Dateien dort erzeugen Ghost-Nodes oder Datenmüll.
+**⚠️ NO-FILE-WRITE**: Do NOT write any files to disk. All code examples go as Markdown code blocks in your reply — NOT as files in the working directory. The CWD may be an Obsidian vault or a production repo — creating files there produces ghost nodes or data garbage.
 
-Am Ende, Sektion `## Skill-Self-Reflection`:
-1. Welche Sektion des Skills hast du zuerst gelesen?
-2. Hattest du Zugriff auf die Tools die das Skill voraussetzt? (Caller-Context-Check)
-3. Welche der Pattern-Schritte hast du umgesetzt? Welche übersprungen + warum?
-4. Welche „natürliche falsche Empfehlung" hat das Skill dich vermeiden lassen?
-5. Was war hilfreich / unklar / fehlend?
+At the end, section `## Skill-Self-Reflection`:
+1. Which section of the skill did you read first?
+2. Did you have access to the tools the skill assumes? (Caller-Context check)
+3. Which pattern steps did you execute? Which did you skip + why?
+4. Which "natural wrong recommendation" did the skill prevent you from making?
+5. What was helpful / unclear / missing?
 """
 )
 ```
 
-**Wichtig für Step 3**:
-- Beide Calls in EINEM Message-Block (parallel-Dispatch, nicht sequenziell)
-- `description`-Feld kurz halten, prefix mit `RED-` / `GREEN-`
-- Skill-Pfad immer via Read-Tool angeben (DRAFT-Status blockiert Skill-Tool-Auto-Discovery)
-- Bei N Skills: 2N Agent-Calls in einem Block (z.B. 8 Skills = 16 Calls)
+**Important for Step 3**:
+- Both calls in ONE message block (parallel dispatch, not sequential)
+- Keep `description` short, prefix with `RED-` / `GREEN-`
+- Always specify skill path via Read-Tool (DRAFT status blocks Skill-Tool auto-discovery)
+- For N skills: 2N Agent calls in one block (e.g. 8 skills = 16 calls)
 
 ## Caller-Context-Bias-Check (CRITICAL Loophole)
 
-Subagents (general-purpose) haben **kein Agent/Task-Tool**. Wenn das zu promotende Skill `superpowers:dispatching-parallel-agents` oder ähnliches als Kern-Mechanik voraussetzt, wird der GREEN-Subagent das Pattern nicht ausführen können → GREEN-Test scheitert silent ODER produziert sequentiellen Fallback der schlechter als Baseline ist.
+Subagents (general-purpose) have **no Agent/Task tool**. If the skill being promoted requires `superpowers:dispatching-parallel-agents` or similar as its core mechanic, the GREEN subagent cannot execute the pattern → GREEN test fails silently OR produces a sequential fallback worse than baseline.
 
-**Pflicht-Check vor RED+GREEN-Dispatch des zu testenden Skills**:
-- Welche Tools setzt das Test-Skill voraus? (Bash? SSH? Agent? MCP?)
-- Hat ein general-purpose-Subagent diese Tools?
-- Wenn nein: das Test-Skill muss eine STOP-Sektion + Fallback-Mode haben (siehe `code-review-chunk-dispatch` als Vorbild; siehe DIESES Skill für Self-Reference)
+**Mandatory check before RED+GREEN dispatch of the skill under test**:
+- Which tools does the test skill assume? (Bash? SSH? Agent? MCP?)
+- Does a general-purpose subagent have these tools?
+- If no: the test skill must have a STOP section + fallback mode (see `code-review-chunk-dispatch` as a model; see THIS skill for self-reference)
 
-**Beispiel** (chunk-dispatch, 26.05.2026): GREEN-Subagent erreichte sequenziell-erzwungenes Chunking statt Parallel-Dispatch → schlechter als RED-Baseline (1 Critical vs 4). R1+R2+R3-Refactor mit Caller-Context-Guard + Fallback-Mode + Description-Filter nötig vor Promotion.
+**Example** (chunk-dispatch): GREEN subagent achieved sequentially-forced chunking instead of parallel dispatch → worse than RED baseline (1 Critical vs 4). R1+R2+R3 refactor with caller-context guard + fallback mode + description filter needed before promotion.
 
-**Beispiel** (skill-tdd-promotion-workflow selbst, 27.05.2026): GREEN-Subagent erkannte „kein Agent-Tool, STOP" — das Skill hatte aber selbst keinen STOP-Mode dokumentiert. Iron-Recursion gefunden, Refactor (dieser Block + Pre-Step-0) angewendet.
+**Example** (skill-tdd-promotion-workflow itself): GREEN subagent recognized "no Agent tool, STOP" — but the skill itself had no STOP mode documented. Ironic recursion found, refactor (this block + Pre-Step-0) applied.
 
-## Fallback: No-Agent-Tool-Caller (Prep-Only-Mode)
+## Fallback: No-Agent-Tool-Caller (Prep-Only Mode)
 
-Wenn Pre-Step-0 Check A scheitert (Subagent-Caller ohne Agent-Tool), gibt es genau EINE legitime Aktion:
+If Pre-Step-0 Check A fails (subagent caller without Agent tool), there is exactly ONE legitimate action:
 
-### Prep-Only-Mode
+### Prep-Only Mode
 
-1. **Lese das Target-Skill** (Read-Tool)
-2. **Schreibe ein PROMOTION-PLAN.md** neben das Target-Skill mit:
-   - RED-Subagent-Prompt-Vorschlag (komplett, copy-paste-ready)
-   - GREEN-Subagent-Prompt-Vorschlag (komplett, copy-paste-ready)
-   - Erwarteter RED-Anti-Pattern (Hypothese)
-   - Erwarteter GREEN-Compliance-Check
-   - Caller-Context-Bias-Risiko für das Target-Skill
-3. **Report-up**: „Prep done, file: PROMOTION-PLAN.md. Top-level-caller mit Agent-Tool muss Dispatch ausführen."
+1. **Read the target skill** (Read tool)
+2. **Write a PROMOTION-PLAN.md** next to the target skill with:
+   - RED subagent prompt suggestion (complete, copy-paste-ready)
+   - GREEN subagent prompt suggestion (complete, copy-paste-ready)
+   - Expected RED anti-pattern (hypothesis)
+   - Expected GREEN compliance check
+   - Caller-context-bias risk for the target skill
+3. **Report-up**: "Prep done, file: PROMOTION-PLAN.md. Top-level caller with Agent tool must execute dispatch."
 
-### Was Prep-Only-Mode NICHT macht
+### What Prep-Only Mode does NOT do
 
-❌ Single-Caller-RED+GREEN-Simulation (Validity verloren — du weißt schon was das Skill claimt)
-❌ Nur name-Rename (Iron-Law-Anti-Pattern: PROMOTE ohne RED-Test)
-❌ Heuristisches „sieht gut aus, ich promote"
-❌ Header-Banner / Description-Strip vor erfolgtem TDD
+❌ Single-caller RED+GREEN simulation (validity lost — you already know what the skill claims)
+❌ Just name-rename (Iron-Law anti-pattern: PROMOTE without RED test)
+❌ Heuristic "looks good, I'll promote"
+❌ Header banner / description strip before TDD has succeeded
 
-## Polish-vs-Promote-Decision
+## Polish-vs-Promote Decision
 
-Subagent-Self-Reflection (siehe `subagent-self-reflection-prompt-pattern`-Skill) liefert oft 3-5 Polish-Items pro Skill. Entscheidung pro Item:
+Subagent self-reflection (see `subagent-self-reflection-prompt-pattern` skill) often delivers 3-5 polish items per skill. Decision per item:
 
-| Item-Typ | Action |
+| Item type | Action |
 |---|---|
-| Sub-Skill-essential (z.B. unklarer Trigger, fehlender STOP-Mode) | jetzt einbauen vor PROMOTE |
-| Edge-Case-Doku (z.B. „was wenn X NULL ist") | jetzt einbauen wenn ≤5min |
-| Pattern-Erweiterung („wäre noch nützlich für Y") | Cycle-2-Backlog in TDD-Verlauf, nicht-blocking |
-| Tool-Wrapper-Refactor (groß) | separate Session |
+| Sub-skill-essential (e.g. unclear trigger, missing STOP mode) | build in now before PROMOTE |
+| Edge-case doc (e.g. "what if X is NULL") | build in now if ≤5min |
+| Pattern extension ("would also be useful for Y") | Cycle-2 backlog in TDD log, non-blocking |
+| Tool-wrapper refactor (large) | separate session |
 
-Iron-Law: jeder Polish-Edit nach PROMOTE braucht eigenen failing-test-first. Vor PROMOTE können Polish-Items als Teil des Promotion-Refactors mit-eingebaut werden.
+Iron Law: every polish edit AFTER PROMOTE needs its own failing-test-first. BEFORE PROMOTE, polish items can be incorporated as part of the promotion refactor.
 
-## TDD-Verlauf-Sektion-Convention
+## TDD-Log Section Convention
 
-Jedes promotete Skill bekommt am Ende eine `## Background: TDD-Verlauf (Bulletproofing-Log)` Sektion mit:
+Every promoted skill gets at the end a `## Background: TDD Log (Bulletproofing Log)` section with:
 
 ```markdown
 ### Cycle 1 — YYYY-MM-DD (PASS/FAIL)
 
-- **RED-Subagent** (ohne Skill, Prompt: ...): Verhalten beschrieben verbatim
-- **GREEN-Subagent** (mit Skill, gleicher Prompt): Verhalten beschrieben verbatim
-- **Refactor angewendet**: R1/R2/... was geändert wurde + warum
+- **RED subagent** (without skill, prompt: ...): behavior described verbatim
+- **GREEN subagent** (with skill, same prompt): behavior described verbatim
+- **Refactor applied**: R1/R2/... what changed + why
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2 Backlog (Polish, non-blocking)
 
-1. [Polish-Item 1]
-2. [Polish-Item 2]
+1. [Polish item 1]
+2. [Polish item 2]
 ...
 ```
 
-Diese Sektion ist Background für ausführende Caller, nicht Anweisung. Macht aber Skill-Reife sichtbar für künftige Reviewer.
+This section is background for executing callers, not instruction. But it makes skill maturity visible for future reviewers.
 
 ## Anti-Patterns
 
-| Anti-Pattern | Was statt dessen |
+| Anti-Pattern | What to do instead |
 |---|---|
-| Skill ohne RED-Test promoten weil „sieht intuitiv okay aus" | RED-Test ist Pflicht — zeigt natürliches Anti-Pattern, validiert Skill-Wert |
-| Pre-Step-0 skippen weil „der Skill existiert sicher" | Existence-Check ist 1s, falsch-Annahme kostet 30min |
-| RED und GREEN sequenziell statt parallel dispatchen | Parallel im selben Message-Block, einziges Variable = Skill-Access |
-| Caller-Context-Bias-Check skippen weil „der Subagent macht das schon" | Subagents haben oft anderes Tool-Inventar — Skill muss Fallback-Mode haben |
-| Single-Caller-Simulation als Ersatz für RED+GREEN-Subagent-Dispatch | Validity verloren (Caller kennt schon Skill-Claim) — Prep-Only-Mode statt |
-| Nur `name`-Feld strippen, `description`-STUB-Prefix vergessen | Auto-Discovery liest BEIDE Felder (Wolf-Pushback 26.05. Nachtrag 3) |
-| Alle Polish-Items vor PROMOTE einbauen wollen | Iron-Law: jeder Polish nach PROMOTE braucht failing-test. Cycle-2-Backlog für non-blocking ist legitim. |
-| PROMOTE ohne TDD-Verlauf-Sektion | Spätere Reviewer wissen nicht ob Skill bulletproof ist oder noch DRAFT-Quality |
-| **NO-FILE-WRITE-Constraint in Subagent-Prompts vergessen** | Subagents erben den Session-CWD (z.B. Obsidian-Vault oder Production-Repo). Ohne explizites Verbot schreiben sie RED/GREEN-Simulation-Outputs als Dateien dorthin → Ghost-Nodes im Graph / Datenmüll. Korrekt: `⚠️ NO-FILE-WRITE` in JEDEN Subagent-Prompt. Encodes: 27.05.2026, 19 Simulationsartefakte im Vault erzeugt + nachträglich gelöscht. |
+| Promote skill without RED test because "looks intuitive enough" | RED test is mandatory — shows natural anti-pattern, validates skill value |
+| Skip Pre-Step-0 because "the skill surely exists" | Existence check is 1s, wrong assumption costs 30min |
+| Dispatch RED and GREEN sequentially instead of parallel | Parallel in the same message block, only variable = skill access |
+| Skip caller-context-bias check because "the subagent will figure it out" | Subagents often have different tool inventories — skill must have a fallback mode |
+| Single-caller simulation as substitute for RED+GREEN subagent dispatch | Validity lost (caller already knows skill claim) — use Prep-Only Mode instead |
+| Strip only `name` field, forget `description` STUB prefix | Auto-Discovery reads BOTH fields |
+| Try to incorporate all polish items before PROMOTE | Iron Law: every polish after PROMOTE needs a failing test. Cycle-2 backlog for non-blocking is legitimate. |
+| PROMOTE without TDD-log section | Later reviewers don't know whether the skill is bulletproof or still DRAFT-quality |
+| **Forget NO-FILE-WRITE constraint in subagent prompts** | Subagents inherit the session CWD (e.g. Obsidian vault or production repo). Without explicit prohibition they write RED/GREEN simulation outputs as files there → ghost nodes in the graph / data garbage. Correct: `⚠️ NO-FILE-WRITE` in EVERY subagent prompt. |
 
-## Querverweise
+## Cross-references
 
-- `superpowers:writing-skills` — CREATE-Stage (vor diesem Skill)
-- `subagent-self-reflection-prompt-pattern` — Polish-Item-Quelle pro Subagent-Dispatch
-- `superpowers:dispatching-parallel-agents` — Mechanik für Step 3
-- `superpowers:test-driven-development` — Iron-Law-Basis
-- `code-review-chunk-dispatch` — bestes Beispiel für Caller-Context-Bias-Refactor (Vorbild)
+- `superpowers:writing-skills` — CREATE stage (before this skill)
+- `subagent-self-reflection-prompt-pattern` — polish-item source per subagent dispatch
+- `superpowers:dispatching-parallel-agents` — mechanic for Step 3
+- `superpowers:test-driven-development` — Iron-Law basis
+- `code-review-chunk-dispatch` — best example for caller-context-bias refactor (model)
 
-## Real-World-Impact
+## Real-World Impact
 
-**Wolf-Cleanup-Day 26.05.2026**: 5 Skills promoted in einer Session via diesen Workflow:
-- chunk-dispatch (Cycle-1-Refactor + Cycle-2-Value-Prop)
-- asyncpg-decimal-test-shape (trivial-PASS)
-- cross-repo-stack-cockpit-pattern (moderate value-add, baseline gut)
-- htmx-outerhtml-load-loop (RED reproduzierte exact-Anti-Pattern)
-- macos-launchagent-fda-pattern (RED fiel auf Lesson-1-Trap)
+**Cleanup day**: 5 skills promoted in one session via this workflow:
+- chunk-dispatch (Cycle-1 refactor + Cycle-2 value-prop)
+- asyncpg-decimal-test-shape (trivial PASS)
+- cross-repo-stack-cockpit-pattern (moderate value-add, baseline good)
+- htmx-outerhtml-load-loop (RED reproduced exact anti-pattern)
+- macos-launchagent-fda-pattern (RED fell into Lesson-1 trap)
 
-**Wolf-Promotion-Day 27.05.2026**: 8 Skills promoted via diesen Workflow (inkl. dieser Self-Application):
+**Promotion day**: 8 skills promoted via this workflow (including this self-application):
 - external-advisor-output-plausibility-audit
 - legal-paragraph-recommendation-checklist
 - pre-migration-data-verification
 - pytest-venv-first-triage
 - roadmap-phase-execution-verify-first
-- skill-tdd-promotion-workflow (DIESER — ironic-recursion: self-applied)
+- skill-tdd-promotion-workflow (THIS — ironic-recursion: self-applied)
 - subagent-self-reflection-prompt-pattern
 - vault-decision-cross-file-sync
 
-Token-Cost: ~0.5M pro 5 Skills (8-16 parallele Subagents = 1 großer Dispatch). Wäre ohne Workflow: re-discovery jedes Promotion-Cycles, Caller-Context-Bias-Bug hätte beim ersten Skill nicht entdeckt → restliche wären verbockt promoted worden.
+Token cost: ~0.5M per 5 skills (8-16 parallel subagents = 1 large dispatch). Without the workflow: re-discovery of every promotion cycle, caller-context-bias bug would not have been caught on the first skill → the rest would have been botched into promotion.
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD Log (Bulletproofing Log)
 
-### Cycle 1 — 2026-05-27 (PASS via Self-Application)
+### Cycle 1 — PASS via Self-Application
 
-- **RED-Subagent**: Mechanischer Rename-only-Approach (1. Skill lesen, 2. name-Feld DRAFT-Suffix strippen, 3. description STUB-Prefix raus, 4. Header-Banner löschen, 5. TDD-Aufgabe-Sektion löschen, 6. Commit). Eigene Selbstkritik am Ende listete 7 Lücken auf (keine TDD-Verifikation, keine Cross-Skill-Konsistenzprüfung, keine TDD-Aufgaben-Abarbeitung-Check, kein Rollback-Pfad, keine Wolf-Rückfrage, kein Pfad-Schema-Check) — RED erkannte die Lücken, hätte sie aber nicht angewendet ohne Skill.
+- **RED subagent**: Mechanical rename-only approach (1. read skill, 2. strip DRAFT suffix from name field, 3. remove STUB prefix from description, 4. delete header banner, 5. delete TDD-task section, 6. commit). Self-critique at the end listed 7 gaps (no TDD verification, no cross-skill consistency check, no TDD-task-completion check, no rollback path, no user query, no path-schema check) — RED recognized the gaps but would not have applied them without the skill.
 
-- **GREEN-Subagent**: Erkannte beim Pre-Step Caller-Context-Bias EXPLIZIT — „Ich als general-purpose-Subagent habe KEIN Agent/Task-Tool, Step 3 (paralleler Subagent-Dispatch) ist physisch nicht ausführbar." Stoppte korrekt statt zu fingieren. Identifizierte zusätzlich: (a) Pre-Step-0 (Existence-Check) fehlt im Skill, (b) Single-Caller-Fallback-Mode predigt das Skill für andere aber lebt es selbst nicht (predigt es im Caller-Context-Bias-Check-Block, hat aber selbst keinen Block dafür), (c) Step-3-Dispatch-Mechanik fehlt konkretes Beispiel.
+- **GREEN subagent**: Recognized at the Pre-Step the Caller-Context-Bias EXPLICITLY — "As a general-purpose subagent I have NO Agent/Task tool, Step 3 (parallel subagent dispatch) is physically not executable." Stopped correctly instead of faking it. Additionally identified: (a) Pre-Step-0 (existence check) missing from the skill, (b) single-caller fallback mode preached by the skill for others but not lived itself (preaches it in the Caller-Context-Bias-Check block but has no block for itself), (c) Step-3 dispatch mechanic lacks a concrete example.
 
-- **Refactor angewendet (R1+R2+R3)**:
-  - **R1** (Pre-Step-0): Caller-Context-Check + Target-Existence-Check + DRAFT-Status-Check als STOP-Gate vor Pattern hinzugefügt
-  - **R2** (Fallback-Mode): „No-Agent-Tool-Caller → Prep-Only-Mode" Sektion mit klarer Anti-Liste (was Prep-Only NICHT macht)
-  - **R3** (Konkretes Dispatch-Beispiel): Python-Pseudocode-Block mit RED+GREEN-Agent-Call-Paar als Step-3-Konkretisierung
-  - Bonus: Anti-Patterns-Tabelle um Pre-Step-0-skip + Single-Caller-Sim erweitert
+- **Refactor applied (R1+R2+R3)**:
+  - **R1** (Pre-Step-0): Caller-context check + target-existence check + DRAFT-status check added as STOP gate before the pattern
+  - **R2** (Fallback mode): "No-Agent-Tool-Caller → Prep-Only Mode" section with clear anti-list (what Prep-Only does NOT do)
+  - **R3** (Concrete dispatch example): Python pseudocode block with RED+GREEN agent-call pair as Step-3 concretization
+  - Bonus: Anti-Patterns table extended with Pre-Step-0-skip + single-caller-sim
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2 Backlog (Polish, non-blocking)
 
-1. **Beispiel-Output-Galerie**: konkrete RED+GREEN-Output-Auszüge pro Skill-Typ (trivial-PASS / moderate / refactor-needed) zur Kalibrierung was als „strong RED-Anti-Pattern" zählt
-2. **Token-Cost-Heuristik**: bei N Skills, geschätzt 2N×~50k = N×100k Tokens; bei N>8 ggf. Welle-A/B-Split
-3. **Test-Skill-Tool-Inventory-Tabelle**: häufige Tool-Sets (general-purpose / gsd-* / specialist) mit „kann Skill X testen ja/nein"-Hint
-4. **`/gsd-promote-skill <name>`-Orchestrator-Command**: wenn dieser Workflow >10× pro Quartal läuft, lohnt eigener Slash-Command
-5. **Cross-Skill-Konsistenz-Check** (aus RED-Selbstkritik): vor PROMOTE prüfen ob Trigger-Phrasen mit anderen GA-Skills kollidieren — `grep -l "<trigger-phrase>" ~/.claude/skills/*/SKILL.md`
-6. **Step 7b — Promotion-Checklist-Sektion entfernen** (aus 12.06.2026-Anwendung): viele DRAFT-Skills haben „## Promotion-Checklist (TDD später)"-Sektion. Bei Promote als Step 7b nach name-Strip entfernen, sonst dangling-Sektion in promotierter Datei. Pattern: `grep -A 10 "## Promotion-Checklist"` + Edit zum Löschen.
-7. **Empirik-Update 12.06.2026** (8 Skills in einem 16-Agent-Block): ~430k Tokens total für 8-Skill-Promotion-Cycle. Bestätigt N×100k-Heuristik (Item 2). Skill-Catalog-Wachstum: +8 GA-Skills in einer Session ohne Cycle-2-Refactor-Bedarf — höchster Durchsatz bisher. Cycle-2-Polish-Items pro Skill durchschnittlich 3-5, alle aus GREEN-Subagent-Self-Reflection direkt verwertbar. 16-Agent-Block ROI ~50% Saving vs sequentiell — gleicher Faktor wie 11.06. Spätabend 8-Agent-Block für 4 Skills.
+1. **Example output gallery**: concrete RED+GREEN output excerpts per skill type (trivial-PASS / moderate / refactor-needed) for calibration of what counts as "strong RED anti-pattern"
+2. **Token-cost heuristic**: at N skills, estimated 2N×~50k = N×100k tokens; for N>8 consider wave-A/B split
+3. **Test-skill tool-inventory table**: common tool sets (general-purpose / gsd-* / specialist) with "can skill X be tested yes/no" hint
+4. **`/gsd-promote-skill <name>` orchestrator command**: if this workflow runs >10× per quarter, a dedicated slash command is worthwhile
+5. **Cross-skill consistency check** (from RED self-critique): before PROMOTE, check whether trigger phrases collide with other GA skills — `grep -l "<trigger-phrase>" ~/.claude/skills/*/SKILL.md`
+6. **Step 7b — remove Promotion-Checklist section**: many DRAFT skills have a "## Promotion-Checklist (TDD later)" section. On promote, as Step 7b after name strip, remove it, otherwise it's a dangling section in the promoted file. Pattern: `grep -A 10 "## Promotion-Checklist"` + Edit to delete.
+7. **Empirical update** (8 skills in one 16-agent block): ~430k tokens total for an 8-skill promotion cycle. Confirms the N×100k heuristic (item 2). Skill-catalog growth: +8 GA skills in one session without Cycle-2 refactor need — highest throughput so far. Cycle-2 polish items per skill averaged 3-5, all from GREEN subagent self-reflection directly actionable. 16-agent-block ROI ~50% saving vs sequential.

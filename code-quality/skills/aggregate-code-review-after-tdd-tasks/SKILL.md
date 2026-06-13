@@ -1,6 +1,6 @@
 ---
 name: aggregate-code-review-after-tdd-tasks
-description: Use when implementing a multi-task TDD plan via `superpowers:subagent-driven-development` AND all individual tasks have already passed their per-task two-stage review (spec-compliance + code-quality). Per-task reviews check the diff of ONE commit against ONE task description — they cannot catch cross-commit drift where Task-N implementation accumulates a divergence from spec-text that only becomes visible when reading the full feature end-to-end. This skill triggers a final aggregate-cross-commit review with a dedicated reviewer-lens that looks for: (1) state-machine/algorithm-order drift between spec-text and accumulated code, (2) naming-inconsistency across commits (variable renamed in Task 3 but old name still used in Task 1 docstring), (3) end-to-end data-flow integrity (does field `x` set in Task-1-Loader still propagate correctly through Task-4-Renderer?), (4) commit-message-honesty across the full commit-set per `commit-message-honesty-precheck`, (5) pre-commit-hook-coverage-gaps (lazy imports inside function bodies bypass `pytest --collect-only` collection), (6) test-suite-cohesion (are 11 new tests across 4 tasks uniform in assertion-style?). Trigger phrases like "Tasks 1-N alle durch", "alle TDD-Tasks done", "aggregate-Review vor Live-Run", "cross-commit-Drift-Check", "Plan-Implementation komplett, vor Push reviewen", "End-to-End-Behavior gegen Spec verifizieren", "letzter Review-Schritt vor finishing-a-development-branch". Do NOT load for single-commit reviews (use `superpowers:requesting-code-review` direkt), per-task reviews innerhalb des SDD-workflows (das ist automatisch via Spec-Reviewer + Code-Quality-Reviewer pro Task), branches mit <3 atomaren Feature-Commits (Aggregate-Linse hat nichts zu finden), oder Hotfixes/Bug-Fixes ohne Spec-Text als Soll-Vergleich. Encodes the 2026-06-02 ClaudetteV-Session-Discovery: nach 4 erfolgreichen Tasks der C1-Backtest-Simulation (jeder mit 2-stage-review passed) fand der aggregate-cross-commit-Reviewer eine State-Machine-Order-Drift zwischen Spec-Text und Code-Implementation, die kein per-commit-Review hatte detecten können — der Drift war erst an der End-to-End-Behavior-Reading sichtbar.
+description: Use when implementing a multi-task TDD plan via `superpowers:subagent-driven-development` AND all individual tasks have already passed their per-task two-stage review (spec-compliance + code-quality). Per-task reviews check the diff of ONE commit against ONE task description — they cannot catch cross-commit drift where Task-N implementation accumulates a divergence from spec-text that only becomes visible when reading the full feature end-to-end. This skill triggers a final aggregate-cross-commit review with a dedicated reviewer-lens that looks for: (1) state-machine/algorithm-order drift between spec-text and accumulated code, (2) naming-inconsistency across commits (variable renamed in Task 3 but old name still used in Task 1 docstring), (3) end-to-end data-flow integrity (does field `x` set in Task-1-Loader still propagate correctly through Task-4-Renderer?), (4) commit-message-honesty across the full commit-set per `commit-message-honesty-precheck`, (5) pre-commit-hook-coverage-gaps (lazy imports inside function bodies bypass `pytest --collect-only` collection), (6) test-suite-cohesion (are 11 new tests across 4 tasks uniform in assertion-style?). Trigger phrases like "Tasks 1-N all done", "all TDD tasks complete", "aggregate review before live-run", "cross-commit drift check", "plan implementation complete, review before push", "verify end-to-end behavior against spec", "last review step before finishing-a-development-branch". Do NOT load for single-commit reviews (use `superpowers:requesting-code-review` directly), per-task reviews within the SDD workflow (that's automatic via Spec-Reviewer + Code-Quality-Reviewer per task), branches with <3 atomic feature-commits (aggregate lens has nothing to find), or hotfixes/bugfixes without spec-text as the target-comparison. Encodes a discovery from practice: after 4 successful tasks of a multi-step feature (each with 2-stage review passed), the aggregate-cross-commit reviewer found a state-machine-order drift between spec-text and code implementation that no per-commit review could have detected — the drift was only visible at end-to-end behavior reading.
 
 ---
 
@@ -73,9 +73,9 @@ Agent({
 })
 ```
 
-## The 2026-06-02 Genesis-Case
+## The Genesis Case
 
-8 atomic commits (4 task-commits + 4 fix-commits from per-task code-reviews) for the Z.1-C1 Backtest-Simulation.
+8 atomic commits (4 task-commits + 4 fix-commits from per-task code-reviews) for a backtest simulation feature.
 
 Per-task reviews passed **all 8 commits individually**. 33/33 tests green.
 
@@ -83,8 +83,8 @@ The aggregate-cross-commit-review found:
 
 | Lens | Finding |
 |---|---|
-| 1. State-Machine-Order | Spec-text said "if paused: add(i) FIRST (unconditionally), then check resume". Code did "if paused: check resume FIRST, then add(i) only if still paused". Both per-task reviewers checked the implementation against the per-task spec's signature+return-shape but missed the algorithmic-ordering-text. **Impact: 1 trade per resume-event differential** — not measurement-blocking but a real spec-vs-code-drift. Resolution: documented as deliberate live-mirror semantics + spec-doc-update. |
-| 5. Pre-Commit-Hook-Coverage | `from strategic.macro_pause import simulate_pause_periods` was a lazy import inside `run_backtest` function body. Per-task review didn't flag it because the lazy-import works at runtime. Aggregate review noted: `pytest --collect-only` only catches module-level imports, so import-break would silently land. **Fix: hoist to module-level.** |
+| 1. State-Machine-Order | Spec-text said "if paused: add(i) FIRST (unconditionally), then check resume". Code did "if paused: check resume FIRST, then add(i) only if still paused". Both per-task reviewers checked the implementation against the per-task spec's signature+return-shape but missed the algorithmic-ordering-text. **Impact: 1 unit per resume-event differential** — not measurement-blocking but a real spec-vs-code-drift. Resolution: documented as deliberate live-mirror semantics + spec-doc-update. |
+| 5. Pre-Commit-Hook-Coverage | `from strategic.macro_pause import simulate_pause_periods` was a lazy import inside a `run_backtest` function body. Per-task review didn't flag it because the lazy-import works at runtime. Aggregate review noted: `pytest --collect-only` only catches module-level imports, so import-break would silently land. **Fix: hoist to module-level.** |
 
 These two issues were **invisible to per-task reviews by construction**.
 
@@ -92,14 +92,14 @@ These two issues were **invisible to per-task reviews by construction**.
 
 - ❌ **Treating per-task two-stage-review as sufficient end-of-feature verification** — they're necessary but cross-commit drift is a separate failure mode
 - ❌ **Dispatching the aggregate-review with the same prompt as per-task code-quality-review** — same prompt = same lens = same blind spots. The aggregate prompt MUST explicitly name the 6 cross-commit lenses.
-- ❌ **Running aggregate-review on a 1-2-commit branch** — there's no cross-commit accumulation possible. Use `superpowers:requesting-code-review` direkt.
+- ❌ **Running aggregate-review on a 1-2-commit branch** — there's no cross-commit accumulation possible. Use `superpowers:requesting-code-review` directly.
 - ❌ **Skipping aggregate-review because "all tests pass"** — tests verify runtime-behavior-on-fixtures, not architectural integrity or commit-message-honesty.
 
 ## Promotion checklist (DRAFT → GA)
 
 - [ ] Codify the dispatch-call as a reusable helper (e.g. `superpowers/aggregate-review.md` template that takes BASE_SHA / HEAD_SHA / Spec-Path / Plan-Path)
 - [ ] Document a concrete sequencing pattern: aggregate-review goes BEFORE `superpowers:finishing-a-development-branch`, AFTER the last per-task review
-- [ ] Add at least 1 more genesis-case from a different feature-domain (not trading) to validate transferability
+- [ ] Add at least 1 more genesis-case from a different feature-domain to validate transferability
 - [ ] Test the workflow in a session where the aggregate-review finds nothing — verify the false-negative-rate is acceptable
 - [ ] Document interaction with `subagent-driven-development` skill: should the SDD-skill itself trigger this at "all tasks complete"?
 
@@ -111,10 +111,8 @@ These two issues were **invisible to per-task reviews by construction**.
 
 ## Genesis-session metadata
 
-- **Date:** 2026-06-02
-- **Vault:** ClaudetteV
-- **Feature:** Z.1-C1-Backtest-Simulation
-- **Commit-range:** `959c0d7..2e30c68` (8 atomic commits after spec/plan)
+- **Feature:** Multi-task backtest simulation
+- **Commit-range:** 8 atomic commits after spec/plan
 - **Per-task two-stage-reviews:** all 8 passed individually
 - **Aggregate-review findings:** 2 Important + 3 Minor (would-have-been-missed by per-task reviews)
 - **ABC-Verdict:** A ✅ Repeatable (every SDD-driven plan with ≥3 atomic tasks), B ✅ Prevents-Error (silent spec-vs-code-drift, hook-coverage-gaps), C ✅ Transferable (cross-commit reviewing is domain-independent)

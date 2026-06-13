@@ -1,34 +1,35 @@
 ---
 name: lazy-module-getattr-for-settings-override-DRAFT
-description: STUB — Use when a Python app needs user-editable runtime configuration that should OVERRIDE existing code constants without refactoring downstream callers. Triggers on phrases like "Settings-Form bauen", "User soll Werte ändern können", "ohne calc.py zu refactoren", "DB-Override über Defaults", "inputs.py bleibt, aber DB soll Vorrang haben", "wie machen wir die hardcoded Werte editierbar". Do NOT load for greenfield-Apps ohne existing Code-Konstanten (dann Settings-Klasse von Anfang an), für Performance-kritische Hot-Paths wo Modul-`__getattr__` ein Bottleneck wäre, oder wenn die Werte bereits über dependency-injection gehen (dann ist Refactor minimal). Pattern: `inputs.py` bleibt als Defaults, neues `cfg.py` mit Modul-level `__getattr__` (PEP 562) macht Lazy-Lookup zu Settings-DB mit 60s-TTL-Cache, Fallback auf inputs.py. Caller importieren `from data import cfg as inputs` (1-Zeilen-Change) — calc.py + andere Verbraucher bleiben unverändert. Wolf-Erlebnis 11.06.2026: vt_source.py (Vormittag, ultimative-platform Quarantine-Filter) + absprung cfg.py (Nachmittag, Settings-Form) — gleicher Pattern 2× am selben Tag erfolgreich appliziert.
+description: STUB — Use when a Python app needs user-editable runtime configuration that should OVERRIDE existing code constants without refactoring downstream callers. Triggers on phrases like "build settings form", "user should be able to change values", "without refactoring calc.py", "DB override above defaults", "inputs.py stays, but DB should take precedence", "how do we make the hardcoded values editable". Do NOT load for greenfield apps without existing code constants (then settings class from the start), for performance-critical hot paths where module-`__getattr__` would be a bottleneck, or when the values already go through dependency-injection (then refactor is minimal). Pattern: `inputs.py` remains as defaults, new `cfg.py` with module-level `__getattr__` (PEP 562) does lazy lookup to settings DB with 60s TTL cache, fallback to inputs.py. Callers import `from data import cfg as inputs` (1-line change) — calc.py + other consumers stay unchanged. Pattern derived from practice: applied successfully 2x in one day on two different apps.
+
 ---
 
-# Lazy Module-`__getattr__` für Settings-Override
+# Lazy Module-`__getattr__` for Settings Override
 
-> ⚠️ **DRAFT — Stand 11.06.2026**. Pattern aus 2 Sessions am gleichen Tag entstanden. TDD-Promotion-Cycle steht aus.
+> ⚠️ **DRAFT**. Pattern emerged from 2 sessions on the same day. TDD promotion cycle pending.
 
-## Das Problem
+## The problem
 
-Eine Python-App hat eine `inputs.py` / `config.py` / `constants.py` mit hardcoded Werten. Caller in der ganzen App nutzen `from data import inputs` und `inputs.RENTENWERT_AKTUELL`. User soll diese Werte jetzt **runtime editieren** können (Settings-Form, DB-Override) — aber:
+A Python app has an `inputs.py` / `config.py` / `constants.py` with hardcoded values. Callers throughout the app use `from data import inputs` and `inputs.RENTENWERT_AKTUELL`. The user should now be able to **edit these values at runtime** (settings form, DB override) — but:
 
-- **Refactor von 30+ Caller-Stellen** auf neue API ist teuer + risk
-- **Settings-Klasse + Dependency-Injection** würde architektonisch sauber sein, aber bricht existing `inputs.XYZ`-Pattern
-- **Direkt `inputs.py` per Settings-DB überschreiben** geht nicht, weil `inputs.py` beim Import einmal evaluiert wird
+- **Refactor of 30+ caller sites** to a new API is expensive + risky
+- **Settings class + dependency injection** would be architecturally clean, but breaks existing `inputs.XYZ` pattern
+- **Direct overwrite of `inputs.py` via settings DB** doesn't work, because `inputs.py` is evaluated once at import
 
 ## Pattern (5 Steps)
 
-### Step 1: `inputs.py` bleibt als Defaults
+### Step 1: `inputs.py` stays as defaults
 
-Keine Änderung. Bleibt Single Source of Truth für Erst-Seed der Settings-DB.
+No change. Stays as Single Source of Truth for initial seed of settings DB.
 
 ```python
-# data/inputs.py — UNVERÄNDERT
-RENTENWERT_AKTUELL_EUR = 42.52
-AKTUELLES_GEHALT_BRUTTO = 115_241.0
-# ... 25+ Konstanten
+# data/inputs.py — UNCHANGED
+PENSION_VALUE_CURRENT_EUR = 42.52
+CURRENT_SALARY_GROSS = 115_241.0
+# ... 25+ constants
 ```
 
-### Step 2: Settings-DB + Helper
+### Step 2: Settings DB + helper
 
 ```python
 # data/settings_db.py
@@ -52,117 +53,117 @@ def update_setting(key: str, value):
     ...
 ```
 
-### Step 3: Lazy-Wrapper-Modul mit `__getattr__` (PEP 562)
+### Step 3: Lazy wrapper module with `__getattr__` (PEP 562)
 
 ```python
 # data/cfg.py
 from . import inputs
 from . import settings_db
 
-# Mapping: Python-Attribut → DB-Key
+# Mapping: Python attribute → DB key
 _OVERRIDE_MAP: dict[str, str] = {
-    "RENTENWERT_AKTUELL_EUR":   "drv.rentenwert",
-    "AKTUELLES_GEHALT_BRUTTO":  "wolf.aktuelles_gehalt_brutto",
-    # ... explizite Whitelist nur für editierbare Werte
+    "PENSION_VALUE_CURRENT_EUR":   "pension.value",
+    "CURRENT_SALARY_GROSS":  "user.current_salary_gross",
+    # ... explicit whitelist only for editable values
 }
 
 def __getattr__(name: str):
-    """Lazy-Lookup: erst Settings-DB, dann inputs.py-Default.
+    """Lazy lookup: first settings DB, then inputs.py default.
 
-    PEP 562: __getattr__ auf Modulebene wird nur aufgerufen wenn das Attribut
-    NICHT direkt im Modul existiert. Da cfg.py keine globalen Konstanten
-    definiert, fängt diese Funktion ALLE Zugriffe.
+    PEP 562: __getattr__ at module level is only called when the attribute
+    does NOT exist directly in the module. Since cfg.py defines no global
+    constants, this function catches ALL accesses.
     """
-    # 1. Override via Settings-DB?
+    # 1. Override via settings DB?
     db_key = _OVERRIDE_MAP.get(name)
     if db_key is not None:
         db_value = settings_db.get_setting(db_key, default=None)
         if db_value is not None:
             return db_value
-    # 2. Fallback auf inputs.py
+    # 2. Fallback to inputs.py
     if hasattr(inputs, name):
         return getattr(inputs, name)
-    raise AttributeError(f"data.cfg hat kein Attribut {name!r}")
+    raise AttributeError(f"data.cfg has no attribute {name!r}")
 
 
 def __dir__() -> list[str]:
     return sorted(set(list(_OVERRIDE_MAP.keys()) + [n for n in dir(inputs) if not n.startswith("_")]))
 ```
 
-### Step 4: 1-Zeilen-Change in main.py
+### Step 4: 1-line change in main.py
 
 ```python
-# Vorher
+# Before
 from data import inputs
 
-# Nachher
+# After
 from data import cfg as inputs
 ```
 
-**Das war's.** Alle Caller (calc.py, services, etc.) bleiben unverändert. `inputs.RENTENWERT_AKTUELL_EUR` geht jetzt durch den Lazy-Wrapper.
+**That's it.** All callers (calc.py, services, etc.) stay unchanged. `inputs.PENSION_VALUE_CURRENT_EUR` now goes through the lazy wrapper.
 
-### Step 5: Tests + Invalidation
+### Step 5: Tests + invalidation
 
 ```python
 def test_cfg_falls_back_to_inputs_when_db_empty(monkeypatch):
     monkeypatch.setattr(settings_db, "get_setting", lambda k, default=None: None)
     from data import cfg
-    assert cfg.RENTENWERT_AKTUELL_EUR == inputs.RENTENWERT_AKTUELL_EUR
+    assert cfg.PENSION_VALUE_CURRENT_EUR == inputs.PENSION_VALUE_CURRENT_EUR
 
 def test_cfg_returns_db_override_when_set(monkeypatch):
     monkeypatch.setattr(settings_db, "get_setting",
-        lambda k, default=None: 99.99 if k == "drv.rentenwert" else None)
+        lambda k, default=None: 99.99 if k == "pension.value" else None)
     from data import cfg
-    assert cfg.RENTENWERT_AKTUELL_EUR == 99.99
+    assert cfg.PENSION_VALUE_CURRENT_EUR == 99.99
 ```
 
-## Warum nicht andere Patterns?
+## Why not other patterns?
 
-| Alternative | Warum nicht |
+| Alternative | Why not |
 |---|---|
-| **Settings-Klasse + DI** | Sauber bei Greenfield, aber bricht existing `inputs.XYZ`-API. Refactor von 30+ Callern. |
-| **`inputs.py` per ENV-Vars überschreiben** | Geht nicht für dynamische User-Edits (App-Restart nötig). |
-| **Globale Modul-Variable-Mutation beim Boot** | Cache-Drift, Race-Conditions, schwer testbar. |
-| **Direkte DB-Calls in jedem Caller** | Verstreute DB-Connections, kein Caching. |
-| **`importlib.reload(inputs)`** | Bricht existing in-Memory-Referenzen, race-conditions. |
+| **Settings class + DI** | Clean for greenfield, but breaks existing `inputs.XYZ` API. Refactor of 30+ callers. |
+| **Override `inputs.py` via env vars** | Doesn't work for dynamic user-edits (app restart needed). |
+| **Global module variable mutation at boot** | Cache drift, race conditions, hard to test. |
+| **Direct DB calls in every caller** | Scattered DB connections, no caching. |
+| **`importlib.reload(inputs)`** | Breaks existing in-memory references, race conditions. |
 
 ## Anti-Patterns
 
-| Anti-Pattern | Was statt dessen |
+| Anti-Pattern | What to do instead |
 |---|---|
-| `cfg.py` ohne TTL-Cache → DB-Call pro Attribut-Zugriff | 60s-TTL-Cache + Lock; analog `vt_source.py`-Pattern |
-| `_OVERRIDE_MAP` weglassen + alle Zugriffe DB-Lookup | Whitelist explizit: nur editierbare Werte gehen über DB. Vermeidet versehentliche DB-Lookups für nicht-editierbare Konstanten |
-| `__getattr__` zusätzlich Modul-Konstanten definieren | PEP 562: `__getattr__` wird nur aufgerufen wenn Attribut NICHT existiert. Wenn `cfg.py` selbst Konstanten hat, wird der Override stumm umgangen |
-| Cache-Invalidation vergessen bei `update_setting()` | `update_setting()` MUSS `_CACHE_TS = 0` setzen — sonst sieht der nächste Caller für 60s den alten Wert |
-| Fallback-fail werfen statt AttributeError | `data.cfg` ist Drop-in-Replacement für `data.inputs` — gleiche Fehler-Semantik (AttributeError für unbekannte Attribute) |
+| `cfg.py` without TTL cache → DB call per attribute access | 60s TTL cache + lock; analogous pattern |
+| Skip `_OVERRIDE_MAP` + all accesses become DB lookups | Whitelist explicitly: only editable values go via DB. Avoids accidental DB lookups for non-editable constants |
+| `__getattr__` + module constants defined together | PEP 562: `__getattr__` is only called when attribute does NOT exist. If `cfg.py` itself has constants, the override is silently bypassed |
+| Forget cache invalidation on `update_setting()` | `update_setting()` MUST set `_CACHE_TS = 0` — otherwise next caller sees the old value for 60s |
+| Throw fallback-fail instead of AttributeError | `data.cfg` is drop-in replacement for `data.inputs` — same error semantics (AttributeError for unknown attributes) |
 
-## Wann das Pattern NICHT trifft
+## When the pattern does NOT fit
 
-- **Greenfield-Apps** ohne existing `inputs.py`-Pattern: Settings-Klasse + DI ist sauberer
-- **Performance-kritische Hot-Paths** wo `__getattr__` ein Bottleneck wäre (jeder Attribut-Zugriff geht durch Python-Function)
-- **Microservices mit Config-Server** (Consul, etcd) — dort ist DB-Override redundant
-- **Wenn die Werte schon über dependency-injection** gehen (z.B. FastAPI-Dependencies) — dann ist Refactor minimal
+- **Greenfield apps** without existing `inputs.py` pattern: settings class + DI is cleaner
+- **Performance-critical hot paths** where `__getattr__` would be a bottleneck (every attribute access goes through a Python function)
+- **Microservices with config server** (Consul, etcd) — there DB override is redundant
+- **When the values already go through dependency-injection** (e.g. FastAPI dependencies) — then refactor is minimal
 
-## Real-World-Impact
+## Real-world impact
 
-**11.06.2026 ultimative-platform `vt_source.py`** (Vormittag): Quarantine-Filter brauchte dynamische `system_phase.mode`-Auflösung mit Env-Override + DB-Lookup + Fallback. 60s-TTL-Cache, Thread-Safe. Caller (scheduler/jobs.py, scripts/quarantine_reeval.py) brauchten KEINEN Refactor.
+**Session A** (morning, quarantine filter): needed dynamic `system_phase.mode` resolution with env override + DB lookup + fallback. 60s TTL cache, thread-safe. Callers (scheduler/jobs.py, scripts/quarantine_reeval.py) needed NO refactor.
 
-**11.06.2026 absprung `cfg.py`** (Nachmittag): SQLite-Settings-Migration von 24 hardcoded `inputs.py`-Konstanten. Gleicher Pattern: `__getattr__` + DB-Lookup + Fallback. **calc.py (530 Zeilen, 30+ inputs-Zugriffe) komplett unverändert**. Nur `main.py` 1 Zeile (`from data import cfg as inputs`).
+**Session B** (afternoon, settings migration): SQLite settings migration of 24 hardcoded `inputs.py` constants. Same pattern: `__getattr__` + DB lookup + fallback. **calc.py (530 lines, 30+ inputs accesses) completely unchanged**. Only `main.py` 1 line (`from data import cfg as inputs`).
 
-**Hypothetisch — wenn dieses Pattern nicht verfügbar gewesen wäre**:
-- absprung: hätte calc.py-Refactor + Tests-Anpassung gebraucht (~2h)
-- vt_source: hätte explizite Pass-Through-Dependency-Injection durch 4-5 Caller-Levels gebraucht (~1h)
-- **Total gespart: ~3h** — pro Day-of-Pattern-Application
+**Hypothetical — if this pattern had not been available**:
+- Session B: would have required calc.py refactor + test adjustment (~2h)
+- Session A: would have required explicit pass-through dependency-injection across 4-5 caller levels (~1h)
+- **Total saved: ~3h** — per day-of-pattern-application
 
 ## Cross-References
 
-- `enum-known-values-via-insert-grep` Skill — komplementär: Read-Side-Validation vs Write-Side-Override
-- CLAUDE.md Vault-Maxime „Single Source of Truth — Hardcoded-Defaults sind tickende Bomben" — dieses Pattern ist EINE Lösung dafür
-- `superpowers:test-driven-development` — Tests für `cfg.py` sind essentiell weil Modul-`__getattr__` subtil zu debuggen ist
+- `enum-known-values-via-insert-grep` skill — complementary: read-side validation vs write-side override
+- CLAUDE.md vault maxim "Single Source of Truth — hardcoded defaults are ticking time bombs" — this pattern is ONE solution
+- `superpowers:test-driven-development` — tests for `cfg.py` are essential because module `__getattr__` is subtle to debug
 
-## TDD-Promotion-Backlog (Cycle 1, steht aus)
+## TDD promotion backlog (Cycle 1, pending)
 
-- RED-Subagent ohne Skill: würde wahrscheinlich Settings-Klasse + DI vorschlagen → 30+ Caller-Refactor
-- GREEN-Subagent mit Skill: würde `cfg.py` mit `__getattr__` anlegen + 1-Zeilen-Change in main.py
-- Refactor-Erwartung: Step 5 (Tests) könnte detaillierter sein; Edge-Cases (`hasattr()` mit __getattr__-Modulen)
-- Cycle 1 zu planen wenn nächste Settings-Migration ansteht (z.B. pvista oder hausverwaltung)
+- RED subagent without skill: would likely suggest settings class + DI → 30+ caller refactor
+- GREEN subagent with skill: would lay out `cfg.py` with `__getattr__` + 1-line change in main.py
+- Refactor expectation: Step 5 (tests) could be more detailed; edge cases (`hasattr()` with __getattr__ modules)
+- Cycle 1 to be scheduled when next settings migration arises

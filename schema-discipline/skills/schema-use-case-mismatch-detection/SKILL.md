@@ -1,6 +1,6 @@
 ---
 name: schema-use-case-mismatch-detection
-description: Use when a user reports "field X is always NULL in table Y despite active code" or "data missing from a table that's actively being written to" — BEFORE jumping to "fix the bug, set the field". The Iron-Law: when a single DB-table has ≥2 writer-paths with different semantics (e.g. one writer is per-trade, another is per-portfolio, or legacy vs new pipeline), the field-NULL-symptom is often NOT a bug but a schema-use-case-mismatch — the active writer simply doesn't have the semantics to produce that field. A "fix" without this check would patch the writer to set a value-that-doesn't-exist-semantically, producing meaningless or wrong data in the DB. Trigger on phrases like "verdict ist immer NULL", "field X always missing", "this column is never populated", "53 rows all with NULL in field Y", "INSERT-Liste unvollständig", "data not appearing in table despite job running", "schema-drift", "legacy table being used by new code", "two write-paths same table different semantics". Do NOT load for ALTER-TABLE-missing-column (different problem — schema-evolution), for permission-issues (writer can't access table), for connection-issues (writer crashes silently), or for first-implementation of a feature (no historical pattern to verify). This skill encodes 27.05.2026 Wolf-Forensik: a "verdict-Befüllungs-Bug" in `claude_assessments` table was reported (53 rows in 4 weeks, all parameter_suggestions populated, 0 verdicts populated). Root-cause turned out to be NOT a bug but a schema-use-case-mismatch — the active writer (strategic_review.py = Portfolio-Reflexion) literally cannot produce per-trade verdicts because its System-Prompt never asks Claude for them. A naive "fix the INSERT" would have produced wrong data; the actual fix was building a NEW per-signal-advisor pipeline.
+description: Use when a user reports "field X is always NULL in table Y despite active code" or "data missing from a table that's actively being written to" — BEFORE jumping to "fix the bug, set the field". The Iron-Law: when a single DB-table has ≥2 writer-paths with different semantics (e.g. one writer is per-trade, another is per-portfolio, or legacy vs new pipeline), the field-NULL-symptom is often NOT a bug but a schema-use-case-mismatch — the active writer simply doesn't have the semantics to produce that field. A "fix" without this check would patch the writer to set a value-that-doesn't-exist-semantically, producing meaningless or wrong data in the DB. Trigger on phrases like "verdict is always NULL", "field X always missing", "this column is never populated", "53 rows all with NULL in field Y", "INSERT list incomplete", "data not appearing in table despite job running", "schema drift", "legacy table being used by new code", "two write-paths same table different semantics". Do NOT load for ALTER-TABLE-missing-column (different problem — schema-evolution), for permission-issues (writer can't access table), for connection-issues (writer crashes silently), or for first-implementation of a feature (no historical pattern to verify). This skill encodes a user-driven forensic case: a "verdict-population-bug" in a `claude_assessments` table was reported (53 rows in 4 weeks, all parameter_suggestions populated, 0 verdicts populated). Root-cause turned out to be NOT a bug but a schema-use-case-mismatch — the active writer (strategic_review.py = portfolio reflection) literally cannot produce per-trade verdicts because its system prompt never asks Claude for them. A naive "fix the INSERT" would have produced wrong data; the actual fix was building a NEW per-signal-advisor pipeline.
 ---
 
 # Schema-Use-Case-Mismatch Detection
@@ -61,7 +61,7 @@ This isolates which writer is responsible for which subset of rows, and confirms
 
 ### Step 4 — Reframe the question with user before coding
 
-Once Steps 1-3 show "no active writer's use-case includes this field", the question changes from "fix the bug" to a 3-way Wolf-question:
+Once Steps 1-3 show "no active writer's use-case includes this field", the question changes from "fix the bug" to a 3-way user-question:
 
 | Reframe | Action |
 |---|---|
@@ -69,16 +69,16 @@ Once Steps 1-3 show "no active writer's use-case includes this field", the quest
 | **E2**: Field is legacy from old schema, not needed anymore → document and ignore (no code change) |
 | **E3**: Both — existing portfolio-use-case OK, but also add per-trade-use-case → new pipeline + keep existing |
 
-This reframe MUST happen with the user — Claude cannot decide E1/E2/E3 from code alone, because it depends on the user's product-intent.
+This reframe MUST happen with the user — the assistant cannot decide E1/E2/E3 from code alone, because it depends on the user's product-intent.
 
 ## Anti-Patterns
 
 - ❌ "Just add the field to the INSERT-list" without checking if data exists to set it
 - ❌ "Add a default value in the INSERT" — masks the missing data, doesn't add value
 - ❌ Assuming the FIRST writer found by grep is the only / active one
-- ❌ Skipping the System-Prompt read for LLM-driven writers (Wolf 27.05.: System-Prompt of strategic_review.py never asked for verdict — invisible until read)
+- ❌ Skipping the System-Prompt read for LLM-driven writers (real case: system prompt of strategic_review.py never asked for verdict — invisible until read)
 - ❌ Skipping quantitative plausibility — without it you can't tell which writer is causing the NULL-pattern
-- ❌ Implementing E1 without explicit user-reframe → may build the wrong feature
+- ❌ Implementing E1 without explicit user reframe → may build the wrong feature
 
 ## When You Don't Need This
 
@@ -90,43 +90,43 @@ This reframe MUST happen with the user — Claude cannot decide E1/E2/E3 from co
 ## Related Skills
 
 - `pre-migration-data-verification` — sibling for the case where you ARE patching INSERTs after schema-changes
-- `external-advisor-output-plausibility-audit` — sibling for auditing LLM-Output against expectation (heavily overlaps Step 2 here for LLM-writers)
+- `external-advisor-output-plausibility-audit` — sibling for auditing LLM-output against expectation (heavily overlaps Step 2 here for LLM-writers)
 - `superpowers:systematic-debugging` — parent: this skill is a specific Phase-1-pattern for "missing-data" symptoms
 
-## Background: 27.05.2026 Real-World-Case
+## Background: Real-world case
 
-`claude_assessments` table in Wolf's ultimative-platform: 53 rows in 4 weeks, all `parameter_suggestions` populated, 0 `verdicts` populated.
+`claude_assessments` table in your-app: 53 rows in 4 weeks, all `parameter_suggestions` populated, 0 `verdicts` populated.
 
-**Naive diagnosis (which I almost shipped)**: "Strategic-Review-Pfad vergisst beim INSERT die Spalte `verdict`, fix the INSERT-Liste."
+**Naive diagnosis (which was almost shipped)**: "The strategic-review path forgets to include the `verdict` column in INSERT, fix the INSERT list."
 
-**Actual diagnosis (after Step 2)**: Strategic-Review's System-Prompt asks Claude for `risk_level`, `alerts`, `parameter_suggestions`, `summary` — but NEVER for `verdict`. The active writer is doing **Portfolio-Reflexion** (since 2026-05-12 refactor), not Per-Trade-Bewertung. The legacy writer (`legacy/claude/assessment_store.py`) DID have per-trade-verdict semantics but is unused.
+**Actual diagnosis (after Step 2)**: Strategic-review's system prompt asks Claude for `risk_level`, `alerts`, `parameter_suggestions`, `summary` — but NEVER for `verdict`. The active writer is doing **portfolio reflection** (since a refactor), not per-trade assessment. The legacy writer (`legacy/claude/assessment_store.py`) DID have per-trade-verdict semantics but is unused.
 
-**Wolf-reframe-question (E1/E2/E3)**: turned out E1 — Wolf actually wanted Per-Signal-Advisor that the system doesn't have. Fix was building a NEW `claude/per_signal/` sub-package, not patching strategic_review.py. 8 atomic commits + Code-Review + Deploy in same session.
+**User reframe question (E1/E2/E3)**: turned out to be E1 — the user actually wanted a per-signal advisor that the system did not have. Fix was building a NEW `claude/per_signal/` sub-package, not patching strategic_review.py. 8 atomic commits + code review + deploy in same session.
 
-→ Quantitatively saved estimated 2-3h of wasted patching, plus avoided semantic-mismatch bug where strategic_review.py would have insert-NULL-verdicts forever.
+→ Quantitatively saved estimated 2-3h of wasted patching, plus avoided semantic-mismatch bug where strategic_review.py would have inserted NULL verdicts forever.
 
 ## Edge-Cases
 
-- **Seltener Writer (nicht „tot, nicht aktiv")**: wenn Datei B nur manuell oder durch seltene Events getriggert wird (z.B. CLI-Tool), kann sie 0 Inserts in 4 Wochen produzieren ohne tot zu sein. Step 1 Audit muss zwischen „nie aufgerufen seit X" vs „aktiv aber seltener Trigger" unterscheiden — Differenzierung via `git log` + Cron-/Hook-Bindings, nicht nur via Commit-Alter.
-- **Schema-Hygiene bei E1**: wenn die Lösung „neue Writer-Pipeline" ist (E1 oder E3), ZWEITE Tabelle empfohlen statt gemischte NULL-Semantik in einer Tabelle. Eine Tabelle mit `risk_level XOR verdict` als „je nach Writer-Type"-Konvention ist Anti-Pattern — Reader-Code muss raten welcher Writer dahinter steckt, JOINs werden semantisch unklar, Indexe ineffizient. Saubere Lösung: Tabelle per Use-Case (`portfolio_assessments` + `per_signal_assessments` getrennt).
-- **Migrations-Schatten-Records**: nach DB-Migrations gibt es manchmal Records mit Null in Spalten die normalerweise gefüllt sind (siehe G3-B1 KW22-Forensik). Das ist KEIN Schema-Use-Case-Mismatch, sondern Migration-Artefakt — Diagnose über `closed_at`/`created_at`-Bulk-Pattern (alle Records mit identischer Mikrosekunde).
+- **Rare writer (not "dead, not active")**: if file B is only triggered manually or by rare events (e.g. CLI tool), it can produce 0 inserts in 4 weeks without being dead. Step 1 audit must distinguish between "never called since X" vs "active but rare trigger" — differentiate via `git log` + cron/hook bindings, not just by commit age.
+- **Schema hygiene at E1**: if the solution is "new writer pipeline" (E1 or E3), a SECOND table is recommended instead of mixed-NULL semantics in one table. A table with `risk_level XOR verdict` as "depends on writer type" convention is anti-pattern — reader code must guess which writer is behind it, JOINs become semantically unclear, indexes are inefficient. Clean solution: one table per use-case (`portfolio_assessments` + `per_signal_assessments` separately).
+- **Migration shadow records**: after DB migrations there are sometimes records with NULL in columns that are normally populated. This is NOT a schema-use-case-mismatch, but a migration artifact — diagnose via `closed_at`/`created_at` bulk pattern (all records with identical microsecond).
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD progress (Bulletproofing Log)
 
-### Cycle 1 — 2026-05-27 (PASS via Subagent-Pair-Dispatch, Reframe-Disziplin-Class)
+### Cycle 1 — PASS via Subagent-Pair-Dispatch, reframe-discipline class
 
-- **RED-Subagent** (ohne Skill, Prompt: `claude_assessments.verdict` immer NULL, Datei A aktiv, Datei B legacy): **identifizierte das Mismatch verbal** („Schema-Use-Case-Mismatch") — aber lief TROTZDEM in die Patch-Falle. Schlug konkret Code-Aktionen vor: Tabellen-Split (Option 1) oder DROP COLUMN (Option 2). Markierte Annahmen ehrlich, aber wählte selbst aus statt User zu fragen — exakt das Anti-Pattern „selbst entscheiden statt reframen".
+- **RED-Subagent** (without skill, prompt: `claude_assessments.verdict` always NULL, file A active, file B legacy): **verbally identified the mismatch** ("schema-use-case-mismatch") — but STILL fell into the patch trap. Proposed concrete code actions: table split (Option 1) or DROP COLUMN (Option 2). Marked assumptions honestly but chose itself instead of asking the user — exactly the anti-pattern "decide oneself instead of reframing".
 
-- **GREEN-Subagent** (mit Skill, identisches Prompt): explizit E1/E2/E3-Reframe an User zurückgegeben statt selbst zu wählen. Quantitativ-Plausibilität durchgerechnet (168 Ticks vs 53 Rows = 31% Gate-Pass-Rate). Explizit „Nicht tun: verdict in INSERT von Datei A aufnehmen — der LLM-Response enthält das Feld nicht" — direkt das Anti-Pattern markiert. Klare Risiko-Differenzierung (naive Fix = HOCH, E2 = NIEDRIG).
+- **GREEN-Subagent** (with skill, identical prompt): explicitly returned the E1/E2/E3 reframe to the user instead of choosing itself. Calculated quantitative plausibility (168 ticks vs 53 rows = 31% gate-pass-rate). Explicitly stated "Do not: add verdict to the INSERT of file A — the LLM response does not contain the field" — directly flagged the anti-pattern. Clear risk differentiation (naive fix = HIGH, E2 = LOW).
 
-- **Refactor angewendet**: Sektion „Edge-Cases" hinzugefügt: seltener-Writer-Differenzierung, Schema-Hygiene-Empfehlung (zweite Tabelle bei E1), Migrations-Schatten-Records-Abgrenzung. Aus GREEN-Self-Reflection: „Schema-Hygiene bei E1 sollte expliziter sein. Aktuell nur implizit in Anti-Patterns."
+- **Refactor applied**: Added "Edge-Cases" section: rare-writer differentiation, schema-hygiene recommendation (second table at E1), migration-shadow-record demarcation. From GREEN self-reflection: "Schema hygiene at E1 should be more explicit. Currently only implicit in anti-patterns."
 
-### Höchster Skill-Wert: Reframe-Disziplin
+### Highest skill value: reframe discipline
 
-Der entscheidende Test war NICHT „erkennt das Skill Mismatch?" sondern „verhindert das Skill, dass Claude die Entscheidung selbst trifft?". RED erkannte das Wort, GREEN erkannte das Pattern. Der Unterschied ist Code-Disziplin — bevor man Code schreibt, dem User die Produkt-Intent-Frage zurückgeben.
+The decisive test was NOT "does the skill recognize the mismatch?" but "does the skill prevent the assistant from making the decision itself?". RED recognized the word, GREEN recognized the pattern. The difference is code discipline — before writing code, return the product-intent question to the user.
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2 Backlog (Polish, non-blocking)
 
-1. **Multi-Tabellen-Audit**: Pattern für „field NULL across MULTIPLE related tables" — z.B. `claude_assessments.verdict` UND `signal_outcomes.verdict` beide NULL → eigene Sektion „Cross-Table-Mismatch"
-2. **Caching-Pipeline-Variant**: gilt das gleiche Pattern wenn der „Writer" ein Cache-Layer ist (Redis/Memcached) und das Backing-Store andere Semantik hat? Vermutlich ja, eigene Diskussion wert
-3. **API-Schema-Mismatch**: REST/GraphQL-Endpoints die optional-fields zurückgeben aber Producer-Backend hat die Semantik nicht — Pattern-Transfer auf API-Layer
+1. **Multi-table audit**: pattern for "field NULL across MULTIPLE related tables" — e.g. `claude_assessments.verdict` AND `signal_outcomes.verdict` both NULL → own section "Cross-Table-Mismatch"
+2. **Caching pipeline variant**: does the same pattern apply when the "writer" is a cache layer (Redis/Memcached) and the backing store has different semantics? Presumably yes, worth its own discussion
+3. **API schema mismatch**: REST/GraphQL endpoints that return optional fields but producer backend lacks the semantics — pattern transfer to the API layer

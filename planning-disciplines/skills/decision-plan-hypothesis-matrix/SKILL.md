@@ -1,11 +1,11 @@
 ---
 name: decision-plan-hypothesis-matrix
-description: Use BEFORE implementing a non-trivial decision-driven task where multiple outcomes are plausible — backtest planning, algorithm comparison, architecture choice, migration strategy, "should I build X or not". Trigger on phrases like "soll ich X bauen", "Backtest planen", "ich brauche eine Decision", "Algo-Varianten testen", "vor Implementation", "wie messe ich Erfolg", "max-Effort-Session", "Refactoring-Strategie wählen", "Compound-GO definieren". The skill produces a Plan-Notiz with an explicit Hypothesis-Matrix (each H + Gegenthese + Distinguishing Metric), Compound-GO-Logic, Out-of-Scope, and Done-Definition. Do NOT load for single-path implementations where there is no decision (e.g. "fix this typo", "add this column"), for brainstorming-/exploration-phase (use `superpowers:brainstorming` first), for plans without binary GO/NO-GO outcome (use `superpowers:writing-plans` for procedural multi-step plans without decision character), or when there is no measurable success criterion (then the task is exploration, not decision — defer planning until criterion exists). Encodes the 03.06.2026 pattern from Wolf-Vault ultimative-platform session — 5× applied across one day (Win-Rate analysis, E-1 debug, E-3 PSAR, E-3.1 R-Tier, E-4 Hängenbleiber-Diagnose) and prevented multiple Engineering-Tage of Wasted-Work — E-3/E-3.1 turned NO-GO via backtest before live-bot integration, E-4 original Score-Drift-Spec was invalidated by Pre-Code-Diagnose discovering OHLCV-Pipeline-Gap.
+description: Use BEFORE implementing a non-trivial decision-driven task where multiple outcomes are plausible — backtest planning, algorithm comparison, architecture choice, migration strategy, "should I build X or not". Trigger on phrases like "should I build X", "plan a backtest", "I need a decision", "test algo variants", "before implementation", "how do I measure success", "max-effort session", "choose refactoring strategy", "define Compound-GO". The skill produces a Plan-Note with an explicit Hypothesis-Matrix (each H + counter-thesis + Distinguishing Metric), Compound-GO-Logic, Out-of-Scope, and Done-Definition. Do NOT load for single-path implementations where there is no decision (e.g. "fix this typo", "add this column"), for brainstorming-/exploration-phase (use `superpowers:brainstorming` first), for plans without binary GO/NO-GO outcome (use `superpowers:writing-plans` for procedural multi-step plans without decision character), or when there is no measurable success criterion (then the task is exploration, not decision — defer planning until criterion exists). Encodes a pattern applied 5× across one day (win-rate analysis, debug, PSAR test, R-tier analysis, diagnostic gap) and prevented multiple engineering-days of wasted work — variants turned NO-GO via backtest before live-bot integration; original spec was invalidated by pre-code-diagnosis discovering an OHLCV-pipeline gap.
 ---
 
 # Decision-Plan-Hypothesis-Matrix
 
-> ✅ **PROMOTED 2026-06-03**: TDD-Pressure-Test Cycle 1 PASS (STRONG). RED-Subagent lieferte Pro/Contra-Liste mit Maximen-Verweisen aber keine formale Hypothesis-Matrix — kein Erfolgs-Kriterium VOR Analyse, keine Distinguishing-Metric-Tabelle, kein Compound-GO. GREEN-Subagent lieferte vollständige 7-Step Plan-Notiz mit 4 Hypothesen + Gegenthesen + Distinguishing-Metric + Compound-GO-Branches + Out-of-Scope + Done-Checklist. Auto-discoverable.
+> ✅ **PROMOTED**: TDD-Pressure-Test Cycle 1 PASS (STRONG). RED-Subagent delivered a pro/con list with maxim references but no formal hypothesis matrix — no success criterion BEFORE analysis, no distinguishing-metric table, no Compound-GO. GREEN-Subagent delivered a complete 7-step plan note with 4 hypotheses + counter-theses + distinguishing-metric + Compound-GO branches + out-of-scope + done-checklist. Auto-discoverable.
 
 ## Overview
 
@@ -15,7 +15,7 @@ Most non-trivial decisions have a story: "I think X is the right approach, let m
 
 ## When to use
 
-- Backtest planning (Trading algo, ML model variants, A/B framework)
+- Backtest planning (trading algo, ML model variants, A/B framework)
 - Algorithm selection (Trail-Stop A vs B, Optimizer X vs Y)
 - Architecture choice with multiple valid paths
 - Migration strategy with multiple risk profiles
@@ -27,41 +27,41 @@ Most non-trivial decisions have a story: "I think X is the right approach, let m
 - Single-path implementations (no decision character)
 - Brainstorming / requirements-gathering (use `superpowers:brainstorming` first)
 - Plans without GO/NO-GO outcome (use `superpowers:writing-plans` for procedural plans)
-- Exploration phase where no success-criterion exists yet
+- Exploration phase where no success criterion exists yet
 - Time-boxed prototypes meant to fail-fast
 
 ## The 7-step procedure
 
-### Step 1 — Erfolgs-Kriterium VOR Start
+### Step 1 — Success criterion BEFORE start
 
 Write down the measurable outcome that determines GO/NO-GO. This must be:
 - Concrete (Expectancy ≥ +0.05R, p<0.05, < 100ms latency)
 - Falsifiable (not "improves UX" — "click-to-action < 200ms 95th percentile")
 - Bounded (today's session, this PR, this experiment)
 
-If you can't write the success-criterion, you're still in exploration. Defer.
+If you can't write the success criterion, you're still in exploration. Defer.
 
-### Step 2 — Liste 3-5 Hypothesen, jede mit Gegenthese
+### Step 2 — List 3-5 hypotheses, each with counter-thesis
 
-Each hypothesis = "I think X causes Y". Each Gegenthese = "but Z could also cause Y". The Gegenthese-Existenz is the lock against confirmation bias.
+Each hypothesis = "I think X causes Y". Each counter-thesis = "but Z could also cause Y". The existence of the counter-thesis is the lock against confirmation bias.
 
-| # | Hypothese | Gegenthese |
+| # | Hypothesis | Counter-thesis |
 |---|---|---|
 | H1 | <claim about cause/effect> | <alternative cause for same effect> |
 | H2 | ... | ... |
 
-### Step 3 — Distinguishing Metric pro Hypothese
+### Step 3 — Distinguishing metric per hypothesis
 
-For each H/Gegenthese-Paar: what concrete metric, when measured, would tell you which one is true?
+For each H/counter-thesis pair: what concrete metric, when measured, would tell you which one is true?
 
-This is the most important step. If you can't define a Distinguishing Metric, the hypotheses are not actually distinct, and the whole framing is muddled.
+This is the most important step. If you can't define a distinguishing metric, the hypotheses are not actually distinct, and the whole framing is muddled.
 
-| # | Hypothese | Gegenthese | Distinguishing Metric |
+| # | Hypothesis | Counter-thesis | Distinguishing Metric |
 |---|---|---|---|
 | H1 | A causes X | B causes X | Mean of X under condition-A only vs condition-B only — significantly different? |
 | ... | ... | ... | ... |
 
-### Step 4 — Compound-GO-Logik definieren
+### Step 4 — Define Compound-GO logic
 
 Most decisions are not 1-hypothesis. Define which combinations lead to GO vs NO-GO:
 
@@ -73,11 +73,11 @@ Re-test ⇔ H2 inconclusive (CI overlaps 0)
 
 Compound logic prevents "1 weak signal" from carrying a decision.
 
-### Step 5 — Implementation-Plan (kurz)
+### Step 5 — Implementation plan (short)
 
 Now that hypotheses + falsification are explicit, the implementation is just "the queries / code that produces the data". List the 3-5 implementation steps. Don't elaborate.
 
-### Step 6 — Out-of-Scope explizit
+### Step 6 — Out-of-Scope explicit
 
 Write what is NOT in scope. This is your gate against scope-creep mid-session. Examples:
 - "Live deployment is NOT in scope — only sim-backtest"
@@ -87,109 +87,109 @@ Write what is NOT in scope. This is your gate against scope-creep mid-session. E
 ### Step 7 — "When is the session done"
 
 Concrete checklist (5-8 items max). Each item must be a yes/no that you can verify at session-end:
-- ☐ Library implemented + N tests grün
-- ☐ Backtest runs against production-DB without errors
-- ☐ Result-Notiz with filled Verdict-Table
-- ☐ Compound-Verdict explicit (GO / NO-GO / re-test)
-- ☐ Roadmap-Item-Status updated
+- ☐ Library implemented + N tests green
+- ☐ Backtest runs against production DB without errors
+- ☐ Result note with filled verdict table
+- ☐ Compound verdict explicit (GO / NO-GO / re-test)
+- ☐ Roadmap-item status updated
 
-## Worked example (heute 03.06.2026 — E-3 PSAR-Trailing-Stop)
+## Worked example (PSAR trailing-stop test)
 
-**Step 1 Erfolgs-Kriterium:**
-> Verdict am Abend, ob PSAR-Trailing Expectancy hebt — über Replay der letzten 30 Tage virtual_trades vs Baseline.
+**Step 1 success criterion:**
+> Verdict by end of day on whether PSAR-Trailing lifts expectancy — via replay of the last 30 days of virtual_trades vs baseline.
 
-**Step 2-3 Hypothesen-Matrix (Auszug):**
+**Step 2-3 hypothesis matrix (excerpt):**
 
-| # | Hypothese | Gegenthese | Distinguishing Metric |
+| # | Hypothesis | Counter-thesis | Distinguishing Metric |
 |---|---|---|---|
-| H1 | PSAR-Trail hebt 30% der 1-1.5R-Wins zu ≥2R | Trail schließt zu früh, Distribution ähnlich | Histogramm-Vergleich pnl_r-Verteilung Wins |
-| H3 | Trail senkt WR nicht unter 40% | Trail erhöht Stop-Rate | WR mit Wilson-CI |
+| H1 | PSAR-Trail lifts 30% of 1-1.5R wins to ≥2R | Trail closes too early, distribution similar | Histogram comparison of pnl_r distribution wins |
+| H3 | Trail does not lower WR below 40% | Trail increases stop-rate | WR with Wilson-CI |
 
-**Step 4 Compound-GO-Logik:**
+**Step 4 Compound-GO logic:**
 ```
-E-3-B GO ⇔ H1 confirmed AND H3 confirmed AND Delta-Expectancy ≥ +0.05R
+GO ⇔ H1 confirmed AND H3 confirmed AND Delta-Expectancy ≥ +0.05R
 ```
 
-**Step 5 Implementation:**
-1. Library `core/indicators/psar_trailing_stop.py` + TDD-Tests
-2. Backtest-Script gegen 30d virtual_trades
-3. Result-Notiz mit Verdict-Tabelle
+**Step 5 implementation:**
+1. Library `core/indicators/psar_trailing_stop.py` + TDD tests
+2. Backtest script against 30d virtual_trades
+3. Result note with verdict table
 
-**Steps 6-7:** wie üblich.
+**Steps 6-7:** as usual.
 
-**Outcome:** Backtest widerlegte H1 + H3 → Compound-Verdict NO-GO. **Ohne Plan-Matrix wäre die nächste Phase Live-Bot-Integration gewesen** (= 1 Tag Engineering für netto-negativen Algorithmus).
+**Outcome:** Backtest refuted H1 + H3 → Compound verdict NO-GO. **Without the plan matrix, the next phase would have been live-bot integration** (= 1 day of engineering for a net-negative algorithm).
 
 ## Anti-patterns
 
-- ❌ Hypothesis-Liste ohne Gegenthese ("I think X because reasons") — entfernt die Falsifikations-Möglichkeit
-- ❌ Distinguishing Metric "wir schauen mal die Daten an" — nicht konkret genug, lässt confirmation bias durch
-- ❌ Single-Hypothesis Compound-GO ("wenn H1 confirmed → GO") — eine Aussage entscheidet ist fragil, immer ≥2 Bedingungen
-- ❌ Implementation-Steps mit > 8 Zeilen — Plan wird Spec, verliert Decision-Charakter
-- ❌ Out-of-Scope leer — fehlt das Scope-Creep-Schutzschild
-- ❌ Erfolgs-Kriterium nachträglich anpassen wenn Daten nicht passen ("eigentlich ist Y das echte Kriterium") — Decision-Hygiene gone
+- ❌ Hypothesis list without counter-thesis ("I think X because reasons") — removes the falsification possibility
+- ❌ Distinguishing metric "we'll just look at the data" — not concrete enough, lets confirmation bias through
+- ❌ Single-hypothesis Compound-GO ("if H1 confirmed → GO") — one statement deciding is fragile, always ≥2 conditions
+- ❌ Implementation steps with > 8 lines — plan becomes spec, loses decision character
+- ❌ Out-of-Scope empty — missing the scope-creep protection shield
+- ❌ Adjusting success criterion retroactively when data doesn't fit ("actually Y is the real criterion") — decision hygiene gone
 
-## Template-Snippet
+## Template snippet
 
 ```markdown
 # <Topic> — Plan YYYY-MM-DD
 
-## Erfolgs-Kriterium
+## Success criterion
 > <one measurable sentence>
 
-## Hypothesen-Matrix
-| # | Hypothese | Gegenthese | Distinguishing Metric | Konsequenz wenn H | Konsequenz wenn ¬H |
+## Hypothesis matrix
+| # | Hypothesis | Counter-thesis | Distinguishing Metric | Consequence if H | Consequence if ¬H |
 |---|---|---|---|---|---|
-| H1 | ... | ... | ... | GO-Hint | NO-GO-Hint |
+| H1 | ... | ... | ... | GO hint | NO-GO hint |
 | ... | ... | ... | ... | ... | ... |
 
-## Compound-GO-Logik
+## Compound-GO logic
 - **GO** ⇔ <combination>
 - **NO-GO** ⇔ <combination>
 - **Re-test** ⇔ <combination>
 
-## Implementation-Plan (max 8 Steps)
+## Implementation plan (max 8 steps)
 1. ...
 
-## Out-of-Scope (heute)
+## Out-of-Scope (today)
 - ...
 
-## Wann ist Session done
+## When is the session done
 - ☐ ...
 ```
 
-## Skill-Composition
+## Skill composition
 
 - `superpowers:brainstorming` — runs BEFORE this skill if requirements are unclear
-- `superpowers:writing-plans` — alternative for procedural plans WITHOUT decision-character
+- `superpowers:writing-plans` — alternative for procedural plans WITHOUT decision character
 - `superpowers:test-driven-development` — runs AFTER for the implementation step
-- `compound-gate-over-single-metric-DRAFT` — related but smaller-scope (no Hypothesis-Matrix part)
+- `compound-gate-over-single-metric-DRAFT` — related but smaller scope (no hypothesis matrix part)
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD log (Bulletproofing-Log)
 
-### Cycle 1 — 2026-06-03 (PASS — STRONG)
+### Cycle 1 (PASS — STRONG)
 
-**Scenario** (Wolf-typische ultimative-platform-Frage):
-> Ich überlege ob ich einen RSI-Divergenz-Filter (14-Bar bullische Divergenz als Pflicht für Long-Signal) als Layer-3 baue. Soll ich das bauen?
+**Scenario** (typical question for production system):
+> I'm considering building an RSI-divergence filter (14-bar bullish divergence as required for long signal) as Layer 3. Should I build that?
 
-**RED-Subagent** (ohne Skill): Lieferte strukturierte Pro/Contra-Liste mit Maximen-Verweisen (Cardwell, Backtest-First, Münzwurf-Problem). Implizit am Ende „3 Kriterien Compound-GO" formuliert. Self-Reflection ehrlich: „keine formale Hypothesis-Matrix, keine echte H/Gegenthese mit Distinguishing-Metric, Erfolgs-Kriterien während (nicht vor) der Antwort konstruiert aus Bauchgefühl". Hätte Wolf gefolgt, wären 5 unkalibrierte Risiken offen geblieben (Divergenz-Definition-Drift, WR-only-Metrik, Sample-Size, Overfitting-Tür, implizite Layer-1+2-Filterbarkeits-Annahme).
+**RED-Subagent** (without skill): Delivered a structured pro/con list with maxim references (Cardwell, Backtest-First, coin-flip problem). Implicitly at the end formulated "3 criteria Compound-GO". Self-reflection honest: "no formal hypothesis matrix, no real H/counter-thesis with distinguishing metric, success criteria constructed during (not before) the answer from gut feeling". Had the user followed it, 5 uncalibrated risks would have remained open (divergence-definition drift, WR-only metric, sample size, overfitting door, implicit layer-1+2 filterability assumption).
 
-**GREEN-Subagent** (mit Skill): Lieferte vollständige Plan-Notiz im Skill-Format:
-- Erfolgs-Kriterium konkret + falsifizierbar (Δ-Expectancy ≥ +0.05R, N ≥ 80, Wilson-LB-WR ≥ 40%)
-- 4 Hypothesen mit echten Gegenthesen + konkreten Distinguishing-Metrics (Bootstrap-CI, Wilson-CI, Retention-Anteil, Per-Instrument-Top-2)
-- Compound-GO mit AND-Verknüpfung über alle 4 H, plus Re-test-Branch für grenzwertige Fälle
-- Out-of-Scope mit 7 expliziten Ausschlüssen (Live-Bot zuerst gegated)
-- Done-Checklist 8 verifizierbare Items
-- Keine 7 Schritte übersprungen
+**GREEN-Subagent** (with skill): Delivered complete plan note in skill format:
+- Success criterion concrete + falsifiable (Δ-Expectancy ≥ +0.05R, N ≥ 80, Wilson-LB-WR ≥ 40%)
+- 4 hypotheses with real counter-theses + concrete distinguishing metrics (Bootstrap-CI, Wilson-CI, retention share, per-instrument top-2)
+- Compound-GO with AND-conjunction across all 4 H, plus re-test branch for borderline cases
+- Out-of-Scope with 7 explicit exclusions (live bot first gated)
+- Done checklist 8 verifiable items
+- None of the 7 steps skipped
 
-**Verdict**: STRONG PASS. RED zeigt klares Anti-Pattern (Pro/Contra statt Matrix), GREEN zeigt qualitativen Sprung. Promotion erfolgt.
+**Verdict**: STRONG PASS. RED shows clear anti-pattern (pro/con instead of matrix), GREEN shows qualitative leap. Promotion done.
 
-**Refactor angewendet**: keine Code-Änderungen — Polish-Items werden als Cycle-2-Backlog dokumentiert (nicht-blocking).
+**Refactor applied**: no code changes — polish items documented as cycle-2 backlog (non-blocking).
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2 backlog (polish, non-blocking)
 
-1. **Heuristik wann 3 vs 5 Hypothesen** — Skill sagt "3-5", aber gibt keine Bottom-Up-Regel. Vorschlag: "minimum 1 Edge-H + 1 Robustness-H + 1 Tradability-H" (aus GREEN-Subagent-Vorschlag)
-2. **Power-Check-Substep in Step 1** — bei Statistik-getriebenen Decisions (Bootstrap-CI, Wilson) zusätzlich Power-Analyse: "ist N realistisch für Effect-Size E mit Significance-Level α?"
-3. **Out-of-Sample-Validation als Pflicht im Re-test-Branch** — derzeit nur implizit, sollte explizit als Decision-Hygiene dokumentiert sein
-4. **Live-Anwendungs-Log** — Tracking-Mechanik um mitzuzählen wie oft das Skill triggert (für künftige Promotion-Audit-Logs)
+1. **Heuristic when 3 vs 5 hypotheses** — Skill says "3-5", but gives no bottom-up rule. Proposal: "minimum 1 edge-H + 1 robustness-H + 1 tradability-H" (from GREEN-Subagent proposal)
+2. **Power-check sub-step in Step 1** — for statistics-driven decisions (Bootstrap-CI, Wilson) additionally power analysis: "is N realistic for effect size E with significance level α?"
+3. **Out-of-Sample validation as required in re-test branch** — currently only implicit, should be explicit as decision hygiene
+4. **Live-application log** — tracking mechanic to count how often the skill triggers (for future promotion-audit logs)
 
-Iron-Law: Cycle-2-Items werden vor Anwendung mit failing-test-first behandelt, nicht als „silent edit".
+Iron law: cycle-2 items are treated with failing-test-first before application, not as "silent edit".

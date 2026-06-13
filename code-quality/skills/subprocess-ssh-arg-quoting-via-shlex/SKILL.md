@@ -1,11 +1,11 @@
 ---
 name: subprocess-ssh-arg-quoting-via-shlex
-description: Use BEFORE writing or debugging Python subprocess.run(["ssh", host, "cmd", "arg1", "arg2"]) calls where the remote args contain shell-metacharacters — pipes `|`, parentheses `(` `)`, semicolons `;`, dollar-signs `$`, backticks, single/double-quotes, glob `*` `?`, tabs `\t`, or empty strings. The naive Python list passed after the host is silently joined by SSH client with spaces and re-evaluated by the REMOTE shell, where metacharacters get interpreted (pipe becomes shell-pipeline, parens cause syntax errors, tabs eaten as whitespace, etc.). Symptoms include 'syntax error: unexpected end of file', 'option requires an argument' for flag-values that contained tabs, 'command not found' for partial args that got shell-split, or silently wrong behavior when args are parsed differently than expected. STOP and use `shlex.quote()` on EACH remote-side arg, then `' '.join(quoted_args)` to produce ONE string that's passed as a SINGLE post-host arg to SSH — the remote shell then sees properly-quoted tokens. Trigger on phrases like "ssh + docker exec funktioniert nicht", "psql via SSH gibt syntax error", "remote command bricht ab", "SSH-arg-Quoting-Problem", "subprocess.run mit ssh args", "MCP-Server SSH-Tunnel", "deploy.sh failing on remote", "Bash syntax error from remote", "rsync mit ssh und Parametern", "pipe wird als shell-pipe interpretiert", "tab character verschwindet im SSH". Do NOT use for shell=True calls (use shlex.split() and proper escaping instead — different concern), for SSH config-file aliases without metacharacter-args (`ssh swatserver` alone is safe), for SSH-without-remote-command (pure tunnel/SFTP), or for pure-local subprocess calls without SSH (Python's args-list mechanism handles those correctly via execve — the issue is SSH-specific double-shell-evaluation). Encodes Wolf's 11.06.2026 MCP-Server-Refactor session loss: 30+ minutes debugging through 4 iterations (-c "..." → -i stdin → -F "\t" tab-eaten → -F "|" shell-pipe-interpreted) before settling on shlex.quote-per-arg + join. Cost: 30 min + frustration. Future SSH-bridging code (MCP servers, deploy scripts, backup scripts, swatserver-iterations) all benefit from this skill applied first.
+description: Use BEFORE writing or debugging Python subprocess.run(["ssh", host, "cmd", "arg1", "arg2"]) calls where the remote args contain shell-metacharacters — pipes `|`, parentheses `(` `)`, semicolons `;`, dollar-signs `$`, backticks, single/double-quotes, glob `*` `?`, tabs `\t`, or empty strings. The naive Python list passed after the host is silently joined by SSH client with spaces and re-evaluated by the REMOTE shell, where metacharacters get interpreted (pipe becomes shell-pipeline, parens cause syntax errors, tabs eaten as whitespace, etc.). Symptoms include 'syntax error: unexpected end of file', 'option requires an argument' for flag-values that contained tabs, 'command not found' for partial args that got shell-split, or silently wrong behavior when args are parsed differently than expected. STOP and use `shlex.quote()` on EACH remote-side arg, then `' '.join(quoted_args)` to produce ONE string that's passed as a SINGLE post-host arg to SSH — the remote shell then sees properly-quoted tokens. Trigger on phrases like "ssh + docker exec doesn't work", "psql via SSH gives syntax error", "remote command breaks", "SSH arg quoting problem", "subprocess.run with ssh args", "MCP server SSH tunnel", "deploy.sh failing on remote", "Bash syntax error from remote", "rsync with ssh and parameters", "pipe interpreted as shell pipe", "tab character disappears in SSH". Do NOT use for shell=True calls (use shlex.split() and proper escaping instead — different concern), for SSH config-file aliases without metacharacter-args (`ssh your-server` alone is safe), for SSH-without-remote-command (pure tunnel/SFTP), or for pure-local subprocess calls without SSH (Python's args-list mechanism handles those correctly via execve — the issue is SSH-specific double-shell-evaluation). Encodes a real session loss: 30+ minutes debugging through 4 iterations (-c "..." → -i stdin → -F "\t" tab-eaten → -F "|" shell-pipe-interpreted) before settling on shlex.quote-per-arg + join. Future SSH-bridging code (MCP servers, deploy scripts, backup scripts) all benefit from this skill applied first.
 ---
 
 # Subprocess SSH Arg Quoting via shlex
 
-> ✅ **PROMOTED 2026-06-12** via TDD-Cycle (RED+GREEN-Subagent-Pair). RED-Subagent schrieb naive Liste-Form und erkannte selbst beim Schreiben „mein Code ist wahrscheinlich kaputt für den `-F '|'` Teil" — Skill verhindert genau diese silent-Shell-Interpretation. GREEN-Subagent nutzte zusätzlich Step 4 (SQL via stdin statt `-c`) und verifizierte 10 Edge-Cases.
+> ✅ **PROMOTED** via TDD cycle (RED+GREEN subagent pair). RED-Subagent wrote naive list form and itself recognized while writing "my code is probably broken for the `-F '|'` part" — skill prevents exactly this silent shell interpretation. GREEN-Subagent additionally used Step 4 (SQL via stdin instead of `-c`) and verified 10 edge cases.
 
 ## Overview
 
@@ -109,30 +109,30 @@ Test cases that catch broken quoting:
 
 - ❌ **Manual escaping with backslashes**: `arg.replace("'", "\\'")` — fragile, misses edge cases, doesn't handle nested quoting
 - ❌ **shlex.quote on ssh_prefix args**: those go through Python's execve (no shell), already safe
-- ❌ **Using f-strings to build remote command** — easy to forget escaping for one variable, hard to audit. Concrete Beispiel:
+- ❌ **Using f-strings to build remote command** — easy to forget escaping for one variable, hard to audit. Concrete example:
   ```python
-  # ❌ BROKEN: was wenn symbol='CL=F' enthält, oder z.B. 'O\'Reilly'?
+  # ❌ BROKEN: what if symbol='CL=F' contains, or e.g. 'O\'Reilly'?
   symbol = "CL=F"
   cmd = ["ssh", host, f"docker exec db psql -c \"SELECT * FROM t WHERE s='{symbol}'\""]
-  # Audit-Frage: muss man bei jedem f-string-Argument einzeln prüfen ob es Shell-safe ist
+  # Audit question: must check each f-string argument individually for shell-safety
   ```
   ```python
-  # ✅ CORRECT: shlex.quote pro Argument, dann join
+  # ✅ CORRECT: shlex.quote per argument, then join
   remote_argv = ["docker", "exec", "db", "psql", "-c", f"SELECT * FROM t WHERE s='{symbol}'"]
   remote_cmd = " ".join(shlex.quote(a) for a in remote_argv)
   cmd = ["ssh", host, remote_cmd]
-  # ODER besser: SQL via stdin (Step 4)
+  # OR better: SQL via stdin (Step 4)
   ```
 - ❌ **shell=True locally**: that's a different escaping problem, also dangerous for injection
 - ❌ **Forgetting BatchMode=yes**: SSH will try interactive password/passphrase prompts and hang silently in subprocess
-- ❌ **No SSH ControlMaster/ControlPersist für hochfrequente Caller**: jeder Call macht neuen TCP+TLS+Auth-Roundtrip (~200-500ms). Für MCP-Server mit häufigen Queries `~/.ssh/config` setzen:
+- ❌ **No SSH ControlMaster/ControlPersist for high-frequency callers**: each call does a new TCP+TLS+Auth roundtrip (~200-500ms). For MCP servers with frequent queries, set `~/.ssh/config`:
   ```
-  Host swatserver
+  Host your-server
     ControlMaster auto
     ControlPath ~/.ssh/cm-%r@%h:%p
     ControlPersist 600
   ```
-  Reduziert nachfolgende Calls auf ~5-20ms.
+  Reduces subsequent calls to ~5-20ms.
 
 ## Why pipe `|` and tab `\t` are particularly insidious
 
@@ -143,50 +143,50 @@ Both are silent — no Python-side error, no traceback, just wrong remote behavi
 
 ## Connection to other skills
 
-- `swatserver-fastapi-iteration` (GA): every SSH-based deploy step is candidate for this skill if it has metacharacter-args
+- `your-server-fastapi-iteration` (GA): every SSH-based deploy step is candidate for this skill if it has metacharacter args
 - `remote-script-scp-over-ssh-heredoc` (GA): heredoc is one valid alternative to stdin-piping
 - `db-telemetry-primary-docker-logs-secondary` (GA): typical caller building `ssh + docker exec psql` chains
-- `mcp-server-stdio-to-http-migration` (GA): MCP-Servers often have this exact issue at the SSH-boundary
+- `mcp-server-stdio-to-http-migration` (GA): MCP servers often have this exact issue at the SSH boundary
 
 ## Cost-of-Skipping
 
-Wolf-Session 11.06.2026 MCP-Server-Refactor:
+A real MCP-server refactor session:
 - Iteration 1: `-c "SQL"` → quotes/parens broken → 5 min
 - Iteration 2: `-i + stdin` for SQL, but `-F "\t"` still broken → 8 min (tab whitespace-eaten)
 - Iteration 3: switch to `-F "|"` for tab-replacement → 7 min (pipe = remote shell pipeline)
 - Iteration 4: `shlex.quote + join` → 5 min, finally works
 - **Total cost: ~30 min + cognitive overhead** for one bug-class that 5 min of skill-application would prevent
 
-At 3-4 SSH-bridge-projects per year × 30 min = 1.5-2h annual savings + frustration reduction.
+At 3-4 SSH-bridge projects per year × 30 min = 1.5-2h annual savings + frustration reduction.
 
-## Quell-Triggers
+## Source triggers
 
-- 11.06.2026 ~14:30 UTC: MCP-Server v0.2.0 Refactor — 4 Iterationen bis korrektes Quoting
-- Wolf-Pain: 30 min Token-Verbrauch für eine Bug-Klasse die strukturell vermeidbar war
-- Brain-Dump-Item „kritische Analyse der Token-Nutzung" (05.06.2026) — solche Iterations-Loops sind direkter Token-Pain
-
----
-
-## Background: TDD-Verlauf (Bulletproofing-Log)
-
-### Cycle 1 — 2026-06-12 (PASS)
-
-- **RED-Subagent** (ohne Skill, Scenario: MCP-Server-Funktion `query_trading_db(sql)` für swatserver/ultimative-db via SSH+docker exec+psql mit `-F '|'` und Test-Query mit Single-Quotes): Schrieb naive Liste-Form `["ssh", host, "docker", "exec", ..., "psql", ..., "-F", "|", "-c", sql]`. **Während des Schreibens** erkannte RED selbst: „Mein Code ist wahrscheinlich kaputt für den `-F '|'` Teil. Die SQL könnte durchkommen weil sie schon gequoted ist, aber das ist Glück, nicht Design." Identifizierte das korrekte Pattern (`shlex.quote + join`) **nur als Option**, nicht als spontanen Default. Klassisches Anti-Pattern: bekannt aber nicht ohne Skill-Trigger angewendet.
-
-- **GREEN-Subagent** (mit Skill via Read-Tool): Las erst `description`-Frontmatter (Trigger-Check), dann „The Pattern" (visueller ✅/❌-Vergleich), dann „Steps to apply" als Checkliste. Nutzte zusätzlich Step 4 (SQL via stdin statt `-c`) — der mächtigste Hebel weil er den SQL-Payload komplett aus dem Quoting-Spiel nimmt. Schrieb 10 Edge-Case-Tests (Pipe, Single-Quote, Parens, Semicolon, Dollar-Sign, Tab, Glob, Syntax-Error, Timeout, BatchMode). Caller-Context-Check: `shlex` ist Python-stdlib, also out-of-the-box verfügbar.
-
-- **Refactor angewendet vor PROMOTE**:
-  - **Polish-1**: Anti-Pattern „f-string-Konstruktion" um konkretes Code-Beispiel mit `symbol="CL=F"` erweitert — vorher nur einzeilig erwähnt, jetzt mit ❌/✅-Vergleich
-  - **Polish-2**: Anti-Pattern „No ControlMaster/ControlPersist" hinzugefügt — für MCP-Server-Caller (hochfrequent) reduziert das Setup-Overhead von 200-500ms auf 5-20ms pro Call
-
-### Cycle-2-Backlog (Polish, nicht-blocking)
-
-1. **Encoding-Hinweis** — `text=True` nutzt Locale-Default. Bei mixed-locale-Setups robuster: `encoding="utf-8", errors="replace"`
-2. **psql `-t` (tuples only) für maschinelles Parsing** — out-of-scope vom Skill aber praktisch relevant für MCP-Tools
-3. **Cross-Skill mit `read-only-sql-via-regex-validator-DRAFT`** — Skill löst nur Shell-Quoting, nicht SQL-Injection-Sicherheit. Für MCP-Server: Validator-Layer separat
-4. **SSH-stderr-Loss bei `check=True` + `capture_output=True`** — psql-NOTICEs gehen verloren, evtl. zurückgeben
+- MCP-server refactor session: 4 iterations to correct quoting
+- Pain: 30 min token consumption for a bug class that was structurally avoidable
+- Brain-dump item "critical analysis of token usage" — such iteration loops are direct token pain
 
 ---
 
-_Erstellt 2026-06-11 ~16:30 UTC im Post-Session-Skill-Review.  
-Promoted 2026-06-12 nach TDD-Cycle 1 PASS via `skill-tdd-promotion-workflow` (RED+GREEN-Subagent-Pair, 2 Polish-Items pre-PROMOTE eingebaut)._
+## Background: TDD progression (Bulletproofing-Log)
+
+### Cycle 1 — PASS
+
+- **RED-Subagent** (without skill, scenario: MCP-server function `query_trading_db(sql)` for a remote DB via SSH+docker exec+psql with `-F '|'` and test query with single quotes): wrote naive list form `["ssh", host, "docker", "exec", ..., "psql", ..., "-F", "|", "-c", sql]`. **While writing**, RED itself recognized: "my code is probably broken for the `-F '|'` part. The SQL might get through because it's already quoted, but that's luck, not design." Identified the correct pattern (`shlex.quote + join`) **only as an option**, not as spontaneous default. Classic anti-pattern: known but not applied without skill trigger.
+
+- **GREEN-Subagent** (with skill via Read tool): first read `description` frontmatter (trigger check), then "The Pattern" (visual ✅/❌ comparison), then "Steps to apply" as a checklist. Additionally used Step 4 (SQL via stdin instead of `-c`) — the most powerful lever because it removes the SQL payload completely from the quoting game. Wrote 10 edge-case tests (pipe, single-quote, parens, semicolon, dollar-sign, tab, glob, syntax-error, timeout, BatchMode). Caller-context check: `shlex` is Python stdlib, available out-of-the-box.
+
+- **Refactor applied before PROMOTE**:
+  - **Polish-1**: anti-pattern "f-string construction" extended with concrete code example with `symbol="CL=F"` — previously only one line mentioned, now with ❌/✅ comparison
+  - **Polish-2**: anti-pattern "No ControlMaster/ControlPersist" added — for MCP-server callers (high frequency) reduces setup overhead from 200-500ms to 5-20ms per call
+
+### Cycle-2-Backlog (Polish, non-blocking)
+
+1. **Encoding hint** — `text=True` uses locale default. For mixed-locale setups more robust: `encoding="utf-8", errors="replace"`
+2. **psql `-t` (tuples only) for machine parsing** — out-of-scope from the skill but practically relevant for MCP tools
+3. **Cross-skill with `read-only-sql-via-regex-validator-DRAFT`** — skill solves only shell quoting, not SQL-injection safety. For MCP server: validator layer separately
+4. **SSH stderr loss with `check=True` + `capture_output=True`** — psql notices get lost, possibly return them
+
+---
+
+_Created in a post-session skill review.  
+Promoted after TDD Cycle 1 PASS via `skill-tdd-promotion-workflow` (RED+GREEN subagent pair, 2 polish items pre-PROMOTE incorporated)._

@@ -1,57 +1,57 @@
 ---
 name: vault-search-helper
-description: Use when Wolf nennt ein Thema/Projekt/Objekt und du musst Vault-First nach existing Notes suchen (Pflicht-Pattern aus CLAUDE.md 08.06.2026 „Vault-First — PFLICHT bei jedem genannten Thema"). Ein einziger Call zu `${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py` ersetzt 2-3 Glob+Grep-Calls und liefert ranked Top-N Notes mit Wikilink + Score-Breakdown + Excerpts. Trigger on phrases like "Vault-First", "wo in vault", "finde Notiz", "existing dazu", "Bestand prüfen", "gibt es schon was", "search vault". Do NOT load for known-path-File-Reads (use `Read` direkt), für reine Filename-Searches (use `Glob`), für External-System-Searches (LaunchAgents, swatserver — use `ls` und `ssh`), oder wenn der User explizit Multi-Pass-Search verlangt.
+description: Use when the user names a topic/project/object and you must do a Vault-First search for existing notes (mandatory pattern: "Vault-First — required for every named topic"). A single call to `${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py` replaces 2-3 Glob+Grep calls and returns ranked top-N notes with wikilink + score breakdown + excerpts. Trigger on phrases like "Vault-First", "where in vault", "find note", "existing on this", "check inventory", "is there already something", "search vault". Do NOT load for known-path file reads (use `Read` directly), for pure filename searches (use `Glob`), for external-system searches (LaunchAgents, remote server — use `ls` and `ssh`), or when the user explicitly requests a multi-pass search.
 ---
 
 # Vault-Search-Helper
 
-> ✅ **PROMOTED 2026-06-12** — TDD-Pressure-Test PASS. Saving 70-80% empirisch (RED: 5 Glob/Grep-Calls ~14k Tokens; GREEN: 1 vault-search.py-Call ~3.5k Tokens). Cycle 2 Polish-Items: Stopword-Score-Inflation-Warnung, Cross-References zu `.remember/`+Skill-Dir, Scope-Auswahl-Heuristik.
+> ✅ **PROMOTED** — TDD pressure-test PASS. Saving 70-80% empirically (RED: 5 Glob/Grep calls ~14k tokens; GREEN: 1 vault-search.py call ~3.5k tokens). Cycle 2 polish items: stopword-score-inflation warning, cross-references to `.remember/` + skill dir, scope selection heuristic.
 
 ## Overview
 
-Wolf-Maxime CLAUDE.md 08.06.2026: **„Wenn Wolf ein Thema, Projekt oder Objekt nennt — egal ob zu Sessionbeginn oder mittendrin — ist der erste Schritt IMMER Vault-First-Suche."** Bisherige Standard-Praxis: 2-3 separate Calls (Glob für Filename-Pattern + Grep für Content-Pattern, ggf. nochmal anders).
+Maxim: **"When the user names a topic, project, or object — whether at session start or mid-session — the first step is ALWAYS Vault-First search."** Previous standard practice: 2-3 separate calls (Glob for filename pattern + Grep for content pattern, possibly again differently).
 
-**Token-Cost-Pattern bisher**: jeder Vault-First-Check kostet ~2-3k Tokens (Glob-Output + Grep-Output + Re-Reads). Bei 5 Vault-Firsts pro Session = ~10-15k Tokens überflüssig.
+**Token-cost pattern so far**: each Vault-First check costs ~2-3k tokens (Glob output + Grep output + re-reads). At 5 Vault-Firsts per session = ~10-15k tokens unnecessary.
 
-**Mit Tool**: ein einziger `vault-search.py <query>`-Call liefert ranked Top-N Notes mit Wikilink + Score-Breakdown + 2-Line-Excerpts. ~500-1000 Tokens. **80% Saving**.
+**With tool**: a single `vault-search.py <query>` call returns ranked top-N notes with wikilink + score breakdown + 2-line excerpts. ~500-1000 tokens. **80% saving**.
 
 ## When to use
 
-Trigger-Phrasen (explizit):
-- „Vault-First-Check zu X"
-- „Was haben wir schon zu X im Vault?"
-- „Finde Notiz zu X"
-- „Existing Bestand zu X"
-- „Gibt es schon was zu X?"
+Trigger phrases (explicit):
+- "Vault-First check on X"
+- "What do we already have on X in the vault?"
+- "Find note on X"
+- "Existing inventory on X"
+- "Is there already something on X?"
 
-Trigger-Signale (implizit, ohne dass Wolf das Wort „Vault-First" sagt):
-- Wolf nennt ein Thema (Projekt-Name, Konzept, Person, Datum, Hardware-Komponente)
-- Es ist nicht offensichtlich ob/wo es im Vault existiert
-- Aufgabe würde sonst „neu" gestartet ohne Kontext-Check
+Trigger signals (implicit, without the user saying "Vault-First"):
+- User mentions a topic (project name, concept, person, date, hardware component)
+- It's not obvious whether/where it exists in the vault
+- Task would otherwise be started "fresh" without context check
 
 ## When NOT to use
 
-- **Known Path**: User gibt explizit File-Pfad → direkt `Read` (kein Search nötig)
-- **Pure Filename-Search**: „Liste alle Daily Notes vom Juni" → `Glob` ist effizienter
-- **Regex-Content-Match**: spezifisches Code-Pattern → `Grep` mit Regex
-- **External-System-Search**: LaunchAgents (`ls ~/Library/LaunchAgents/`), swatserver (`ssh ... cmd`), GitHub (`gh search`)
-- **Multi-Pass-Required**: User sagt explizit „suche erst mal grob, dann verfeinere" → eigene Multi-Step-Sequenz
+- **Known path**: user explicitly gives a file path → direct `Read` (no search needed)
+- **Pure filename search**: "List all daily notes from June" → `Glob` is more efficient
+- **Regex content match**: specific code pattern → `Grep` with regex
+- **External-system search**: LaunchAgents (`ls ~/Library/LaunchAgents/`), remote server (`ssh ... cmd`), GitHub (`gh search`)
+- **Multi-pass required**: user explicitly says "search roughly first, then refine" → own multi-step sequence
 
 ## How to use
 
-### Step 1 — Query formulieren
+### Step 1 — Formulate query
 
-Multi-Word-Query ist OK. Tool stopword-filtert (in, im, an, auf, und, oder, the, and, or) + macht case-insensitive Lowercase-Tokenize.
+Multi-word query is OK. Tool stopword-filters (in, im, an, auf, und, oder, the, and, or) + does case-insensitive lowercase tokenize.
 
 ```bash
-${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py "stop zu eng" --max 5
-${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py "ko schein hebel" --scope projekte
-${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py "verhandlung renten" --include-archiv
+${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py "stop too tight" --max 5
+${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py "leverage certificate" --scope projekte
+${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py "negotiation retirement" --include-archiv
 ```
 
-### Step 2 — Scope wählen
+### Step 2 — Choose scope
 
-| `--scope` | Sucht in |
+| `--scope` | Searches in |
 |---|---|
 | `projekte` | `02 Projekte/` |
 | `bereiche` | `03 Bereiche/` |
@@ -59,12 +59,12 @@ ${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py "verhandlung renten" 
 | `daily` | `05 Daily Notes/` |
 | `inbox` | `01 Inbox/` |
 | `kontext` | `00 Kontext/` |
-| `all` (default) | alle außer `06 Archiv/` |
-| `+--include-archiv` | auch `06 Archiv/` |
+| `all` (default) | all except `06 Archiv/` |
+| `+--include-archiv` | also `06 Archiv/` |
 
-Bei Vault-First-Check unklarem Scope: `--scope all` (default). Bei Trading-Frage: `--scope projekte`. Bei Daily-Suche: `--scope daily`.
+For a Vault-First check with unclear scope: `--scope all` (default). For production-domain questions: `--scope projekte`. For daily search: `--scope daily`.
 
-### Step 3 — Output interpretieren
+### Step 3 — Interpret output
 
 ```json
 {
@@ -89,73 +89,72 @@ Bei Vault-First-Check unklarem Scope: `--scope all` (default). Bei Trading-Frage
 ```
 
 **Interpretation**:
-- `score >100`: starker Treffer, höchstwahrscheinlich relevant
-- `score 30-100`: wahrscheinlich relevant, lese Excerpt
-- `score <30`: schwacher Treffer, eher skippen
-- `breakdown.filename >0`: Thema ist im Filename → Hub-Note oder Hauptdoku
-- `breakdown.heading >3`: Thema strukturell relevant
-- `breakdown.tag >0`: explizit als Tag markiert → wahrscheinlich Hub
-- `breakdown.recency`: bis +6 Punkte für neue Files (max 0 nach 12 Monaten)
+- `score >100`: strong hit, most likely relevant
+- `score 30-100`: probably relevant, read excerpt
+- `score <30`: weak hit, likely skip
+- `breakdown.filename >0`: topic is in filename → hub note or main doc
+- `breakdown.heading >3`: topic structurally relevant
+- `breakdown.tag >0`: explicitly marked as tag → probably hub
+- `breakdown.recency`: up to +6 points for new files (max 0 after 12 months)
 
-### Step 4 — Top-Note(s) lesen
+### Step 4 — Read top note(s)
 
-Mit Wikilink → `Read` direkt auf `path_rel`. Bei Score-Tie zwischen Top-2: beide lesen.
+With wikilink → `Read` directly on `path_rel`. On score-tie between top-2: read both.
 
-## Ranking-Heuristik (Score-Gewichte)
+## Ranking Heuristic (Score Weights)
 
-| Match-Typ | Punkte | Begründung |
+| Match type | Points | Reasoning |
 |---|---|---|
-| Filename-Match | +5 pro Query-Wort | Filename ist Hub-Indikator |
-| Frontmatter-Tag-Match | +4 pro Query-Wort | Tag-Match = explizite Kategorisierung |
-| Heading-Match (H1/H2/H3) | +3 pro Match | Struktur signalisiert Thema-Zentralität |
-| Content-Match | +1 pro Vorkommen | Reine Erwähnung |
-| Recency-Boost | +0.5/Monat (max +6) | Neuere Files wahrscheinlich relevanter |
+| Filename match | +5 per query word | Filename is hub indicator |
+| Frontmatter tag match | +4 per query word | Tag match = explicit categorization |
+| Heading match (H1/H2/H3) | +3 per match | Structure signals topic centrality |
+| Content match | +1 per occurrence | Mere mention |
+| Recency boost | +0.5/month (max +6) | Newer files more likely relevant |
 
-**Tuning-Backlog**: Gewichte sind heuristisch, empirisch nicht ge-tuned. Bei Cycle-2 könnte ein A/B-Test gegen User-Choice runs Optimum finden.
+**Tuning backlog**: weights are heuristic, not empirically tuned. In Cycle-2 an A/B test against user-choice runs could find the optimum.
 
 ## Anti-patterns
 
-| Anti-Pattern | Was statt dessen |
+| Anti-Pattern | What to do instead |
 |---|---|
-| `Glob "**/*.md"` + `Grep ...` (2 Calls) für Vault-First | `vault-search.py <query>` (1 Call) |
-| Multi-Pass: erst Glob, dann Grep im Result | vault-search macht beides in einem Pass |
-| Multiple Searches mit Synonymen | Multi-Word-Query enthält schon Variationen, Stopword-Filter macht den Rest |
-| Recursive Subagent für Vault-Search | Overhead frisst Saving, vault-search ist sync genug |
-| Vault-Search für Code-Files | nur für `.md`, nicht für `.py`/`.ts`/`.yaml` |
+| `Glob "**/*.md"` + `Grep ...` (2 calls) for Vault-First | `vault-search.py <query>` (1 call) |
+| Multi-pass: Glob first, then Grep in the result | vault-search does both in one pass |
+| Multiple searches with synonyms | Multi-word query already contains variations, stopword filter handles the rest |
+| Recursive subagent for vault search | Overhead eats the saving, vault-search is sync enough |
+| Vault search for code files | only for `.md`, not for `.py`/`.ts`/`.yaml` |
 
-## Token-Saving Empirik (12.06.2026)
+## Token-Saving Empirics
 
-Smoke-Test mit `"token optimierung"`:
-- **96 candidates** durchsucht (alle .md in 6 Scopes)
-- **Top-3 returned** mit Score 109 / 99 / 78
-- **Output-Größe**: ~3 KB JSON ≈ 700 Tokens
-- **Vorher (Glob+Grep manuell)**: ~3-5k Tokens für gleichen Output
+Smoke test with `"token optimierung"`:
+- **96 candidates** searched (all .md in 6 scopes)
+- **Top-3 returned** with score 109 / 99 / 78
+- **Output size**: ~3 KB JSON ≈ 700 tokens
+- **Previously (Glob+Grep manually)**: ~3-5k tokens for same output
 
-**Saving pro Vault-First**: ~70-80%. Bei 5 Vault-Firsts/Session = **~10-15k Tokens/Session gespart**.
+**Saving per Vault-First**: ~70-80%. At 5 Vault-Firsts/session = **~10-15k tokens/session saved**.
 
 ## Cross-References
 
-- CLAUDE.md 08.06.2026 „Vault-First — PFLICHT" — die zugrundeliegende Wolf-Maxime
-- `pdf-text-extract-without-vision` (GA seit 11.06.) — Schwester-Skill für PDFs
-- `image-preprocessing-helper` (DRAFT seit 12.06.) — Vision-Token-Saver
-- `bash-output-filtering-disciplines` (DRAFT seit 11.06.) — selbe Token-Optimierungs-Familie
+- "Vault-First — required" maxim — the underlying rule
+- `pdf-text-extract-without-vision` (GA) — sister skill for PDFs
+- `image-preprocessing-helper` — Vision token saver
+- `bash-output-filtering-disciplines` — same token-optimization family
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD Trail (Bulletproofing Log)
 
-### Cycle 1 — 2026-06-12 (PASS)
+### Cycle 1 — PASS
 
-- **RED-Subagent** (ohne Skill): 5 Tool-Calls (broad Grep + focused Grep -C=2 + 2× Glob + Read der Top-2), ~14k Tokens total. Übersah systematisch `.remember/core-memories.md`, CLAUDE.md selbst, Skill-Verzeichnis. „Drift-Risiko hoch — nur 60-70% Coverage in erster Iteration."
-- **GREEN-Subagent** (mit Skill): 1× `vault-search.py "stop loss zu eng" --max 5` + 1 Refinement `--scope projekte` + 3 Grep-Excerpts, ~3.5k Tokens. **Saving 70-80%** exakt im Skill-versprochenen Korridor. Entdeckte zudem Stopword-Score-Inflation (Score 124 für False-Positive bei Multi-Word-Stopword-Query).
-- **Refactor**: keiner blocker; Cycle-2-Backlog erweitert.
+- **RED-Subagent** (without skill): 5 tool calls (broad Grep + focused Grep -C=2 + 2× Glob + Read of top-2), ~14k tokens total. Systematically overlooked `.remember/core-memories.md`, CLAUDE.md itself, the skill directory. "Drift risk high — only 60-70% coverage on first iteration."
+- **GREEN-Subagent** (with skill): 1× `vault-search.py "stop loss too tight" --max 5` + 1 refinement `--scope projekte` + 3 grep excerpts, ~3.5k tokens. **Saving 70-80%** exactly in the skill-promised corridor. Also discovered stopword-score-inflation (score 124 for a false positive on a multi-word stopword query).
+- **Refactor**: none blocking; Cycle-2 backlog expanded.
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2 Backlog (Polish, non-blocking)
 
-- **Anti-Pattern „Stopword-Score-Inflation"**: bei Score >100 ohne filename/tag-Boost → gegen-Greppen mit exakter Phrase als Disambiguierung-Layer
-- **Scope-Auswahl-Heuristik**: Trading-Themen → `--scope projekte` Default; Daily-Note-Cross-Check optional
-- **Cross-References zu Non-Vault-Quellen**: Skill sollte explizit erwähnen dass `.remember/`, CLAUDE.md, `~/.claude/skills/` nicht durch das Tool indexiert werden — Caller muss separat checken
-- Embedding-basiertes Ranking (sentence-transformers lokal)
-- Persistent Index (SQLite oder JSON-Cache)
-- Multi-Vault-Support (private vs work-Vault)
-- Cache-Invalidation bei Vault-Mods (inotify oder polling)
-- Fuzzy-Match für Tippfehler
-
+- **Anti-pattern "stopword-score-inflation"**: with score >100 without filename/tag boost → counter-grep with exact phrase as disambiguation layer
+- **Scope selection heuristic**: production-domain topics → `--scope projekte` default; daily-note cross-check optional
+- **Cross-references to non-vault sources**: skill should explicitly mention that `.remember/`, CLAUDE.md, `~/.claude/skills/` are not indexed by the tool — caller must check separately
+- Embedding-based ranking (sentence-transformers locally)
+- Persistent index (SQLite or JSON cache)
+- Multi-vault support (private vs work vault)
+- Cache invalidation on vault mods (inotify or polling)
+- Fuzzy match for typos

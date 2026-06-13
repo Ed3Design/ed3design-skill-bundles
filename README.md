@@ -4,6 +4,8 @@
 
 ## 📦 Bundles
 
+## Software Engineering Bundles
+
 | Bundle | Skills | Hooks | Agents | Tools | Status |
 |---|---|---|---|---|---|
 | [`token-savers`](./token-savers/) | 4 | **1** | — | 5 | ✅ v0.2.0 |
@@ -13,7 +15,14 @@
 | [`schema-discipline`](./schema-discipline/) | 6 | — | **1** (`schema-validator`) | — | ✅ v0.2.0 |
 | [`skill-system-meta`](./skill-system-meta/) | 5 | **1** | — | — | ✅ v0.2.0 |
 
-**Total**: 48 skills + 6 hooks + 4 sub-agents + 5 tools — patterns extracted from real-world engineering practice and structured for reuse.
+## Hardware / Maker Engineering Bundles
+
+| Bundle | Skills | Hooks | Agents | Tools | Status |
+|---|---|---|---|---|---|
+| [`cad-design`](./cad-design/) | 4 | — | — | — | ✅ v0.1.0 |
+| [`maker-fdm`](./maker-fdm/) | 2 | — | — | — | ✅ v0.1.0 |
+
+**Total**: 54 skills + 6 hooks + 4 sub-agents + 5 tools — patterns extracted from real-world engineering practice and structured for reuse. Covers software engineering (Python/SQL/Git workflows) AND hardware/maker engineering (CAD, FDM, embedded UI).
 
 ## 🚀 Quickstart
 

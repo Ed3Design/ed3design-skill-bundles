@@ -1,6 +1,6 @@
 ---
 name: async-context-manager-retry-pattern
-description: Use when implementing retry-logic around an `async with X:` block where `X.__aenter__()` or `X.__aexit__()` itself performs network-IO that can fail transiently — for example python-telegram-bot's `async with Bot(token) as bot:` (calls `initialize()` with HTTPX-connection-setup that can TimedOut), asyncpg's `async with pool.acquire() as conn:` (TCP-handshake can fail), httpx `async with AsyncClient() as c:` (TLS-handshake), or websockets `async with connect(url) as ws:` (WS-upgrade-handshake). The Iron-Law: every `async with` whose enter/exit does network-IO must sit INSIDE the retry-loop, not around it — otherwise enter-failures fly past the inner `try/except` and get caught by an outer `except Exception` as "Unexpected", with zero retries actually attempted. Trigger on phrases like "Retry um async with", "TimedOut aus __aenter__", "Connection-Setup im Retry-Loop", "Unexpected send-error trotz retry-logic", "Retry erschöpft sich nicht", "ich habe Retry implementiert aber er greift nicht", "fresh connection pro Versuch", "async context manager retry pitfall", "context manager exception bypasses retry", "wie wraps man async with mit retries". Do NOT load for SYNC context-managers (different exception-propagation model, less common pitfall — sync `with X:` rarely does heavy IO), for async-with where __aenter__ does only-local-work like file-open or in-memory state (no network → no transient retries needed), for retry around a generator-based async-iterator (different pattern entirely — `async for` retry has its own consideration), or for first-time-design of an async-context-manager class itself (use „building async-context-managers" guidance instead — that's the producer side, this skill is consumer side). Encodes the 03.06.2026 ultimative-platform E-7.3.3 trap: Bot-Connection-TimedOut from `async with bot:` flew past 3-retry-loop, was caught as "Unexpected send-error" with zero retries — 9 hours between fix-deploy and bug-discovery despite 3 passing retry-tests.
+description: Use when implementing retry-logic around an `async with X:` block where `X.__aenter__()` or `X.__aexit__()` itself performs network-IO that can fail transiently — for example python-telegram-bot's `async with Bot(token) as bot:` (calls `initialize()` with HTTPX-connection-setup that can TimedOut), asyncpg's `async with pool.acquire() as conn:` (TCP-handshake can fail), httpx `async with AsyncClient() as c:` (TLS-handshake), or websockets `async with connect(url) as ws:` (WS-upgrade-handshake). The Iron-Law: every `async with` whose enter/exit does network-IO must sit INSIDE the retry-loop, not around it — otherwise enter-failures fly past the inner `try/except` and get caught by an outer `except Exception` as "Unexpected", with zero retries actually attempted. Trigger on phrases like "retry around async with", "TimedOut from __aenter__", "connection-setup in retry-loop", "unexpected send-error despite retry-logic", "retry never fires", "I implemented retry but it doesn't trigger", "fresh connection per attempt", "async context manager retry pitfall", "context manager exception bypasses retry", "how to wrap async with in retries". Do NOT load for SYNC context-managers (different exception-propagation model, less common pitfall — sync `with X:` rarely does heavy IO), for async-with where __aenter__ does only-local-work like file-open or in-memory state (no network → no transient retries needed), for retry around a generator-based async-iterator (different pattern entirely — `async for` retry has its own consideration), or for first-time-design of an async-context-manager class itself (use "building async-context-managers" guidance instead — that's the producer side, this skill is consumer side). Encodes a real-world trap: a Bot-Connection-TimedOut from `async with bot:` flew past a 3-retry-loop, was caught as "Unexpected send-error" with zero retries — 9 hours between fix-deploy and bug-discovery despite 3 passing retry-tests.
 ---
 
 # Async-Context-Manager Retry Pattern
@@ -9,9 +9,9 @@ description: Use when implementing retry-logic around an `async with X:` block w
 
 > If your retry-loop wraps `async with X:` instead of being wrapped BY it, your retry-logic is fictional for the most common transient-failure mode: connection-setup-timeout.
 
-## The trap (concrete from E-7.3.3 03.06.2026)
+## The trap (concrete example)
 
-### Wrong (heute Vormittag deployed E-7.3.2)
+### Wrong (originally deployed)
 
 ```python
 try:
@@ -23,25 +23,25 @@ try:
             except TelegramError as exc:
                 if not is_retryable(exc):
                     return False
-                # retry-Logik HIER drin
+                # retry logic lives HERE
                 await asyncio.sleep(delays[attempt])
-except Exception as exc:             # ← catches __aenter__-TimedOut
+except Exception as exc:             # ← catches __aenter__ TimedOut
     log.error("Unexpected send-error: %s", exc)
     return False                     # ← Zero retries done!
 ```
 
-**Bug-Wirkung**: `Bot.__aenter__()` ruft `initialize()` mit HTTPX-Connection-Setup. Wenn diese TimedOut wirft, fliegt die Exception OUTSIDE des inneren retry-`try`, wird vom äußeren `except Exception` gefangen, und **Retry-Loop wird nie betreten** — auch wenn Retry-Logic vorhanden ist.
+**Bug effect**: `Bot.__aenter__()` calls `initialize()` with HTTPX connection-setup. When that raises TimedOut, the exception flies OUTSIDE the inner retry `try`, gets caught by the outer `except Exception`, and **the retry loop is never entered** — even though retry logic is present.
 
-**Live-Beleg**: 6 Sekunden zwischen DB-Save und Error-Log. Echte 3-Retries mit Backoff [1s, 2s, 4s] + 4 × ~5s default-timeout = ~27 Sekunden. Differenz = Beweis dass kein Retry lief.
+**Live evidence**: 6 seconds between DB-Save and Error-Log. A real 3-retry pass with backoff [1s, 2s, 4s] + 4 × ~5s default-timeout = ~27 seconds. The gap proves no retry ran.
 
 ### Right
 
 ```python
 last_exc = None
 for attempt in range(MAX_RETRIES + 1):
-    bot = create_bot(token)              # ← Fresh Bot-Instance pro Versuch
+    bot = create_bot(token)              # ← Fresh Bot instance per attempt
     try:
-        async with bot:                  # ← __aenter__ JETZT im retry-Scope
+        async with bot:                  # ← __aenter__ NOW inside retry scope
             await bot.send_message(...)
         last_exc = None
         break  # success
@@ -63,39 +63,39 @@ for attempt in range(MAX_RETRIES + 1):
 return last_exc is None
 ```
 
-Beachte:
-1. `async with bot:` ist INNERHALB des `for attempt in range(...)`-Loops
-2. Bot-Instance wird IN jedem Iteration neu erstellt — fresh Connection-Pool
-3. Der `try/except TelegramError` umschließt jetzt sowohl `__aenter__` als auch `bot.send_message()` — beide Failure-Modi werden retry-klassifiziert
+Note:
+1. `async with bot:` is INSIDE the `for attempt in range(...)` loop
+2. Bot instance is freshly created in EACH iteration — fresh connection pool
+3. The `try/except TelegramError` now wraps both `__aenter__` and `bot.send_message()` — both failure modes get retry-classified
 
 ## Why this matters generally
 
-Jedes der folgenden Patterns hat den gleichen Fehler-Pfad:
+Each of the following patterns has the same failure path:
 
 | Library | Risky `__aenter__` does |
 |---|---|
-| python-telegram-bot `async with Bot(...) as bot` | HTTPX-Client-Init, eventuell `initialize()` mit getMe() |
-| httpx `async with AsyncClient(...) as c` | Transport-Setup, kann sich SSL-Handshakes verzögern |
-| asyncpg `async with pool.acquire() as conn` | TCP-Handshake zum Postgres, TLS-Upgrade, Auth-Roundtrip |
-| websockets `async with connect(url) as ws` | TCP + WS-Upgrade-Handshake |
-| aiohttp `async with session.get(url) as resp` | Verbindung + Request + Initial-Response-Header |
-| aiokafka `async with consumer:` | Broker-Connection + Group-Coordination |
+| python-telegram-bot `async with Bot(...) as bot` | HTTPX-Client-Init, possibly `initialize()` with getMe() |
+| httpx `async with AsyncClient(...) as c` | Transport-Setup, may stall on SSL handshakes |
+| asyncpg `async with pool.acquire() as conn` | TCP-handshake to Postgres, TLS-upgrade, Auth-roundtrip |
+| websockets `async with connect(url) as ws` | TCP + WS upgrade handshake |
+| aiohttp `async with session.get(url) as resp` | Connection + Request + Initial-Response-Header |
+| aiokafka `async with consumer:` | Broker connection + Group coordination |
 
-Alle haben non-trivial IO in `__aenter__`. Wenn dein Retry-Loop außenrum sitzt, hast du sie nicht abgedeckt.
+All have non-trivial IO in `__aenter__`. If your retry loop sits around them, you have not covered them.
 
-## Test-Plicht (heute aufgedeckt)
+## Test discipline (the real lesson)
 
-**Test-Lücke heute Vormittag**: alle 3 retry-Tests mockten `FakeBotClass.__aenter__` als trivialen Stub:
+**Test gap**: all 3 retry-tests mocked `FakeBotClass.__aenter__` as a trivial stub:
 ```python
 class FakeBotClass:
-    async def __aenter__(self): return self   # ← failt nie
+    async def __aenter__(self): return self   # ← never fails
     async def __aexit__(self, *a): return None
-    async def send_message(self, **k): ...    # ← Test mockt nur DAS
+    async def send_message(self, **k): ...    # ← test only mocks THIS
 ```
 
-Damit war der Test grün, aber der reale Failure-Modus (`__aenter__` wirft TimedOut) war komplett unabgedeckt.
+That made the test green, but the real failure mode (`__aenter__` raises TimedOut) was completely uncovered.
 
-**Fix-Test-Pattern**: mindestens EIN Test pro Library wo `__aenter__` selbst eine retryable Exception wirft:
+**Fix-Test pattern**: at least ONE test per library where `__aenter__` itself raises a retryable exception:
 
 ```python
 class FakeBotClass:
@@ -109,34 +109,34 @@ class FakeBotClass:
     async def send_message(self, **k): return None  # never fails
 ```
 
-Erwartung:
+Expectation:
 - `aenter_calls["n"] == 3` (2 failures + 1 success)
-- `send_calls["n"] == 1` (send_message wird nur 1× erreicht — beim erfolgreichen attempt)
-- `sleeps == [1.0, 2.0]` (2 backoffs zwischen den 3 attempts)
+- `send_calls["n"] == 1` (send_message is reached only once — on the successful attempt)
+- `sleeps == [1.0, 2.0]` (2 backoffs between the 3 attempts)
 
 ## The 4-Step Refactor Procedure
 
-### Step 1 — Audit: was macht `__aenter__` wirklich?
+### Step 1 — Audit: what does `__aenter__` actually do?
 
-Library-Docs lesen oder Source-Code:
-- python-telegram-bot 22.x: `Bot.__aenter__` → `initialize()` → `httpx.AsyncClient` setup + optional `getMe()`-Call
+Read library docs or source code:
+- python-telegram-bot 22.x: `Bot.__aenter__` → `initialize()` → `httpx.AsyncClient` setup + optional `getMe()` call
 - asyncpg: `pool.acquire().__aenter__` → connect + TLS + auth
-- httpx: `AsyncClient.__aenter__` → in der Regel nur in-memory state aber `aclose` macht Connection-Pool-Drain
+- httpx: `AsyncClient.__aenter__` → usually just in-memory state but `aclose` drains the connection pool
 
-Wenn `__aenter__` Netz-IO macht: Retry-Scope einschließen.
+If `__aenter__` does network IO: include it in the retry scope.
 
-### Step 2 — Refactor: Context-Manager IN den Loop
+### Step 2 — Refactor: Context-Manager INTO the loop
 
-Vorher:
+Before:
 ```python
 async with X:
     for attempt in retries: try send except retry sleep
 ```
 
-Nachher:
+After:
 ```python
 for attempt in retries:
-    X = create_fresh()        # ← optional: fresh resource pro versuch
+    X = create_fresh()        # ← optional: fresh resource per attempt
     try:
         async with X:
             await operation()
@@ -145,42 +145,42 @@ for attempt in retries:
     except NonRetryableErr: return
 ```
 
-### Step 3 — RED-Test mit `__aenter__`-Failure
+### Step 3 — RED test with `__aenter__` failure
 
-Schreibe einen Test wo `__aenter__` mehrfach failt. **Vor Fix muss er rot sein** — sonst hattest du das Bug-Pattern nicht.
+Write a test where `__aenter__` fails multiple times. **It must be red before the fix** — otherwise you didn't have the bug pattern.
 
-### Step 4 — GREEN: Refactor anwenden, Test grün
+### Step 4 — GREEN: apply refactor, test green
 
-Plus: bestehende „send-fails-but-aenter-ok"-Tests müssen weiterhin grün bleiben (Regression).
+Plus: existing "send-fails-but-aenter-ok" tests must remain green (regression).
 
 ## Anti-patterns
 
-- ❌ **„Mein Retry-Loop ist drin im async with"** — du retryst nur den Operations-Call, nicht den Setup. Connection-Setup-TimedOut fliegt durch.
-- ❌ **Singleton-Resource im Retry-Loop** — wenn du EINE Bot-Instance verwendest und der Connection-State korrupt ist, retryst du gegen denselben kaputten State. Lösung: `create_fresh()` pro Iteration.
-- ❌ **`except Exception` außerhalb des Retry-Loops** — fängt zu viel, maskiert Connection-Setup-Failures als „Unexpected". Wenn überhaupt: VOR dem Loop loggen + raise.
-- ❌ **Test mockt `__aenter__` als trivialen Stub** — du testest dann nicht den heißen Pfad. Mindestens ein Test mit `__aenter__`-Failure.
-- ❌ **Retry-Counter im Klassen-Attribute statt Closure** — beim Test mit mehreren Test-Cases im selben Process bleiben die Counter aus dem vorigen Test hängen. Pro-Test fresh-instance.
+- ❌ **"My retry loop is INSIDE the async with"** — you only retry the operation call, not the setup. Connection-Setup-TimedOut flies through.
+- ❌ **Singleton resource in the retry loop** — if you use ONE Bot instance and the connection state is corrupt, you retry against the same broken state. Solution: `create_fresh()` per iteration.
+- ❌ **`except Exception` outside the retry loop** — catches too much, masks Connection-Setup-Failures as "Unexpected". If at all: log BEFORE the loop + raise.
+- ❌ **Test mocks `__aenter__` as a trivial stub** — you are then not testing the hot path. At least one test with `__aenter__` failure.
+- ❌ **Retry counter in a class attribute instead of a closure** — across multiple test cases in the same process, counters from the previous test stick around. Fresh instance per test.
 
 ## Skill-Composition
 
-- `superpowers:test-driven-development` — runs AROUND this skill (RED-Test mit __aenter__-Failure → GREEN-Refactor)
-- `library-subclass-explicit-type-classification-DRAFT` — komplementärer Aspekt: WELCHE Exceptions sind retryable? Dieser hier: WO greift Retry?
-- `forensik-spur-fuer-fire-and-forget-sends-DRAFT` — orthogonal: DB-Spur bei Send-Fail damit silent-Failure nicht silent bleibt
-- `asyncpg-live-vs-mock-shape` — anderer Aspekt von Mock-vs-Live-Divergenz (Type-Coercion, nicht Context-Manager-Setup)
+- `superpowers:test-driven-development` — runs AROUND this skill (RED-Test with __aenter__-failure → GREEN-Refactor)
+- `library-subclass-explicit-type-classification-DRAFT` — complementary aspect: WHICH exceptions are retryable? This skill: WHERE does retry take effect?
+- `forensik-spur-fuer-fire-and-forget-sends-DRAFT` — orthogonal: DB-trail on Send-Fail so silent failure does not stay silent
+- `asyncpg-live-vs-mock-shape` — different aspect of mock-vs-live divergence (Type-Coercion, not Context-Manager-Setup)
 
 ## When-Built / Why-Built
 
-Built 03.06.2026 ~16:45 nach E-7.3.3 Forensik:
+Built after a forensic investigation:
 
-- 03.06. ~12:00 Wolf-Feedback dass heute Vormittag-Signal kein Advisory hatte
-- 03.06. ~12:30 deployed E-7.3.2 Retry-Logik (alle 3 Tests grün)
-- 03.06. ~14:02 nächstes Signal (BAS.DE LONG): DB-Save OK, Telegram-Send TimedOut → "Unexpected send-error", **kein Retry**
-- 03.06. ~16:30 Wolf-Feedback: „wieder kein Advisory trotz Fix"
-- 03.06. ~16:45 Forensik in journalctl, Root-Cause klar
-- 03.06. ~17:00 RED-Test mit __aenter__-TimedOut → exakt der Production-Log-String
-- 03.06. ~17:10 GREEN-Refactor: `async with bot` in den Loop verschoben, fresh Bot pro Versuch
-- 03.06. ~17:25 Live-Verify mit nachträglichem Send für Assessment #145 → 200 OK, telegram_sent_at gesetzt
+- ~12:00 user feedback that the morning signal had no advisory
+- ~12:30 deployed initial retry logic (all 3 tests green)
+- ~14:02 next signal: DB-Save OK, Telegram-Send TimedOut → "Unexpected send-error", **no retry**
+- ~16:30 user feedback: "still no advisory despite the fix"
+- ~16:45 forensics in journalctl, root cause clear
+- ~17:00 RED-Test with __aenter__-TimedOut → exactly the production log string
+- ~17:10 GREEN-Refactor: `async with bot` moved into the loop, fresh Bot per attempt
+- ~17:25 Live-Verify with a re-send for assessment #145 → 200 OK, telegram_sent_at set
 
-Bug-Lifetime: ~9 Stunden zwischen Deploy und Discovery, despite green tests. **Test-Pattern-Lücke** (triviale __aenter__-Mocks) war die strukturelle Ursache.
+Bug-Lifetime: ~9 hours between Deploy and Discovery, despite green tests. **Test-pattern gap** (trivial __aenter__ mocks) was the structural cause.
 
-Promotion-Trigger: ≥2 weitere Live-Anwendungen außerhalb python-telegram-bot (z.B. asyncpg-pool-acquire Retry, httpx-Client-Setup Retry).
+Promotion-Trigger: ≥2 further live applications outside python-telegram-bot (e.g. asyncpg-pool-acquire retry, httpx-client-setup retry).

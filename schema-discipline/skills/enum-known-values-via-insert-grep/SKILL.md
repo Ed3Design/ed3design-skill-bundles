@@ -1,210 +1,210 @@
 ---
 name: enum-known-values-via-insert-grep
-description: Use BEFORE writing or editing a Python-side constants/enum/validator-set that should match a DB-column's real value-space — `_KNOWN_X = {...}`, `VALID_<DIMENSION> = frozenset(...)`, `class XStatus(str, Enum)`, `pydantic.Field(..., regex='^(a|b|c)$')`, in-app filter-allow-lists. STOP and grep ALL `INSERT INTO <table>` + ALL `<table>.<column> = ...` setter-lines + ALL UPDATE-statements that touch the column, BEFORE deciding the value-set in Python. Specifically trigger when (a) you write phrases like „die _KNOWN_SOURCES-Liste pflegen", „valid_phase_set definieren", „pydantic-Validator für <column> bauen", „Filter-Allowlist für UI", „neue Constants für <DIMENSION>", (b) you are about to copy a value-set from spec / docs / memory without grepping the real INSERTs first, (c) the column is shared between MULTIPLE call-sites (different services, different scripts, replay vs live, mock vs production). Also use when reviewing existing constants and the symptom is „Wert X wird silent akzeptiert" oder „Wert Y wird fälschlich rejected — er ist aber im Code". Wolf-Erlebnis 09.06.2026 Phase-5-Re-Review: `_KNOWN_SOURCES` mischte `system_phase.mode` mit `virtual_trades.source` (verschiedene Spalten verschiedener Tabellen!), Tippfehler `shadow` silent akzeptiert, echte values `manual` + `replay` fälschlich gewarnt. Method: `grep -rn "INSERT INTO <table>"` + `grep -rn "<table_var>\.<column>\s*="` + `grep -rn "UPDATE <table> SET <column>"` — dann tatsächliche Werte verifizieren + Tabelle/Spalte/Mode-Field disambiguieren (mehrere Tabellen können gleichnamige Spalten haben mit unterschiedlichen Werteräumen). Do NOT load for greenfield-tables (kein INSERT existiert, du DEFINIERST gerade), for typed-Postgres-ENUMs (PG `CREATE TYPE ... AS ENUM` zeigt die Liste in `\d` schon vollständig), oder für rein interne Python-Constants ohne DB-Bezug (z.B. UI-Theme-Names). Complement to `enum-value-discovery-before-sql-where` (this skill is for the WRITE/DEFINE side, that skill is for the SQL WHERE-read side) + complement to `schema-verify-via-information-schema` (this assumes you already know the table+column, want to know the values).
+description: Use BEFORE writing or editing a Python-side constants/enum/validator-set that should match a DB-column's real value-space — `_KNOWN_X = {...}`, `VALID_<DIMENSION> = frozenset(...)`, `class XStatus(str, Enum)`, `pydantic.Field(..., regex='^(a|b|c)$')`, in-app filter-allow-lists. STOP and grep ALL `INSERT INTO <table>` + ALL `<table>.<column> = ...` setter-lines + ALL UPDATE-statements that touch the column, BEFORE deciding the value-set in Python. Specifically trigger when (a) you write phrases like "maintain the _KNOWN_SOURCES list", "define valid_phase_set", "build pydantic validator for <column>", "filter-allowlist for UI", "new constants for <DIMENSION>", (b) you are about to copy a value-set from spec / docs / memory without grepping the real INSERTs first, (c) the column is shared between MULTIPLE call-sites (different services, different scripts, replay vs live, mock vs production). Also use when reviewing existing constants and the symptom is "value X is silently accepted" or "value Y is wrongly rejected — it IS in the code". Real-world experience: `_KNOWN_SOURCES` mixed `system_phase.mode` with `virtual_trades.source` (different columns of different tables!), typo `shadow` silently accepted, real values `manual` + `replay` wrongly warned. Method: `grep -rn "INSERT INTO <table>"` + `grep -rn "<table_var>\.<column>\s*="` + `grep -rn "UPDATE <table> SET <column>"` — then verify actual values + disambiguate table/column/mode-field (multiple tables can have same-named columns with different value-spaces). Do NOT load for greenfield-tables (no INSERT exists, you are DEFINING right now), for typed-Postgres-ENUMs (PG `CREATE TYPE ... AS ENUM` shows the list in `\d` completely), or for purely internal Python-Constants without DB context (e.g. UI-theme-names). Complement to `enum-value-discovery-before-sql-where` (this skill is for the WRITE/DEFINE side, that skill is for the SQL WHERE-read side) + complement to `schema-verify-via-information-schema` (this assumes you already know the table+column, want to know the values).
 ---
 
 # Enum Known-Values via INSERT-Grep
 
-> ✅ **PROMOTED 2026-06-10** — TDD Cycle 1 **STRONG PASS**. RED-Subagent reagierte heuristisch korrekt („erst grep") aber ohne konkrete Verifikation am echten Repo (7 Self-Critique-Punkte). GREEN-Subagent führte **18 Bash-Tool-Uses** durch im echten ultimative-platform-Repo und lieferte substantielle Befunde die ohne Skill nicht erreicht worden wären: (1) aktueller `_KNOWN_SOURCES` ist bereits anders als im Scenario angenommen (Hotfix 10.06.), (2) fehlender produktiver Wert `'real'` aus `ml/real_trade_bridge.py:142` — würde wochenlang silent `unknown source: real`-Warnings triggern, (3) Cross-Table-False-Positives explizit zurückgewiesen (`'optimizer'`, `'manual'@strategy_params`, `'av_earnings'`), (4) `_MODE_TO_SOURCES`-Mapping + DB-Constraint-Implikationen identifiziert. **R1-Refactor angewendet**: Step 4b „DB-Constraint-Verify" als eigene Sub-Sektion ergänzt — bei CHECK-Constraint / PG-ENUM begrenzt DB den Wertraum und Constants-Edit allein ist wirkungslos.
+> ✅ **PROMOTED** — TDD Cycle 1 **STRONG PASS**. RED-Subagent reacted heuristically correct ("grep first") but without concrete verification at a real repo (7 self-critique points). GREEN-Subagent executed **18 Bash-Tool-Uses** in a real production domain repo and delivered substantial findings that would not have been reached without the skill: (1) current `_KNOWN_SOURCES` is already different from what the scenario assumed (recent hotfix), (2) missing productive value `'real'` from `ml/real_trade_bridge.py:142` — would silently trigger `unknown source: real`-warnings for weeks, (3) Cross-Table-False-Positives explicitly rejected (`'optimizer'`, `'manual'@strategy_params`, `'av_earnings'`), (4) `_MODE_TO_SOURCES`-Mapping + DB-Constraint-Implications identified. **R1-Refactor applied**: Step 4b "DB-Constraint-Verify" added as own sub-section — if a CHECK-Constraint / PG-ENUM limits the value-range, a constants-edit alone is ineffective.
 
 ## Overview
 
-**Eine Python-Konstanten-Liste die DB-Werte abdeckt muss aus den DB-Werten abgeleitet sein, nicht aus dem Kopf.**
+**A Python constants list that covers DB-values must be derived from the DB-values, not from memory.**
 
-Wenn du `_KNOWN_X = {...}`, `VALID_<DIMENSION>`, `pydantic.Field(regex="^(a|b|c)$")`, oder einen Status-Enum-Validator schreibst, ist das ein **Vertrag mit der Datenbank**. Wenn die Liste vom echten Wertraum abweicht:
+When you write `_KNOWN_X = {...}`, `VALID_<DIMENSION>`, `pydantic.Field(regex="^(a|b|c)$")`, or a status-enum validator, that is a **contract with the database**. If the list deviates from the real value-space:
 
-- **Falsch-positiv**: Tippfehler-Werte rutschen durch („shadow" wird akzeptiert obwohl niemand das insertet)
-- **Falsch-negativ**: echte Werte werden gewarnt / abgelehnt („manual" wird `unknown source`-warning obwohl es legitim ist)
-- **Cross-Table-Drift**: Spalten gleichen Namens existieren in mehreren Tabellen mit unterschiedlichen Werteräumen — Python-Side mischt sie versehentlich
+- **False-positive**: typo values slip through ("shadow" gets accepted even though nobody inserts that)
+- **False-negative**: real values get warned / rejected ("manual" triggers `unknown source` warning even though it's legitimate)
+- **Cross-Table-Drift**: columns of the same name exist in multiple tables with different value-spaces — Python side mixes them accidentally
 
-Skill = Disziplin: **`grep -rn "INSERT INTO <table>"` + alle `<column> =`-Setter BEVOR die Konstante geschrieben wird.**
+Skill = discipline: **`grep -rn "INSERT INTO <table>"` + all `<column> =` setters BEFORE the constant is written.**
 
-Diese Maxime ist die Definition-Side-Variante der Wolf-Maxime „Schema-Drift vermeiden" (08.06.2026 CLAUDE.md): nicht nur die Spalten existieren-müssen, sondern auch die Wert-Räume müssen mit der Code-Side abgleichen.
+This maxim is the definition-side variant of the maxim "avoid schema-drift": not only must the columns exist, but the value-ranges must also align with the code side.
 
 ## When to use
 
-**Trigger-Phrasen (du würdest gerade sagen)**:
-- „die _KNOWN_X-Liste pflegen / erweitern"
-- „valid_phase_set / valid_states definieren"
-- „pydantic-Validator für die <column> bauen"
-- „Filter-Allowlist für UI / API"
-- „neue Constants für DIMENSION X"
-- „Enum-Class für <column> schreiben"
-- „Allowed-Values für <field>"
+**Trigger phrases (you would say right now)**:
+- "maintain / extend the _KNOWN_X list"
+- "define valid_phase_set / valid_states"
+- "build pydantic validator for <column>"
+- "filter-allowlist for UI / API"
+- "new constants for DIMENSION X"
+- "enum-class for <column>"
+- "allowed-values for <field>"
 
-**Symptom-Trigger** (du untersuchst einen bestehenden Skill):
-- „Wert X wird silent akzeptiert obwohl niemand X insertet" → grep INSERTs
-- „Wert Y wird `unknown source`-warning, ist aber im Code als Setter da" → grep INSERTs + Setters
-- „Cohort A vs B aus DB" → check ob beide Cohorts gleiches Werte-Vokabular nutzen
+**Symptom-Trigger** (you are investigating an existing skill):
+- "Value X is silently accepted even though nobody inserts X" → grep INSERTs
+- "Value Y triggers `unknown source`-warning but is in code as a setter" → grep INSERTs + setters
+- "Cohort A vs B from DB" → check whether both cohorts use the same value-vocabulary
 
-**Hochrisiko-Marker**:
-- Die Spalte hat **gleichen Namen in mehreren Tabellen** (z.B. `mode` in `system_phase` UND `virtual_trades` UND `signals_log`)
-- Die Spalte ist **type `text`** statt `enum` — PG hilft nicht
-- Die Werte werden in Python-Code an **mehreren Stellen geschrieben** (mehrere Services, mehrere Worker)
-- Code hat eine `_KNOWN_X`-Set ODER eine Pydantic-Validator ODER ein UI-Dropdown auf die gleiche Spalte
-- Replay-Mock-Setter unterscheidet sich vom Live-Setter
+**High-risk markers**:
+- The column has the **same name in multiple tables** (e.g. `mode` in `system_phase` AND `virtual_trades` AND `signals_log`)
+- The column is **type `text`** instead of `enum` — PG does not help
+- Values are written in Python code at **multiple locations** (multiple services, multiple workers)
+- Code has a `_KNOWN_X` set OR a pydantic validator OR a UI dropdown on the same column
+- Replay-mock setter differs from live setter
 
 ## When NOT to use
 
-- **Greenfield-Tabelle**: kein INSERT existiert, du **definierst** die Werte gerade. Dann Constants → Migration → Setter, in dieser Reihenfolge
-- **Typed PostgreSQL ENUM** (`CREATE TYPE foo AS ENUM ('a', 'b', 'c')`): `\d <table>` zeigt die Liste vollständig + DB lehnt unknown values bereits ab
-- **Rein interne Python-Constants** ohne DB-Bezug (UI-Theme-Names, in-memory Cache-Keys)
-- **Single-Writer-Pattern** mit Code-Lock (nur eine Klasse darf inserten + sie nutzt die Constants-Liste — Validators are co-located)
+- **Greenfield table**: no INSERT exists, you are **defining** the values right now. Then Constants → Migration → Setter, in that order
+- **Typed PostgreSQL ENUM** (`CREATE TYPE foo AS ENUM ('a', 'b', 'c')`): `\d <table>` shows the list completely + DB already rejects unknown values
+- **Purely internal Python constants** without DB context (UI-theme-names, in-memory cache keys)
+- **Single-writer pattern** with code lock (only one class may insert + it uses the constants list — validators are co-located)
 
 ## The 4-Step Insert-Grep Flow
 
-### Step 1 — Tabelle + Spalte explizit identifizieren
+### Step 1 — Identify table + column explicitly
 
-Vor dem grep festhalten:
-- **Tabelle**: z.B. `virtual_trades`
-- **Spalte**: z.B. `source`
-- **Vermutete Werte-Liste**: z.B. `{"live", "training", "shadow"}`
-- **Annahme über Disambiguierung**: gibt es **gleichnamige Spalten in anderen Tabellen**? (Risiko-Check)
+Before the grep, write down:
+- **Table**: e.g. `virtual_trades`
+- **Column**: e.g. `source`
+- **Suspected value list**: e.g. `{"live", "training", "shadow"}`
+- **Assumption about disambiguation**: are there **same-named columns in other tables**? (risk check)
 
-### Step 2 — Drei Grep-Pässe für INSERTs + Setters + UPDATEs
+### Step 2 — Three grep passes for INSERTs + Setters + UPDATEs
 
 ```bash
-# Pass 1: INSERT-statements (alle INSERTs touching virtual_trades)
+# Pass 1: INSERT statements (all INSERTs touching virtual_trades)
 grep -rn "INSERT INTO virtual_trades" --include="*.py" | head -50
 
-# Pass 2: Setter-lines (column = value oder dict-Schreibweise)
+# Pass 2: Setter lines (column = value or dict-style)
 grep -rn "\.source\s*=\s*['\"]" --include="*.py" \
   | grep -E "(virtual_trade|vt|trade)" \
   | head -50
 
-# Pass 3: UPDATE-statements
+# Pass 3: UPDATE statements
 grep -rn "UPDATE virtual_trades SET" --include="*.py" | grep "source"
 
 # Pass 4 (Cross-Table-Check): same column-name in other tables
 grep -rn "['\"]source['\"]" --include="*.sql" | head -20
-grep -rn "\.source\s*=" --include="*.py" | head -20  # ohne table-filter
+grep -rn "\.source\s*=" --include="*.py" | head -20  # without table filter
 ```
 
-### Step 3 — Wert-Set aus Treffern destillieren
+### Step 3 — Distill value-set from hits
 
-Sortiere jeden Treffer:
+Sort each hit:
 
-| Wert | Quelle | Wirklich genutzt? | Ähnlich-aber-anders? |
+| Value | Source | Really used? | Similar-but-different? |
 |---|---|---|---|
-| `'live'` | `services/live_dispatcher.py:42` | ✅ ja | — |
-| `'training'` | `services/training_runner.py:104` | ✅ ja | — |
-| `'manual'` | `cli/manual_trade.py:67` | ✅ ja | — |
-| `'replay'` | `scripts/replay_session.py:88` | ✅ ja | — |
-| `'shadow'` | `services/system_phase.py:21` (setzt `system_phase.mode`!) | ❌ falsche Tabelle | gehört zu `system_phase.mode`, nicht zu `virtual_trades.source` |
+| `'live'` | `services/live_dispatcher.py:42` | ✅ yes | — |
+| `'training'` | `services/training_runner.py:104` | ✅ yes | — |
+| `'manual'` | `cli/manual_trade.py:67` | ✅ yes | — |
+| `'replay'` | `scripts/replay_session.py:88` | ✅ yes | — |
+| `'shadow'` | `services/system_phase.py:21` (sets `system_phase.mode`!) | ❌ wrong table | belongs to `system_phase.mode`, not `virtual_trades.source` |
 
-### Step 4 — Konstanten korrekt definieren mit Cross-Table-Disambiguierung
+### Step 4 — Define constants correctly with cross-table disambiguation
 
 ```python
-# WRONG (mischt zwei Tabellen):
-_KNOWN_SOURCES = {"live", "training", "shadow"}  # 'shadow' gehört nicht hierher
+# WRONG (mixes two tables):
+_KNOWN_SOURCES = {"live", "training", "shadow"}  # 'shadow' does not belong here
 
-# RIGHT (eine pro Tabelle/Spalte, dokumentiert):
-# virtual_trades.source — values from INSERT-grep 2026-06-10
+# RIGHT (one per table/column, documented):
+# virtual_trades.source — values from INSERT-grep
 _KNOWN_TRADE_SOURCES = {"live", "training", "manual", "replay"}
 
-# system_phase.mode — separate Set
+# system_phase.mode — separate set
 _KNOWN_PHASE_MODES = {"live", "training", "shadow"}
 ```
 
-Im Validator oder Logger-Warning:
-- Verwende `_KNOWN_TRADE_SOURCES` für `virtual_trades.source`
-- Verwende `_KNOWN_PHASE_MODES` für `system_phase.mode`
-- Nicht mischen, niemals
+In the validator or logger-warning:
+- Use `_KNOWN_TRADE_SOURCES` for `virtual_trades.source`
+- Use `_KNOWN_PHASE_MODES` for `system_phase.mode`
+- Never mix
 
-### Step 4b — DB-Constraint-Verify (R1-Refactor 10.06.2026)
+### Step 4b — DB-Constraint-Verify (R1-Refactor)
 
-**Wenn die Spalte in der DB durch einen `CHECK`-Constraint, eine PG-`ENUM`-Typ-Definition, oder eine Foreign-Key-Lookup-Tabelle den Wertraum begrenzt, ist der Constants-Edit allein wirkungslos** — neue Werte werden vom DB-Engine zurückgewiesen mit `CheckViolation` oder `InvalidTextRepresentation`.
+**If the column in the DB is constrained by a `CHECK` constraint, a PG `ENUM` type definition, or a foreign-key lookup table, the constants-edit alone is ineffective** — new values will be rejected by the DB engine with `CheckViolation` or `InvalidTextRepresentation`.
 
 ```bash
-# CHECK-Constraint auf der Spalte?
+# CHECK constraint on the column?
 psql -c "\d+ virtual_trades" | grep -A1 "Check constraints"
 
-# Wenn ENUM-Typ:
-psql -c "\dT+ source_type"  # zeigt die enum-Werte
+# If ENUM type:
+psql -c "\dT+ source_type"  # shows the enum values
 
-# Wenn FK-Lookup:
+# If FK lookup:
 psql -c "SELECT * FROM source_lookup;"
 ```
 
-**Bei begrenzendem DB-Constraint**: braucht zusätzliche Migration **VOR** dem Python-Constants-Edit:
+**With a limiting DB constraint**: requires additional migration **BEFORE** the Python constants edit:
 
 ```sql
--- Beispiel CHECK-Constraint erweitern
+-- Example: extend CHECK constraint
 ALTER TABLE virtual_trades DROP CONSTRAINT IF EXISTS virtual_trades_source_check;
 ALTER TABLE virtual_trades ADD CONSTRAINT virtual_trades_source_check
   CHECK (source IN ('live', 'training', 'manual', 'replay', 'real', 'paper'));
 
--- Beispiel PG-ENUM erweitern (PG13+)
+-- Example: extend PG ENUM (PG13+)
 ALTER TYPE source_type ADD VALUE 'paper';
 ```
 
-Reihenfolge: **DB-Migration → Python-Constants-Update → Setter-Code → Test**. Umgekehrt kracht's beim ersten echten INSERT.
+Order: **DB-Migration → Python-Constants-Update → Setter-Code → Test**. Reversed, it crashes on the first real INSERT.
 
 ## Quick Reference
 
-| Constants-Typ | Grep-Pattern (Beispiel) |
+| Constants type | Grep pattern (example) |
 |---|---|
 | `_KNOWN_X = {...}` | `grep -rn "INSERT INTO <table>" + grep -rn "\.<col>\s*="` |
-| `pydantic regex='^(a|b)$'` | gleiches plus `grep "<col>:.*=" --include="*.py"` |
-| `class XEnum(str, Enum)` | gleiches plus `grep "class.*Enum"` für existierende Enums |
-| UI-Dropdown-Options | gleiches plus `grep "options=\[" --include="*.ts,*.py"` |
+| `pydantic regex='^(a|b)$'` | same plus `grep "<col>:.*=" --include="*.py"` |
+| `class XEnum(str, Enum)` | same plus `grep "class.*Enum"` for existing Enums |
+| UI dropdown options | same plus `grep "options=\[" --include="*.ts,*.py"` |
 
 ## Anti-Patterns
 
-| Anti-Pattern | Lehre |
+| Anti-Pattern | Lesson |
 |---|---|
-| `_KNOWN_X` aus Spec/Doku übernehmen ohne grep | Spec wird drift, Code nicht — Single Source of Truth ist INSERT |
-| „Ich kenne die 3 Werte aus dem Kopf" | Wolf 09.06.: 3 von 5 Werten lagen daneben (Tippfehler `shadow` + fehlende `manual`/`replay`) |
-| Spalten-Name als Disambiguierung ausreichend | `mode` existiert in `system_phase` UND `signals_log` UND `virtual_trades` — gleich-Name ≠ gleich-Werteraum |
-| Validators ohne Tabellen-Suffix | `_KNOWN_SOURCES` mehrdeutig; `_KNOWN_TRADE_SOURCES` + `_KNOWN_PHASE_MODES` explizit |
-| Werte-Liste in einer einzelnen Datei statt zentral | Jede neue Source landet bei nur einem Maintainer → drift garantiert. **Ein** Validators-Modul pro DB-Spalte |
+| Copying `_KNOWN_X` from spec/docs without grep | Spec drifts, code does not — Single Source of Truth is INSERT |
+| "I know the 3 values from memory" | Real case: 3 of 5 values were wrong (typo `shadow` + missing `manual`/`replay`) |
+| Column name as disambiguation sufficient | `mode` exists in `system_phase` AND `signals_log` AND `virtual_trades` — same-name ≠ same value-space |
+| Validators without table suffix | `_KNOWN_SOURCES` is ambiguous; `_KNOWN_TRADE_SOURCES` + `_KNOWN_PHASE_MODES` are explicit |
+| Value list in a single file instead of central | Each new source lands with only one maintainer → drift guaranteed. **One** validators module per DB column |
 
 ## Cost of Skipping (real)
 
-**Wolf-Erlebnis 09.06.2026 Phase-5-Re-Review** (Schema-Drift-Sweep):
-- `_KNOWN_SOURCES = {"live", "training", "shadow"}` aus Erinnerung
-- Reality (durch INSERT-grep aufgeklärt): `virtual_trades.source` hatte tatsächlich `{"live", "training", "manual", "replay"}` (keine `shadow`)
-- `shadow` war eine `system_phase.mode`-Wert — andere Tabelle
-- Konsequenz vor Fix: `manual` + `replay` lösten silent `unknown source`-warnings aus (Logs zugefüllt), `shadow`-Tippfehler hätte fälschlich akzeptiert
-- Fix: zwei getrennte Constants-Sets pro Tabelle
+**Real-world Phase-5-Re-Review** (Schema-Drift-Sweep):
+- `_KNOWN_SOURCES = {"live", "training", "shadow"}` from memory
+- Reality (clarified by INSERT-grep): `virtual_trades.source` actually had `{"live", "training", "manual", "replay"}` (no `shadow`)
+- `shadow` was a `system_phase.mode` value — different table
+- Consequence before fix: `manual` + `replay` triggered silent `unknown source` warnings (filling logs), `shadow` typo would have been wrongly accepted
+- Fix: two separate constants-sets per table
 
-**Pattern**: gleichnamige Spalten in verschiedenen Tabellen mit unterschiedlichen Wertebereichen sind eine der häufigsten Drift-Quellen. Python-Side nicht aus dem Kopf — aus dem INSERT.
+**Pattern**: same-named columns in different tables with different value-ranges are one of the most common drift sources. Python side not from memory — from the INSERT.
 
 ## Red Flags — STOP and grep
 
-- Du schreibst gerade `_KNOWN_<DIMENSION>` oder einen Pydantic-Validator
-- Deine Werte-Liste kommt aus dem Kopf / aus Spec / aus alter Doku
-- Die Spalte könnte in mehreren Tabellen existieren
-- Du hast keine Validators-Convention pro Tabelle/Spalte etabliert
+- You are writing `_KNOWN_<DIMENSION>` or a pydantic validator
+- Your value list comes from memory / from spec / from old docs
+- The column might exist in multiple tables
+- You have not established a validators convention per table/column
 
-**Alle bedeuten: 3 Grep-Pässe (INSERT, Setter, UPDATE) + Cross-Table-Check, dann Constants pro Tabelle/Spalte explizit benennen.**
+**All mean: 3 grep passes (INSERT, Setter, UPDATE) + cross-table check, then constants per table/column named explicitly.**
 
 ## Cross-References
 
-- **COMPLEMENT (Lese-Seite)**: `enum-value-discovery-before-sql-where` — gleicher Schmerz aus SQL-WHERE-Sicht
-- **COMPLEMENT**: `schema-verify-via-information-schema` — verifiziert dass die Spalte überhaupt existiert
-- **COMPLEMENT**: `silent-except-versteckt-schema-drift` — der `except Exception: x = []`-Pattern versteckt diese Drift-Bugs
-- Wolf-Maxime: „Single Source of Truth — Hardcoded-Defaults sind tickende Bomben" (`CLAUDE.md` Vault, 09.06.2026)
+- **COMPLEMENT (read side)**: `enum-value-discovery-before-sql-where` — same pain from SQL WHERE perspective
+- **COMPLEMENT**: `schema-verify-via-information-schema` — verifies that the column even exists
+- **COMPLEMENT**: `silent-except-versteckt-schema-drift` — the `except Exception: x = []` pattern hides these drift bugs
+- maxim: "Single Source of Truth — hardcoded defaults are ticking bombs"
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD progress (Bulletproofing Log)
 
-### Cycle 1 — 2026-06-10 (STRONG PASS mit R1-Refactor)
+### Cycle 1 — STRONG PASS with R1 Refactor
 
-- **RED-Subagent** (ohne Skill, Scenario „Erweitere _KNOWN_SOURCES um 'paper' für Paper-Trading-Mode"): Reagierte heuristisch korrekt aus CLAUDE.md-Pattern („erst grep"), aber **ohne Repo-Zugriff** — gab Befehle vor statt sie auszuführen. Self-Critique listete 7 Punkte (keine konkrete Verifikation, Migrations-Geschichte ignoriert, Test-Fixtures nicht erwähnt, Logging-Downstream übersehen, Naming-Konvention nicht geprüft, Wolf-spezifische Notizen nicht durchsucht, Frage „reicht das?" nicht direkt beantwortet).
+- **RED-Subagent** (without skill, scenario "Extend _KNOWN_SOURCES with 'paper' for paper-trading mode"): Reacted heuristically correct from prior pattern ("grep first"), but **without repo access** — gave commands instead of executing them. Self-critique listed 7 points (no concrete verification, ignored migration history, did not mention test fixtures, overlooked logging downstream, did not check naming convention, did not search user-specific notes, did not directly answer "is that enough?").
 
-- **GREEN-Subagent** (mit Skill): **Führte 18 Bash-Tool-Uses durch** im echten Production-Repo `~/Documents/Claude-Code/ultimative-platform/` und lieferte 4 substantielle Befunde:
-  1. **Code-Stand-Drift**: `_KNOWN_SOURCES` ist im aktuellen Code bereits `{"training", "live", "backtest", "manual", "replay"}` — NICHT die im Scenario behauptete Liste. Hotfix vom 10.06. Phase-5-Re-Review war bereits geschehen.
-  2. **Bestandsschuld entdeckt**: `ml/real_trade_bridge.py:142` schreibt `source='real'` in `virtual_trades`, fehlt aber in `_KNOWN_SOURCES` → silent `unknown source: real`-Warnungen.
-  3. **Cross-Table-False-Positives korrekt zurückgewiesen**: `'optimizer'`, `'av_earnings'`, `'combo_optimizer'` → andere Tabellen (`strategy_params.source`, etc.), gehören NICHT in `virtual_trades.source`-Set.
-  4. **`_MODE_TO_SOURCES`-Mapping + DB-Constraint-Implikation**: Wenn `system_phase.mode='paper'` triggert, muss zusätzlich `_MODE_TO_SOURCES` UND ggf. PG-ENUM/CHECK-Constraint erweitert werden — sonst kracht's beim ersten `SET mode='paper'`-Versuch.
+- **GREEN-Subagent** (with skill): **Executed 18 Bash-Tool-Uses** in the real production repo `your-app/` and delivered 4 substantial findings:
+  1. **Code-state drift**: `_KNOWN_SOURCES` is currently `{"training", "live", "backtest", "manual", "replay"}` — NOT the list claimed in the scenario. A recent Phase-5-Re-Review hotfix had already happened.
+  2. **Outstanding tech-debt discovered**: `ml/real_trade_bridge.py:142` writes `source='real'` into `virtual_trades`, but it is missing from `_KNOWN_SOURCES` → silent `unknown source: real` warnings.
+  3. **Cross-Table-False-Positives correctly rejected**: `'optimizer'`, `'av_earnings'`, `'combo_optimizer'` → other tables (`strategy_params.source`, etc.), do NOT belong in `virtual_trades.source` set.
+  4. **`_MODE_TO_SOURCES`-Mapping + DB-Constraint-Implication**: When `system_phase.mode='paper'` triggers, additionally `_MODE_TO_SOURCES` AND possibly PG-ENUM/CHECK-Constraint must be extended — otherwise the first `SET mode='paper'` attempt crashes.
 
-- **R1-Refactor angewendet**: Step 4b „DB-Constraint-Verify" als eigene Sub-Sektion ergänzt mit Code-Beispielen für CHECK-Constraint-Update, PG-ENUM-Extension, FK-Lookup-Insert. Reihenfolge explizit dokumentiert: DB-Migration → Python-Constants → Setter → Test.
+- **R1 Refactor applied**: Step 4b "DB-Constraint-Verify" added as own sub-section with code examples for CHECK constraint update, PG ENUM extension, FK lookup insert. Order documented explicitly: DB-Migration → Python-Constants → Setter → Test.
 
-- **Vermiedener Anti-Pattern**: GREEN nannte explizit dass die naheliegende Antwort „Ja, ergänze einfach 'paper'" 4 Bugs erzeugt hätte: (a) übersieht 10.06.-Hotfix, (b) lässt `'real'` fehlen, (c) zementiert `'shadow'`-Cross-Table-Fehler, (d) lässt DB-Constraint krachen.
+- **Avoided Anti-Pattern**: GREEN explicitly noted that the obvious answer "Yes, just add 'paper'" would have produced 4 bugs: (a) misses the recent hotfix, (b) leaves `'real'` missing, (c) cements `'shadow'` cross-table error, (d) lets DB constraint crash.
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2 Backlog (Polish, non-blocking)
 
-1. **Test-Pattern für Vollständigkeits-Check**: Test der `_KNOWN_X` gegen `_MODE_TO_X`-Mapping abgleicht (jeder Mode-Wert muss in Sources-Set sein). GREEN hat das vorgeschlagen.
-2. **CWD-Mismatch-Hinweis** für Subagents: Repo-Pfad explizit machen wenn CWD nicht das Production-Repo ist.
-3. **DB-Live-Verify als optionaler Step 4c**: `SELECT source, COUNT(*) FROM <table> GROUP BY source` für Bestands-Werte-Audit. Komplementär zu Step 2 INSERT-grep.
-4. **Cross-Reference**: `schema-use-case-mismatch-detection` (gibt es?) als Komplement bei DB-Side-Wertraum-Begrenzung.
+1. **Test pattern for completeness check**: Test that compares `_KNOWN_X` against `_MODE_TO_X` mapping (every mode value must be in sources set). GREEN suggested this.
+2. **CWD-mismatch hint** for subagents: make repo path explicit when CWD is not the production repo.
+3. **DB-Live-Verify as optional Step 4c**: `SELECT source, COUNT(*) FROM <table> GROUP BY source` for existing-values audit. Complementary to Step 2 INSERT-grep.
+4. **Cross-Reference**: `schema-use-case-mismatch-detection` as complement when DB-side value-range is limited.

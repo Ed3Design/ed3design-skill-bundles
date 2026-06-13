@@ -1,11 +1,11 @@
 ---
 name: plan-execution-state-drift-precheck
-description: Use before executing any superpowers/gsd-style implementation plan (`docs/superpowers/plans/*.md`, `.planning/PLAN.md`, `roadmap-phase-*.md`) whose plan-file was written in a previous session — to detect whether tasks have already been implemented (in a parallel session, by a different agent, or by the user) before re-executing them. Trigger on phrases like "Plan-Z.1-Execution starten", "executing-plans-skill anwenden", "gsd-execute-phase starten", "phase ausführen", "Plan-file ist vom <gestern/letzter Woche>", "plan written earlier, now executing". Do NOT load for plans written in the SAME session (no drift possible), for plans without git-tracked code-targets (e.g. pure-documentation phases), or when the user explicitly says "I know the codebase is at the pre-plan state" (no need to verify). This skill encodes the 30.05.2026 detour where a 2083-LoC Z.1-Plan was written 29.05. AND all 8 code-tasks were implemented the same day in a parallel session — but the daily-note documented only "plan written". Without `git log <base>..HEAD` precheck, I would have re-implemented tasks 1-8 inline, wasting 60+ min.
+description: Use before executing any superpowers/gsd-style implementation plan (`docs/superpowers/plans/*.md`, `.planning/PLAN.md`, `roadmap-phase-*.md`) whose plan-file was written in a previous session — to detect whether tasks have already been implemented (in a parallel session, by a different agent, or by the user) before re-executing them. Trigger on phrases like "start Plan-Z.1 execution", "apply executing-plans skill", "start gsd-execute-phase", "execute phase", "plan file is from <yesterday/last week>", "plan written earlier, now executing". Do NOT load for plans written in the SAME session (no drift possible), for plans without git-tracked code targets (e.g. pure-documentation phases), or when the user explicitly says "I know the codebase is at the pre-plan state" (no need to verify). This skill encodes a detour where a 2083-LoC Z.1 plan was written one day AND all 8 code tasks were implemented the same day in a parallel session — but the daily note documented only "plan written". Without `git log <base>..HEAD` precheck, the tasks 1-8 would have been re-implemented inline, wasting 60+ min.
 ---
 
 # Plan-Execution State-Drift Precheck
 
-> **DRAFT — encodes the 30.05.2026 pattern, not yet TDD-promoted.**
+> **DRAFT — encodes the discovered pattern, not yet TDD-promoted.**
 
 ## When to use
 
@@ -73,7 +73,7 @@ For each plan-task, scan commit-subjects for evidence of implementation. Look fo
 
 If significant drift detected (≥ 3 tasks already done), STOP and present to user:
 
-> "Plan ist bereits zu N/M Tasks implementiert (commits XYZ). Adjustierter Scope-Vorschlag: [Option A / B / C]. Welcher passt?"
+> "Plan is already implemented for N/M tasks (commits XYZ). Adjusted scope proposal: [Option A / B / C]. Which fits?"
 
 Wait for user confirmation. Do NOT silently skip done-tasks — that hides relevant context (the user may not know what's been done).
 
@@ -93,12 +93,12 @@ After scope-confirmation, proceed with the adjusted task-set, marking already-do
 - Skill: `superpowers:executing-plans` — invokes this as precheck
 - Skill: `superpowers:writing-plans` — produces the plans this verifies
 - Skill: `superpowers:subagent-driven-development` — same precheck applies before dispatching subagents
-- **Complementary** to `plan-execution-stack-mode-precheck-DRAFT` (29.05.2026) — that skill checks **stack-mode** (local-runnable vs remote-only vs hybrid); this skill checks **state-drift** (tasks already done vs not). Run both as Pre-Step-0 before executing.
-- **Complementary** to `pre-deploy-code-drift-detection-DRAFT` (29.05.2026) — that skill detects 3-way Mac↔origin↔Server-Drift before rsync; this skill detects Plan↔Codebase-Drift before execution. Different drift-dimensions, both worth checking.
+- **Complementary** to `plan-execution-stack-mode-precheck-DRAFT` — that skill checks **stack-mode** (local-runnable vs remote-only vs hybrid); this skill checks **state-drift** (tasks already done vs not). Run both as Pre-Step-0 before executing.
+- **Complementary** to `pre-deploy-code-drift-detection-DRAFT` — that skill detects 3-way local↔origin↔server drift before rsync; this skill detects plan↔codebase drift before execution. Different drift dimensions, both worth checking.
 
-## Genese
+## Genesis
 
-30.05.2026: Z.1-Marktphase-Filter-Plan (2083 LoC, 9 Tasks) was written 29.05. 08:42 — and ALL 8 code-tasks + 5 code-review-fixes were committed the same day 08:48-15:13. Daily-Note 29.05. mentioned only "Plan-Z.1 geschrieben"; the implementation was in a parallel session that wasn't logged. I started `executing-plans` skill, was about to dispatch subagents for Tasks 1+2 — `git log main..HEAD` showed 12 Z.1-commits already in. Adjusted scope from "Pre-Flight + DB + Confluence-Cap" to "Pre-Flight + Backtest-RUN", saved 60+ min, AND caught a separate Critical-Bug (CR-D1) during Pre-Flight that the already-implemented code had.
+A Z.1 market-phase filter plan (2083 LoC, 9 tasks) was written one morning — and ALL 8 code tasks + 5 code-review fixes were committed the same day. The daily note mentioned only "Plan Z.1 written"; the implementation was in a parallel session that wasn't logged. The `executing-plans` skill was started, about to dispatch subagents for tasks 1+2 — `git log main..HEAD` showed 12 Z.1 commits already in. Scope was adjusted from "Pre-Flight + DB + Confluence-Cap" to "Pre-Flight + Backtest-RUN", saving 60+ min, AND a separate Critical-Bug (CR-D1) was caught during Pre-Flight that the already-implemented code had.
 
 ## TODO (Promotion to GA)
 

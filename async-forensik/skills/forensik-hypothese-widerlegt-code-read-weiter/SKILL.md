@@ -1,133 +1,133 @@
 ---
 name: forensik-hypothese-widerlegt-code-read-weiter
-description: Use when conducting a forensic investigation with explicit hypotheses (H1/H2/H3) on a system bug or anomaly, and 2+ hypotheses have been disproved by code-read or DB-query. Default-behavior is "Hypothesis disproved → investigation done, no real bug". This skill says: continue code-read with no specific hypothesis — bonus-findings often surface during the disproving process and are real bugs that would be missed otherwise. Trigger on phrases like "Hypothese H1 widerlegt", "alle Theorien falsch", "Forensik ergebnislos", "kein Bug gefunden aber komisches Verhalten", "forensik abbrechen", "doch nichts da". Do NOT load for hypothesis-testing in research code where "disproved" is success, for time-boxed forensik with hard stop after X minutes, when user explicitly says "wenn die Hypothesen widerlegt sind, sind wir fertig", or for non-investigative tasks.
+description: Use when conducting a forensic investigation with explicit hypotheses (H1/H2/H3) on a system bug or anomaly, and 2+ hypotheses have been disproved by code-read or DB-query. Default-behavior is "Hypothesis disproved → investigation done, no real bug". This skill says: continue code-read with no specific hypothesis — bonus-findings often surface during the disproving process and are real bugs that would be missed otherwise. Trigger on phrases like "hypothesis H1 disproved", "all theories wrong", "forensics inconclusive", "no bug found but weird behavior", "abort forensics", "nothing there after all". Do NOT load for hypothesis-testing in research code where "disproved" is success, for time-boxed forensics with a hard stop after X minutes, when user explicitly says "if the hypotheses are disproved we are done", or for non-investigative tasks.
 ---
 
-# Forensik: Hypothese-widerlegt → Code-Read weiter
+# Forensics: Hypothesis disproved → continue code-read
 
-> ✅ **PROMOTED 2026-06-12** — TDD-Pressure-Test PASS. GREEN strukturierte Bonus-Findings systematisch (4 Findings mit Schwere-Tabelle: 2 Critical + 1 Important + 1 Minor) — RED kam zwar selbst auf „weiter-investigieren" via Self-Reflection, lieferte aber unstrukturierte Pfad-Liste. Skill-Wert: strukturiertes Pattern statt ad-hoc-Forensik. Cycle 2 Polish: „mindestens X"-Pre-existing-Dauer-Hint, Wolf-Bestätigung-vor-DB-DELETE Cross-Ref, v3_trades-CLAUDE.md-Verlinkung.
+> ✅ **PROMOTED** — TDD pressure test PASS. GREEN structured bonus findings systematically (4 findings with a severity table: 2 Critical + 1 Important + 1 Minor) — RED did arrive at "keep investigating" via self-reflection but delivered an unstructured path list. Skill value: structured pattern instead of ad-hoc forensics. Cycle 2 polish: "at-least X" pre-existing-duration hint, user-confirmation-before-DB-DELETE cross-ref, project-CLAUDE.md linking.
 
 ## Overview
 
-Forensik-Sessions starten oft mit 2-3 plausiblen Hypothesen. Default-Workflow:
-1. Hypothesen formulieren
-2. Pro Hypothese Evidence sammeln (Code-Read, DB-Query, Log-Inspect)
-3. Wenn alle widerlegt: „Kein Bug, falsche Hypothese" → Session beenden
+Forensic sessions often start with 2-3 plausible hypotheses. Default workflow:
+1. Formulate hypotheses
+2. Per hypothesis collect evidence (code-read, DB query, log inspect)
+3. If all disproved: "no bug, wrong hypothesis" → end session
 
-**Problem**: das Sammeln von Evidence führt Claude tief in den Code, der unter-untersucht war. **Bonus-Findings entstehen genau dann** — Bugs die mit der ursprünglichen Hypothese nichts zu tun haben, aber während Code-Read sichtbar werden. Default-Workflow übersieht sie.
+**Problem**: collecting evidence takes Claude deep into code that was under-investigated. **Bonus findings emerge precisely then** — bugs that have nothing to do with the original hypothesis but become visible during code-read. The default workflow misses them.
 
-**Fix**: nach Hypothesen-Widerlegung NICHT abbrechen. Stattdessen:
-- Code-Read fortsetzen ohne spezifische Hypothese
-- Auf „Anomalien zweiter Ordnung" achten (komisches Schema, redundante Code-Pfade, fehlende Constraints)
-- Bonus-Findings dokumentieren mit klarer Schwere-Bewertung (Critical/Important/Minor)
+**Fix**: after a hypothesis is disproved, do NOT stop. Instead:
+- Continue code-read without a specific hypothesis
+- Watch for "second-order anomalies" (odd schema, redundant code paths, missing constraints)
+- Document bonus findings with a clear severity rating (Critical/Important/Minor)
 
 ## When to use
 
-Trigger-Phrasen:
-- „Hypothese H1 widerlegt"
-- „Alle Theorien sind falsch"
-- „Forensik ergebnislos, kein Bug"
-- „Komisches Verhalten, aber keine klare Ursache"
-- „Sollen wir die Forensik abbrechen?"
+Trigger phrases:
+- "Hypothesis H1 disproved"
+- "All theories are wrong"
+- "Forensics inconclusive, no bug"
+- "Weird behavior but no clear cause"
+- "Should we abort the forensics?"
 
-Konkrete Signale:
-- 2+ Hypothesen wurden mit harten Evidenzen widerlegt (Code-Read zeigt Pattern nicht, DB hat erwartete Werte)
-- User-Maxime: „diese Anomalie verstehe ich nicht" → Pattern für Bonus-Finding-Risk
-- Code-Read war für die Hypothesen-Tests bereits 30+ Minuten investiert
+Concrete signals:
+- 2+ hypotheses have been disproved with hard evidence (code-read shows pattern absent, DB has expected values)
+- User maxim: "I don't understand this anomaly" → pattern for bonus-finding risk
+- Code-read for hypothesis tests has already taken 30+ minutes
 
 ## When NOT to use
 
-- **Research-Code**: „Hypothese widerlegt" ist Success-State, nicht Bug-Hint
-- **Time-Boxed Forensik**: User sagt explicit „max 30min, dann egal"
-- **Eindeutiges Hypothese-Set**: wenn die 3 Hypothesen vollständig den Solution-Space abdecken
-- **User-Override**: „wenn nichts gefunden wird, sind wir fertig"
+- **Research code**: "Hypothesis disproved" is a success state, not a bug hint
+- **Time-boxed forensics**: user explicitly says "max 30 min, then whatever"
+- **Clear hypothesis set**: when the 3 hypotheses fully cover the solution space
+- **User override**: "if nothing is found, we're done"
 
 ## How to use
 
-### Step 1 — Widerlegung dokumentieren
+### Step 1 — Document the disproof
 
-Pro widerlegter Hypothese:
-- **H1**: Behauptung
-- **Test**: was wurde geprüft (Code-Read/DB-Query/Log)
-- **Result**: was wurde gefunden (Pattern existiert nicht / Werte ok / Logs sauber)
+Per disproved hypothesis:
+- **H1**: claim
+- **Test**: what was checked (code-read / DB query / log)
+- **Result**: what was found (pattern doesn't exist / values OK / logs clean)
 
-Diese Dokumentation bleibt im Forensik-Report — auch wenn Bonus-Findings dominieren.
+This documentation stays in the forensic report — even if bonus findings dominate.
 
-### Step 2 — Code-Read-Fortsetzung ohne Hypothese
+### Step 2 — Continue code-read without hypothesis
 
-Continue mit den **angrenzenden Code-Pfaden**:
-- Was passiert nach dem Test-Punkt?
-- Welche **Constraints** existieren (DB-Indexes, NOT NULL, FK-Cascades)?
-- Welche **silent failures** könnten passieren (try/except, COALESCE, default-values)?
-- Welche **redundante Pfade** existieren (zwei Module die ähnliches machen)?
+Continue with the **adjacent code paths**:
+- What happens after the test point?
+- Which **constraints** exist (DB indexes, NOT NULL, FK cascades)?
+- Which **silent failures** could occur (try/except, COALESCE, default values)?
+- Which **redundant paths** exist (two modules doing something similar)?
 
-### Step 3 — Anomalien zweiter Ordnung aufspüren
+### Step 3 — Hunt second-order anomalies
 
-Bonus-Finding-Indikatoren während Code-Read:
-- „Hier sollte ein Dedup-Check sein, aber ist nicht"
-- „Diese Spalte ist nullable obwohl sie required sein müsste"
-- „Zwei Stages schreiben in dieselbe Tabelle ohne Coordination"
-- „COALESCE versteckt NULL-Werte die als 0 gerendert werden"
-- „Schema-Drift zwischen Code-Convention und DB-Reality"
+Bonus-finding indicators during code-read:
+- "There should be a dedup check here, but there isn't"
+- "This column is nullable even though it should be required"
+- "Two stages write to the same table without coordination"
+- "COALESCE hides NULL values that get rendered as 0"
+- "Schema drift between code convention and DB reality"
 
-### Step 4 — Bonus-Findings mit Schwere-Bewertung dokumentieren
+### Step 4 — Document bonus findings with severity rating
 
-Pro Bonus-Finding:
-- **Schwere**: Critical (Geld-Verlust-Risk) / Important (User-Spam) / Minor (Cycle-2)
-- **Wolf-Impact**: konkret was Wolf erlebt
-- **Fix-Ansatz**: kurz skizziert
-- **Pre-existing-Dauer**: wie lange war der Bug schon latent?
+Per bonus finding:
+- **Severity**: Critical (money-loss risk) / Important (user spam) / Minor (cycle 2)
+- **User impact**: concrete experience for the user
+- **Fix approach**: brief sketch
+- **Pre-existing duration**: how long has the bug been latent?
 
-### Step 5 — Forensik-Report schreiben
+### Step 5 — Write the forensic report
 
-Struktur:
-1. Hypothesen-Widerlegung (kurz, evidence-basiert)
-2. **Bonus-Findings** (Hauptergebnis, mit Schwere-Liste)
-3. Backlog-Items + Sequencing-Empfehlung
+Structure:
+1. Hypothesis disproof (short, evidence-based)
+2. **Bonus findings** (main result, with severity list)
+3. Backlog items + sequencing recommendation
 
 ## Anti-patterns
 
-| Anti-Pattern | Was statt dessen |
+| Anti-pattern | What to do instead |
 |---|---|
-| „H1+H2+H3 widerlegt → Session done" | Code-Read fortsetzen mit „Anomalien zweiter Ordnung"-Auge |
-| Bonus-Finding als „Random Stuff" abtun | Schwere-Bewertung + Wolf-Impact dokumentieren |
-| Hypothesen-Widerlegung im Report verstecken (nur Bonus-Finding zeigen) | Beide dokumentieren — Widerlegung schützt vor späteren „warum hast du das nicht geprüft" |
-| Code-Read auf einzelne Funktion beschränken | Erweitern auf Aufruf-Kette + Schema + Constraints |
+| "H1+H2+H3 disproved → session done" | Continue code-read with a "second-order anomaly" eye |
+| Dismiss bonus finding as "random stuff" | Severity rating + user-impact documented |
+| Hide hypothesis disproof in the report (only show bonus finding) | Document both — disproof protects against later "why didn't you check that" |
+| Restrict code-read to a single function | Expand to the call chain + schema + constraints |
 
-## Real-world impact (12.06.2026)
+## Real-world impact
 
-Direction-Flip-vor-Advisor-Forensik:
-- H1: Advisor-Cache-Lag → **widerlegt** (Code-Read: Advisor läuft async nach Persist)
-- H2: Andere Datenbasis → **widerlegt** (selbe DB-Queries)
-- H3: Unabhängige Direction-Berechnung im Advisor → **widerlegt** (Advisor ist Plausibility-Check, keine Direction)
+A direction-flip-before-advisor forensic investigation:
+- H1: advisor cache lag → **disproved** (code-read: advisor runs async after persist)
+- H2: different data basis → **disproved** (same DB queries)
+- H3: independent direction computation in the advisor → **disproved** (advisor is a plausibility check, no direction)
 
-Default-Workflow hätte: „Wolfs Befund ist erwartetes Verhalten, keine Action."
+The default workflow would have said: "the user's observation is expected behavior, no action."
 
-Mit diesem Skill: Code-Read fortgesetzt → fand `persist_signal` ohne Dedup-Check → 19 Duplikat-Cluster mit max 12-fach → **Critical-Bug-Discovery**.
+With this skill: code-read continued → found `persist_signal` without a dedup check → 19 duplicate clusters with up to 12× → **Critical bug discovery**.
 
-Konsequenz: 4 zusätzliche Commits heute (Code-Fix + Cleanup + UNIQUE INDEX), 58 Duplikate gelöscht, künftige Telegram-Spam eliminiert.
+Consequence: 4 additional commits (code fix + cleanup + UNIQUE INDEX), 58 duplicates deleted, future notification spam eliminated.
 
-## Cross-References
+## Cross-references
 
-- `reporting-artefact-detection-before-claiming-anomaly` — Vorgänger-Skill (Triage vor Forensik-Start)
-- `superpowers:systematic-debugging` — verwandtes Pattern für Bug-Hunt
-- `db-telemetry-primary-docker-logs-secondary` — Forensik-Quellen-Hierarchie
+- `reporting-artefact-detection-before-claiming-anomaly` — predecessor skill (triage before forensic start)
+- `superpowers:systematic-debugging` — related pattern for bug hunting
+- `db-telemetry-primary-docker-logs-secondary` — forensic-source hierarchy
 
 ## Background
 
-Pattern entdeckt 12.06.2026 nach Wolf-Direktive Forensik-Direction-Flip. Ergänzt Wolf-Maxime „Erst Logs/Code/DB lesen bevor Hypothese formulieren" (25.05.) um den After-Hypothese-Continuation-Aspekt.
+Pattern discovered after a user-directed forensic investigation into a direction flip. Extends the maxim "read logs/code/DB first before formulating a hypothesis" with the after-hypothesis continuation aspect.
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD Log (Bulletproofing)
 
-### Cycle 1 — 2026-06-12 (PASS — mit Caveat)
+### Cycle 1 — PASS (with caveat)
 
-- **RED-Subagent** (ohne Skill): identifizierte selbst, dass „Alle MEINE Hypothesen widerlegt = Hypothesen-Set war unvollständig" — ist überraschend stark. Lieferte aber unstrukturierte Pfad-Liste (Telegram-Layer, Retry-Pattern, DB-Trigger, Multiple-Senders) als „möglicherweise übersehen", kein systematisches Vorgehen.
-- **GREEN-Subagent** (mit Skill): strukturiertes 5-Step-Vorgehen (Widerlegung dokumentieren → Code-Read fortsetzen → Anomalien zweiter Ordnung → Bonus-Findings mit Schwere → Report). Lieferte 4 Bonus-Findings mit Schwere-Tabelle (Critical/Important/Minor) + Sequencing-Empfehlung an Wolf.
-- **Skill-Wert**: RED ist „glücklicher Engineer mit Self-Awareness", GREEN ist „strukturierter Forensik-Prozess". Skill ersetzt Glück durch System.
-- **Refactor**: keiner blocker.
+- **RED-Subagent** (without skill): self-identified that "all MY hypotheses disproved = hypothesis set was incomplete" — surprisingly strong. But delivered an unstructured path list (Telegram layer, retry pattern, DB trigger, multiple senders) as "possibly missed", no systematic approach.
+- **GREEN-Subagent** (with skill): structured 5-step approach (document disproof → continue code-read → second-order anomalies → bonus findings with severity → report). Delivered 4 bonus findings with severity table (Critical/Important/Minor) + sequencing recommendation to the user.
+- **Skill value**: RED is "lucky engineer with self-awareness", GREEN is "structured forensic process". Skill replaces luck with system.
+- **Refactor**: none blocking.
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2 Backlog (polish, non-blocking)
 
-- **„Mindestens X"-Pre-existing-Dauer-Hint**: wenn DB-Retention < vermutete Bug-Dauer, „mindestens X Tage, vermutlich länger" als valide Antwort dokumentieren
-- **Wolf-Bestätigung-vor-DB-DELETE** Pattern als Cross-Reference (v3_trades-CLAUDE.md-Maxime)
-- **Cross-Reference** auf vault-spezifische Maxime für Critical-Findings mit DB-Cleanup-Anforderung
+- **"At-least X" pre-existing-duration hint**: when DB retention < suspected bug duration, document "at least X days, probably longer" as a valid answer
+- **User-confirmation-before-DB-DELETE** pattern as cross-reference (project-CLAUDE.md maxim)
+- **Cross-reference** to project-specific maxims for Critical findings with DB cleanup requirements

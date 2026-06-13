@@ -1,190 +1,190 @@
 ---
 name: ga-skill-edit-tdd-workflow
-description: Use when editing or expanding an already-GA-promoted skill (suffix-less name, banner says PROMOTED) to add a new capability/class/feature. Different from `skill-tdd-promotion-workflow` which covers DRAFT→GA. This skill covers GA→GA+Capability — the failure mode is silent-rename-or-expand without RED-test for the new capability (Iron-Law violation). Trigger on phrases like "Skill erweitern um X", "neue Klasse zum existing Skill hinzufügen", "asyncpg-skill um JSONB erweitern", "GA-Skill umbenennen + Capability erweitern", "Skill-Rename mit Content-Expansion", "Cycle-2-Capability für promoted Skill". Do NOT load for new Skill from scratch (`superpowers:writing-skills`), for DRAFT→GA Promotion (`skill-tdd-promotion-workflow`), for minor edit ohne neue Capability (just edit), or when the target skill doesn't exist.
+description: Use when editing or expanding an already-GA-promoted skill (suffix-less name, banner says PROMOTED) to add a new capability/class/feature. Different from `skill-tdd-promotion-workflow` which covers DRAFT→GA. This skill covers GA→GA+Capability — the failure mode is silent-rename-or-expand without RED-test for the new capability (Iron-Law violation). Trigger on phrases like "extend skill with X", "add a new class to an existing skill", "extend asyncpg-skill with JSONB", "rename GA skill + extend capability", "skill rename with content expansion", "Cycle-2 capability for promoted skill". Do NOT load for new skill from scratch (`superpowers:writing-skills`), for DRAFT→GA promotion (`skill-tdd-promotion-workflow`), for minor edit without new capability (just edit), or when the target skill doesn't exist.
 ---
 
 # ga-skill-edit-tdd-workflow (DRAFT — TDD-Promotion-Pending)
 
-> ⚠️ **DRAFT 2026-05-29**: Pattern aus Wolf-Session 29.05.2026 nach Erweiterung von `asyncpg-decimal-test-shape` (GA seit 26.05.) um JSONB/UUID/INET-Klassen → Umbenennung zu `asyncpg-live-vs-mock-shape`. Iron-Law-Verstoß (silent rename ohne RED-Test für neue Capability) wurde durch Pre-Step-0-Check abgefangen. Pattern war ad-hoc gemacht, aber repeatable.
+> ⚠️ **DRAFT**: pattern derived from a work session where an existing GA skill was extended with new classes and renamed. Iron-law violation (silent rename without RED test for new capability) was caught by Pre-Step-0 check. Pattern was ad-hoc but repeatable.
 
-## Lifecycle-Position
+## Lifecycle position
 
 ```
-[Idee] → CREATE (writing-skills) → -DRAFT
+[Idea] → CREATE (writing-skills) → -DRAFT
   ↓
 PROMOTE (skill-tdd-promotion-workflow) → GA-Skill
   ↓
-EDIT (DIESES Skill) → GA-Skill mit erweiterter Capability
+EDIT (THIS skill) → GA-Skill with extended capability
 ```
 
-`skill-tdd-promotion-workflow` ist NICHT für GA-Edits — das macht es explizit per „Do NOT load for editing GA-skills".  
-`superpowers:writing-skills` (CREATE) ist nicht für Capability-Expansion auf existing GA — sonst wird existing Content fragmentiert.
+`skill-tdd-promotion-workflow` is NOT for GA edits — it explicitly says "Do NOT load for editing GA-skills".  
+`superpowers:writing-skills` (CREATE) is not for capability expansion on existing GA — otherwise existing content gets fragmented.
 
-Dieses Skill ist die fehlende Lifecycle-Stage.
+This skill is the missing lifecycle stage.
 
-## Pre-Step-0: Target-Verification (PFLICHT)
+## Pre-Step-0: Target verification (MANDATORY)
 
-### Check A — Skill ist tatsächlich GA?
+### Check A — Skill is actually GA?
 
 ```bash
 head -3 ~/.claude/skills/<SKILL-NAME>/SKILL.md | grep -E "name:.*-DRAFT|name:.*-STUB"
 ```
 
-Wenn MATCH → Skill ist noch DRAFT → **falsches Skill verwendet** → STOP, `skill-tdd-promotion-workflow` zuerst.
+If MATCH → skill is still DRAFT → **wrong skill used** → STOP, `skill-tdd-promotion-workflow` first.
 
-### Check B — PROMOTED-Banner vorhanden?
+### Check B — PROMOTED banner present?
 
 ```bash
 grep -E "PROMOTED|✅" ~/.claude/skills/<SKILL-NAME>/SKILL.md | head -3
 ```
 
-Wenn KEIN MATCH → Skill war nie explizit promoted (kein TDD-Verlauf dokumentiert) → STOP, erst writing-skills + skill-tdd-promotion-workflow.
+If NO MATCH → skill was never explicitly promoted (no TDD progression documented) → STOP, first writing-skills + skill-tdd-promotion-workflow.
 
-### Check C — Neue Capability ist orthogonal zur existing?
+### Check C — New capability is orthogonal to existing?
 
-Frage: addiert die Erweiterung eine NEUE Bug-Klasse / Pattern-Variante / Use-Case-Branch (ja → EDIT-Workflow legitim) ODER ist es nur Polish auf existing Content (nein → einfacher Edit, kein TDD nötig)?
+Question: does the extension add a NEW bug-class / pattern-variant / use-case-branch (yes → EDIT workflow legitimate) OR is it just polish on existing content (no → simple edit, no TDD needed)?
 
-| Erweiterung | Workflow |
+| Extension | Workflow |
 |---|---|
-| Neue Klasse / Bug-Pattern (z.B. JSONB neben Decimal) | EDIT-Workflow (dieses Skill) |
-| Edge-Case-Doku zur existing Klasse | einfacher Edit (kein TDD) |
-| Erweiterte Trigger-Phrasen ohne Content-Change | einfacher Edit |
-| Major-Rename (semantische Verschiebung) | EDIT-Workflow + ggf. Old-Skill-Redirect |
+| New class / bug pattern (e.g. JSONB alongside Decimal) | EDIT workflow (this skill) |
+| Edge-case doc for existing class | Simple edit (no TDD) |
+| Extended trigger phrases without content change | Simple edit |
+| Major rename (semantic shift) | EDIT workflow + possibly old-skill redirect |
 
 ## Pattern (8 Steps)
 
-Pro GA-Skill-Expansion (nach Pre-Step-0-Pass):
+Per GA skill expansion (after Pre-Step-0 pass):
 
-1. **Original-Skill vollständig lesen** — verstehen was schon valididiert ist, was Klassen-/Sektion-Struktur ist
-2. **Neuen erweiterten Skill als `-DRAFT` anlegen** unter neuem Namen (falls Rename) oder unter `<original-name>-DRAFT` (falls In-Place-Expansion staged) — Original bleibt unangetastet während TDD läuft
-3. **Existing-Content unverändert übernehmen** + **NEUE Sektionen für neue Capability anhängen** — keine Re-Validation der existing Content nötig (war schon GA)
-4. **RED + GREEN-Scenario designen** für die NEUE Capability — Bait der zum natürlichen Fehler in der neuen Klasse führt (NICHT die alte Klasse retesten — die ist validiert)
-5. **Parallele Subagent-Dispatch** (Agent-Tool, `general-purpose`) — identischer Prompt-Stem, einziges Variable = Skill-Access. Verwende die `-DRAFT`-Datei für GREEN-Read-Tool-Pfad
-6. **Analyse + Polish**: passt GREEN compliant für neue Capability? Self-Reflection-Findings ggf. inline einbauen (Iron-Law-konform: nur wenn ≤5min Polish, sonst Cycle-2-Backlog)
-7. **DRAFT-Marker stripen** (name: + description: STUB-Prefix) + **PROMOTED-Banner Cycle-2-Update** (Datum + Verdict für NEUE Capability) + **TDD-Verlauf-Sektion erweitern** mit Cycle-N-Eintrag
-8. **Directory-Rename + Old-Skill-Removal** (falls Rename) — Skills-Verzeichnis ist nicht git-versioniert, daher kein Commit-Step
+1. **Read original skill completely** — understand what's already validated, what the class/section structure is
+2. **Lay out new extended skill as `-DRAFT`** under a new name (if rename) or under `<original-name>-DRAFT` (if in-place expansion staged) — original stays untouched while TDD runs
+3. **Take over existing content unchanged** + **append NEW sections for new capability** — no re-validation of existing content needed (was already GA)
+4. **Design RED + GREEN scenario** for the NEW capability — bait that leads to natural error in the new class (NOT re-test the old class — it's validated)
+5. **Parallel subagent dispatch** (Agent tool, `general-purpose`) — identical prompt-stem, only variable = skill access. Use the `-DRAFT` file for GREEN Read-tool path
+6. **Analysis + polish**: does GREEN comply for new capability? Self-reflection findings if applicable incorporated inline (iron-law-compliant: only if ≤5min polish, otherwise Cycle-2 backlog)
+7. **Strip DRAFT marker** (name: + description: STUB prefix) + **PROMOTED banner Cycle-2 update** (date + verdict for NEW capability) + **TDD progression section extension** with Cycle-N entry
+8. **Directory rename + old-skill removal** (if rename) — skills directory is not git-versioned, so no commit step
 
-## Konkretes Dispatch-Beispiel (Step 5)
+## Concrete dispatch example (Step 5)
 
-So sieht RED+GREEN-Dispatch-Pair für GA-Edit aus (gekürzt aus 29.05.2026):
+This is what RED+GREEN dispatch-pair looks like for GA edit (shortened):
 
 ```python
-# RED: ohne Skill, NEUE Capability scenario
+# RED: without skill, NEW capability scenario
 Agent(
     subagent_type="general-purpose",
     description="RED-X <skill-shortname> <new-capability>",
     prompt="""
-Du bist RED-Baseline (ohne Skill).
+You are RED baseline (without skill).
 
-**CONSTRAINT**: KEIN Skill mit Namen `<old-name>` ODER `<new-name>` laden.
+**CONSTRAINT**: do NOT load any skill named `<old-name>` OR `<new-name>`.
 
-**Scenario**: <konkretes Mini-Problem das NUR die neue Capability triggert, nicht die alte>
-<eingebaute Anti-Pattern-Bait, der ohne Skill natürlich auftritt>
+**Scenario**: <concrete mini-problem that triggers ONLY the new capability, not the old>
+<built-in anti-pattern bait that naturally arises without skill>
 
-⚠️ NO-FILE-WRITE: Markdown-Code-Blocks only, keine Dateien.
+⚠️ NO-FILE-WRITE: markdown code-blocks only, no files.
 
-Output: Code + Begründung + Self-Reflection mit Unsicherheiten.
+Output: code + reasoning + self-reflection with uncertainties.
 """
 )
 
-# GREEN: mit erweitertem -DRAFT
+# GREEN: with extended -DRAFT
 Agent(
     subagent_type="general-purpose",
     description="GREEN-X <skill-shortname> <new-capability>",
     prompt="""
-Du bist GREEN-Subagent.
+You are GREEN subagent.
 
-**SKILL-DIREKTIVE**: Lies via Read-Tool: `/Users/<user>/.claude/skills/<NEW-NAME>-DRAFT/SKILL.md`.
-Folge seinen Anweisungen für das Scenario.
+**SKILL DIRECTIVE**: Read via Read-tool: `/Users/<user>/.claude/skills/<NEW-NAME>-DRAFT/SKILL.md`.
+Follow its instructions for the scenario.
 
-**Scenario**: <IDENTISCH zu RED>
+**Scenario**: <IDENTICAL to RED>
 
-⚠️ NO-FILE-WRITE: Markdown-Code-Blocks only.
+⚠️ NO-FILE-WRITE: markdown code-blocks only.
 
-Skill-Self-Reflection-Sektion mit: erste gelesene Section / umgesetzt / vermiedene-Falsch-Empfehlung / Caller-Context-Check / hilfreich+fehlend.
+Skill self-reflection section with: first section read / implemented / wrong-recommendation-avoided / caller-context check / helpful+missing.
 """
 )
 ```
 
-## Pre-Validated-Content-Skip
+## Pre-validated-content skip
 
-Iron-Law erlaubt Skip von Re-Validation **nur** für unveränderten Content:
+Iron-law allows skipping re-validation **only** for unchanged content:
 
-- ✅ existing Klasse-A-Sektion unverändert → kein Re-RED-Test für Klasse A
-- ✅ Cycle-1-TDD-Verlauf-Eintrag bleibt → wird durch Cycle-2 ergänzt, nicht ersetzt
-- ❌ Klasse-A-Sektion umstrukturiert/neu-formuliert → Re-RED-Test für Klasse A nötig
-- ❌ Default-Werte geändert in existing Sektion → Re-RED-Test für alle betroffenen Klassen
+- ✅ existing Class-A section unchanged → no Re-RED-Test for Class A
+- ✅ Cycle-1 TDD-progression entry remains → gets supplemented by Cycle-2, not replaced
+- ❌ Class-A section restructured/reformulated → Re-RED-Test for Class A needed
+- ❌ Default values changed in existing section → Re-RED-Test for all affected classes
 
-Faustregel: wenn du existing Sektion editierst (nicht nur anhängst), wird sie zur „neuen Capability" → Re-TDD.
+Rule of thumb: if you edit an existing section (not just append), it becomes the "new capability" → Re-TDD.
 
-## Rename-Strategien
+## Rename strategies
 
-Wenn EDIT von Capability-Expansion auch Rename involviert (z.B. `asyncpg-decimal-test-shape` → `asyncpg-live-vs-mock-shape`):
+If EDIT of capability expansion also involves rename (e.g. `asyncpg-decimal-test-shape` → `asyncpg-live-vs-mock-shape`):
 
-### Option A — Hard-Rename + Delete-Old (Wolf-Pattern 29.05.)
+### Option A — Hard rename + delete-old
 
-- Neuer Skill unter neuem Namen
-- Alter Skill-Directory komplett entfernt
-- **Vorteil**: clean, kein Duplikat-Auto-Discovery
-- **Nachteil**: Trigger-Phrasen aus alter Beschreibung müssen in neuer description abgedeckt sein (sonst Discovery-Lücke)
+- New skill under new name
+- Old skill directory completely removed
+- **Advantage**: clean, no duplicate auto-discovery
+- **Disadvantage**: trigger phrases from old description must be covered in new description (otherwise discovery gap)
 
-### Option B — Old-Skill mit Redirect
+### Option B — Old skill with redirect
 
-- Alter Skill-Directory bleibt
-- Content: einzige Sektion „⚠️ This skill has been superseded by `<new-name>`. See there."
-- Description bleibt mit alten Triggers, ergänzt um „use new-name instead"
-- **Vorteil**: backward-compatible für Trigger-Phrase-Discovery
-- **Nachteil**: 2 Skills laden bei Trigger-Match
+- Old skill directory stays
+- Content: single section "⚠️ This skill has been superseded by `<new-name>`. See there."
+- Description stays with old triggers, supplemented with "use new-name instead"
+- **Advantage**: backward-compatible for trigger-phrase discovery
+- **Disadvantage**: 2 skills load on trigger match
 
-**Wolf-Default 29.05.**: Option A (Hard-Rename). Trigger-Phrasen wurden in neue description konsolidiert.
+**Default**: Option A (hard rename). Trigger phrases consolidated into new description.
 
-## Polish-vs-Promote-Decision (analog skill-tdd-promotion-workflow)
+## Polish-vs-Promote decision (analogous to skill-tdd-promotion-workflow)
 
-| Item-Typ | Action |
+| Item type | Action |
 |---|---|
-| Sub-Skill-essential für neue Capability (z.B. unklarer Trigger) | jetzt einbauen vor PROMOTE |
-| Edge-Case-Doku für neue Capability (≤5min) | jetzt einbauen |
-| Pattern-Erweiterung („wäre noch nützlich") | Cycle-N-Backlog |
-| Refactor an existing Content (≥5min, orthogonal zur Capability) | separate Session |
+| Sub-skill essential for new capability (e.g. unclear trigger) | now build in before PROMOTE |
+| Edge-case doc for new capability (≤5min) | build in now |
+| Pattern extension ("would still be useful") | Cycle-N backlog |
+| Refactor on existing content (≥5min, orthogonal to capability) | separate session |
 
 ## Anti-Patterns
 
-| Anti-Pattern | Korrekt |
+| Anti-Pattern | Correct |
 |---|---|
-| Silent rename + expand ohne RED-Test für neue Capability | Iron-Law-Verstoß; RED-Test ist Pflicht für jede neue Klasse |
-| Re-RED-Test für existing validierten Content | Iron-Law-Pflicht ist failing-test-first; unveränderter Content braucht das nicht |
-| Pre-Step-0 skippen weil „Ich weiß doch dass es GA ist" | 1-Sekunde-Check, falsche Annahme kostet 30min Re-Work |
-| Old-Skill-Directory vergessen zu entfernen bei Hard-Rename | Auto-Discovery findet beide → User-Confusion |
-| PROMOTED-Banner nicht ge-Cycle-2-update'd | Spätere Reviewer denken Skill ist GA-since-Cycle-1, sehen aber neue Klassen ohne TDD-Backing |
-| NEUE Capability ohne TDD-Verlauf-Cycle-N-Entry | Cycle-Tracking ist Voraussetzung für künftige Cycle-3+-Edits |
-| Wolf-Direktive „expand X" als CREATE-Workflow interpretieren | Wenn X bereits GA-Skill ist, ist es EDIT, nicht CREATE |
+| Silent rename + expand without RED test for new capability | Iron-law violation; RED test is mandatory for every new class |
+| Re-RED-Test for existing validated content | Iron-law obligation is failing-test-first; unchanged content doesn't need that |
+| Skip Pre-Step-0 because "I know it's GA" | 1-second check, wrong assumption costs 30min re-work |
+| Forget to remove old skill directory on hard rename | Auto-discovery finds both → user confusion |
+| PROMOTED banner not Cycle-2-updated | Later reviewers think skill is GA-since-Cycle-1, but see new classes without TDD backing |
+| NEW capability without TDD-progression Cycle-N entry | Cycle tracking is prerequisite for future Cycle-3+ edits |
+| User directive "expand X" interpreted as CREATE workflow | If X is already GA skill, it's EDIT, not CREATE |
 
-## Querverweise
+## Cross-references
 
-- `superpowers:writing-skills` — CREATE-Stage (vor PROMOTE)
-- `skill-tdd-promotion-workflow` — PROMOTE-Stage (DRAFT → GA)
-- `superpowers:dispatching-parallel-agents` — Mechanik für Step 5
-- `superpowers:test-driven-development` — Iron-Law-Basis
-- `subagent-self-reflection-prompt-pattern` — Polish-Item-Quelle
+- `superpowers:writing-skills` — CREATE stage (before PROMOTE)
+- `skill-tdd-promotion-workflow` — PROMOTE stage (DRAFT → GA)
+- `superpowers:dispatching-parallel-agents` — mechanic for Step 5
+- `superpowers:test-driven-development` — Iron-law basis
+- `subagent-self-reflection-prompt-pattern` — polish-item source
 
-## TDD-Aufgabe für künftige Promotion
+## TDD task for future promotion
 
-Vor GA-Promotion dieses Skills selbst:
-1. RED+GREEN-Pressure-Test mit Scenario: „User sagt 'erweitere asyncpg-decimal-test-shape um JSONB'"
-2. RED ohne Skill: würde vermutlich `superpowers:writing-skills` laden oder silent renamen
-3. GREEN mit DIESEM Skill: lädt Pre-Step-0 Check A/B/C, identifiziert EDIT-Mode, dispatcht RED+GREEN für JSONB-Capability, rename mit Option A
-4. Erwartung: GREEN strukturell sauberer, expliziter im Workflow-Pick
+Before GA promotion of this skill itself:
+1. RED+GREEN pressure-test with scenario: "User says 'extend asyncpg-decimal-test-shape with JSONB'"
+2. RED without skill: would likely load `superpowers:writing-skills` or silently rename
+3. GREEN with THIS skill: loads Pre-Step-0 check A/B/C, identifies EDIT mode, dispatches RED+GREEN for JSONB capability, renames with Option A
+4. Expectation: GREEN structurally cleaner, more explicit in workflow pick
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing-Log)
 
-### Cycle 1 — 2026-05-29 (DRAFT-Phase)
+### Cycle 1 — DRAFT phase
 
-Skeleton aus Wolf-Session 29.05. Echte TDD-Pressure-Test pending. Pattern ad-hoc angewandt heute:
-- Original `asyncpg-decimal-test-shape` (GA seit 26.05.) gelesen
-- Erweiterung als `asyncpg-live-vs-mock-shape-DRAFT` angelegt mit 5 Klassen (A-E)
-- RED+GREEN für Klasse B (JSONB) — PASS
-- Inline-Polish für Symptom-Klarheit (5 Access-Pattern-Mapping)
-- Hard-Rename Option A: Directory `asyncpg-decimal-test-shape` entfernt, `-DRAFT` → final-Name
-- PROMOTED-Banner Cycle-2-Update mit Datum 2026-05-29
+Skeleton from a work session. Real TDD pressure-test pending. Pattern applied ad-hoc:
+- Original `asyncpg-decimal-test-shape` (GA) read
+- Extension laid out as `asyncpg-live-vs-mock-shape-DRAFT` with 5 classes (A-E)
+- RED+GREEN for Class B (JSONB) — PASS
+- Inline polish for symptom clarity (5 access-pattern mapping)
+- Hard rename Option A: directory `asyncpg-decimal-test-shape` removed, `-DRAFT` → final name
+- PROMOTED banner Cycle-2 update with date
 
-Resultat: Skill mit 5 Bug-Klassen statt 1, Cycle-1-Decimal-Validation erhalten + Cycle-2-JSONB-Validation hinzugefügt. Saubere Lifecycle-Progression.
+Result: skill with 5 bug classes instead of 1, Cycle-1 Decimal validation retained + Cycle-2 JSONB validation added. Clean lifecycle progression.

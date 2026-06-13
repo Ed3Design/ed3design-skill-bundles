@@ -1,41 +1,41 @@
 ---
 name: pytest-venv-first-triage
-description: Use when pytest shows multiple failures or errors (especially ModuleNotFoundError clusters) and you're about to dig into individual test fixes. ALWAYS check the Python-environment FIRST — `which python3` vs `venv/bin/python3` — before debugging individual tests. System-Python frequently lacks project-deps (cachetools, asyncpg, etc.) while project venv has them. Trigger on phrases like "pytest zeigt viele failures", "test errors after pull", "these tests were green yesterday", "ModuleNotFoundError multiple files", "pre-existing failures", "tests broken without code change", "ImportError test sweep". Do NOT load for single-test-fail debugging (use systematic-debugging directly), for Python projects without venv (no env-mismatch possible), or for failures with clear test-logic-bugs (e.g. assertion errors with concrete values).
+description: Use when pytest shows multiple failures or errors (especially ModuleNotFoundError clusters) and you're about to dig into individual test fixes. ALWAYS check the Python environment FIRST — `which python3` vs `venv/bin/python3` — before debugging individual tests. System-Python frequently lacks project deps (cachetools, asyncpg, etc.) while project venv has them. Trigger on phrases like "pytest shows many failures", "test errors after pull", "these tests were green yesterday", "ModuleNotFoundError multiple files", "pre-existing failures", "tests broken without code change", "ImportError test sweep". Do NOT load for single-test-fail debugging (use systematic-debugging directly), for Python projects without venv (no env mismatch possible), or for failures with clear test-logic bugs (e.g. assertion errors with concrete values).
 ---
 
 # pytest venv-first Triage
 
-> ✅ **PROMOTED 2026-05-27**: TDD-Pressure-Test bestanden mit interessanter Variabilität. RED-Subagent erkannte selbst das env-Mismatch-Pattern (smart-RED) und empfahl env-Check vor code-debug — aber mit längerer Begründungs-Tour. GREEN-Subagent lieferte identische Diagnose in <60s via Quick-Check-Procedure-Block + Pattern-Match-Confidence aus Skill-Daten. Skill ist als Tempo-Booster + Insurance-gegen-weniger-smarte-Subagents wertvoll. Cycle-2-Backlog: direnv/pyenv/poetry/uv-Erwähnung, pre-commit-Hook-Hinweis, Makefile-`make test`-Pattern.
+> ✅ **PROMOTED**: TDD pressure-test passed with interesting variability. RED-Subagent itself recognized the env-mismatch pattern (smart-RED) and recommended env-check before code-debug — but with a longer reasoning tour. GREEN-Subagent delivered identical diagnosis in <60s via Quick-Check-Procedure block + pattern-match confidence from skill data. Skill is valuable as a tempo booster + insurance against less-smart subagents. Cycle-2 backlog: direnv/pyenv/poetry/uv mention, pre-commit hook hint, Makefile `make test` pattern.
 
-## Pattern (Kurzform)
+## Pattern (short form)
 
-**Vor jedem pytest-Failure-Debug-Dive**: prüfe ob du das richtige Python-Environment nutzt.
+**Before every pytest failure debug dive**: check whether you're using the right Python environment.
 
 ```bash
-# 1. Welche python3 verweist auf welches Environment?
+# 1. Which python3 points to which environment?
 which python3
 python3 -c "import sys; print(sys.prefix)"
 
-# 2. Gibt es einen Projekt-venv?
+# 2. Is there a project venv?
 ls -d venv 2>/dev/null && ls venv/bin/python*
 
-# 3. Wenn ja: re-run mit venv-python
-venv/bin/python3 -m pytest <gleiche args> -q
+# 3. If yes: re-run with venv python
+venv/bin/python3 -m pytest <same args> -q
 ```
 
-Wenn (3) drastisch andere Failure-Counts liefert → 90% der „pre-existing failures" waren Environment-Mismatch, nicht Code-Bug.
+If (3) delivers drastically different failure counts → 90% of the "pre-existing failures" were environment mismatch, not code bug.
 
-## Symptome (woran erkennt man dass es venv ist)
+## Symptoms (how to tell it's the venv)
 
-- **ModuleNotFoundError-Cluster** in einem Sub-Verzeichnis (z.B. alle Tests in `tests/test_dashboard/` failed → vermutlich import-error in einer geteilten Datei dieses Subdir)
-- **„Diese Tests waren doch grün"** — nichts am Code wurde geändert, aber pytest zeigt 30+ Failures
-- **`sys.prefix` zeigt `/Library/Frameworks/Python.framework/...`** statt `/path/to/project/venv`
-- **`which python3`** zeigt `/usr/local/bin/python3` oder `/usr/bin/python3` statt `venv/bin/python3`
-- pre-commit-Hook lief erfolgreich aber lokaler full-suite-Run failed (Hook nutzt vielleicht system-python, lokal sollte venv sein)
+- **ModuleNotFoundError cluster** in a subdirectory (e.g. all tests in `tests/test_dashboard/` failed → probably import error in a shared file of that subdir)
+- **"These tests were green"** — nothing in the code was changed, but pytest shows 30+ failures
+- **`sys.prefix` shows `/Library/Frameworks/Python.framework/...`** instead of `/path/to/project/venv`
+- **`which python3`** shows `/usr/local/bin/python3` or `/usr/bin/python3` instead of `venv/bin/python3`
+- pre-commit hook ran successfully but local full-suite run failed (hook maybe uses system python, locally should be venv)
 
-## Konkretes Heutiges Beispiel (26.05.2026)
+## Concrete example
 
-Wolf full-suite-Run: 1894 passed, **15 failed, 32 errors**. Triage-Verdacht: pre-existing failures. Detailed look auf erste Error:
+Full-suite run: 1894 passed, **15 failed, 32 errors**. Triage suspicion: pre-existing failures. Detailed look at first error:
 
 ```
 ERROR tests/test_dashboard/test_cockpit_page.py::test_status_page_returns_200
@@ -49,52 +49,52 @@ $ grep -i cachetools requirements.txt
 cachetools>=5.3  # in requirements ✓
 
 $ which python3
-/usr/local/bin/python3                              # ← system-python
+/usr/local/bin/python3                              # ← system python
 
 $ python3 -c "import sys; print(sys.prefix)"
 /Library/Frameworks/Python.framework/Versions/3.14  # ← Apple Python.framework
 
 $ ls venv/bin/python*
-venv/bin/python3                                    # ← venv existiert
+venv/bin/python3                                    # ← venv exists
 
 $ venv/bin/python3 -c "import cachetools; print(cachetools.__version__)"
-cachetools OK: 7.1.1                                # ← venv hat es
+cachetools OK: 7.1.1                                # ← venv has it
 ```
 
-Re-Run mit venv-python: **1946 passed, 1 failed** (echter Test-Bug, schnell gefixt). 47 von 48 Failures waren env-Mismatch.
+Re-run with venv python: **1946 passed, 1 failed** (real test bug, quickly fixed). 47 of 48 failures were env mismatch.
 
-## Diagnose-Tabelle
+## Diagnosis table
 
-| Symptom | Ursache | Action |
+| Symptom | Cause | Action |
 |---|---|---|
-| `which python3` = system-pfad + venv-Dir existiert | venv nicht aktiviert | `venv/bin/python3 -m pytest ...` oder `source venv/bin/activate` |
-| ModuleNotFoundError für Module aus requirements.txt | venv installed alle deps, system-python nicht | venv nutzen |
-| pre-commit OK, lokal failed | Hook + lokal nutzen verschiedene Pythons | beide auf venv normalisieren |
-| CI grün, lokal failed | CI nutzt requirements-installed Container, lokal system-python | venv nutzen |
-| Failures in einem Subdir-Cluster | gemeinsamer Import in Subdir crasht alle Tests | nach env-Check Code-Diff prüfen |
-| Failures verteilt + ohne Module-Pattern | echter Code-Bug | normaler Debug-Workflow |
+| `which python3` = system path + venv dir exists | venv not activated | `venv/bin/python3 -m pytest ...` or `source venv/bin/activate` |
+| ModuleNotFoundError for modules from requirements.txt | venv installed all deps, system python didn't | use venv |
+| pre-commit OK, local failed | hook + local use different pythons | normalize both to venv |
+| CI green, local failed | CI uses requirements-installed container, local system python | use venv |
+| Failures in a subdir cluster | shared import in subdir crashes all tests | after env check, check code diff |
+| Failures scattered + without module pattern | real code bug | normal debug workflow |
 
-## When NOT to use (echter Code-Bug-Indikatoren)
+## When NOT to use (real code-bug indicators)
 
-- Failures sind verteilt über viele Subdirs OHNE gemeinsames Import-Module
-- AssertionError mit konkreten erwarteten-vs-tatsächlichen Werten
-- Failure-Count ändert sich nicht zwischen system-python und venv-python
-- Failures begannen erst nach einem konkreten Commit-Sweep (file-path-diff dann hilfreich)
+- Failures spread over many subdirs WITHOUT a common import module
+- AssertionError with concrete expected-vs-actual values
+- Failure count doesn't change between system python and venv python
+- Failures started only after a concrete commit sweep (file-path-diff then helpful)
 
 ## Anti-Patterns
 
-| Anti-Pattern | Was statt dessen |
+| Anti-Pattern | What to do instead |
 |---|---|
-| Sofort in test-by-test Debug einsteigen weil „32 Failures sind echt" | ERST env-Check (30 Sekunden), DANN Debug |
-| `pip install <missing-module>` ins system-python statt venv-Switch | Im venv landest du in requirements.txt-Konsistenz; system-pip-install kollidiert mit Brew/Apple-Python-Updates |
-| Annehmen pre-commit-Hook nutze venv (tut er evtl. nicht) | Pre-commit-Config explizit checken: `cat .pre-commit-config.yaml \| grep python` |
-| Failures als „pre-existing acceptable" markieren ohne env-Check | Du bist evtl. die einzige Person die die Tests jemals fährt — niemand sah die Failures vorher |
-| 30+ Minuten in Code-Diff-Triage verbringen ohne env-Check | Env-Check ist 30s, file-path-diff kann immer noch nach env-Check folgen |
+| Jump immediately into test-by-test debug because "32 failures are real" | FIRST env check (30 seconds), THEN debug |
+| `pip install <missing-module>` into system python instead of venv switch | In venv you land in requirements.txt consistency; system-pip-install collides with brew/Apple-Python updates |
+| Assume pre-commit hook uses venv (maybe it doesn't) | Check pre-commit config explicitly: `cat .pre-commit-config.yaml \| grep python` |
+| Mark failures as "pre-existing acceptable" without env check | You may be the only person running these tests — no one saw the failures before |
+| 30+ minutes spent in code-diff triage without env check | Env check is 30s, file-path-diff can still follow after env check |
 
-## Quick-Check-Procedure (60 Sekunden)
+## Quick-Check Procedure (60 seconds)
 
 ```bash
-# Diagnose-Block — copy-paste-fähig
+# Diagnosis block — copy-paste-ready
 echo "=== Active Python ==="; which python3
 echo "=== sys.prefix ==="; python3 -c "import sys; print(sys.prefix)"
 echo "=== venv exists? ==="; ls -d venv 2>/dev/null && echo "YES" || echo "NO"
@@ -102,45 +102,45 @@ echo "=== venv exists? ==="; ls -d venv 2>/dev/null && echo "YES" || echo "NO"
 echo "=== requirements check ==="
 [ -f requirements.txt ] && head -10 requirements.txt
 
-# Falls system-python aktiv + venv existiert → re-run:
-venv/bin/python3 -m pytest <vorherige args> -q 2>&1 | tail -5
+# If system python is active + venv exists → re-run:
+venv/bin/python3 -m pytest <previous args> -q 2>&1 | tail -5
 ```
 
-## TDD-Aufgabe für nächste Skill-Building-Session
+## TDD task for next skill-building session
 
-1. **RED**: Subagent ohne Skill bekommt pytest-Output mit 32 ModuleNotFoundError-Errors. Beobachten: dive er direkt in code-debug oder fragt erst env? Wahrscheinlich: code-debug.
-2. **GREEN**: Mit Skill: gleiche Task. Sollte ERST env-Check + Quick-Check-Procedure laufen lassen.
-3. **REFACTOR**: Loophole „Aber die requirements.txt enthält cachetools, also ist pytest grün ja sicher in venv" → Skill muss explizit machen dass requirements ≠ activated venv.
-4. **Trigger-Phrasen**: „pytest viele failures", „tests broken without code change", „ModuleNotFoundError multiple" → wird Skill auto-getriggert?
+1. **RED**: subagent without skill gets pytest output with 32 ModuleNotFoundError errors. Observe: does it dive directly into code-debug or first ask env? Likely: code-debug.
+2. **GREEN**: with skill: same task. Should FIRST run env-check + Quick-Check Procedure.
+3. **REFACTOR**: loophole "but requirements.txt contains cachetools, so pytest is certainly green in venv" → skill must make explicit that requirements ≠ activated venv.
+4. **Trigger phrases**: "pytest many failures", "tests broken without code change", "ModuleNotFoundError multiple" → does the skill get auto-triggered?
 
-## Querverweise
+## Cross-references
 
-- `superpowers:systematic-debugging` — Übergeordnetes Debug-Framework, dieses Skill ist Spezialfall „first check env"
-- `swatserver-fastapi-iteration` — Repo-spezifische Python-Setup-Conventions
+- `superpowers:systematic-debugging` — overarching debug framework, this skill is special case "first check env"
+- `your-server-fastapi-iteration` — repo-specific Python setup conventions
 
-## Real-World-Impact (Wolf-Cleanup-Day 26.05.2026)
+## Real-world impact
 
-Initial-Run mit system-python:
-- 1894 passed, 15 failed, 32 errors (47 vermeintliche pre-existing-failures)
-- Triage-Verdacht: in Code-Debug einsteigen würde ~1-2h kosten
+Initial run with system python:
+- 1894 passed, 15 failed, 32 errors (47 apparent pre-existing failures)
+- Triage suspicion: jumping into code debug would cost ~1-2h
 
-Mit venv-python re-run:
-- 1946 passed, 1 failed (echter Bug, 5min Fix)
-- Real-Saving: ~30-60 Min vermieden, plus Vertrauen gewonnen dass tatsächlich nichts substantielles broken war
+With venv-python re-run:
+- 1946 passed, 1 failed (real bug, 5min fix)
+- Real saving: ~30-60 min avoided, plus confidence gained that nothing substantial was actually broken
 
-Wäre dieses Skill verfügbar gewesen: 60s env-check sofort, 5min real-bug-fix, fertig.
+If this skill had been available: 60s env check immediately, 5min real-bug fix, done.
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing-Log)
 
-### Cycle 1 — 2026-05-27 (PASS — mit Variabilitäts-Note)
+### Cycle 1 — PASS — with variability note
 
-- **RED-Subagent** (ohne Skill, 47-Failures-Diagnose-Task): Bemerkenswert smart — erkannte selbst dass `requirements.txt` enthält cachetools aber Import scheitert → env-Mismatch-Hypothese. Schlug env-Check vor code-debug vor. Gegenthese-Check explizit gemacht („könnten die 15 Failures echte Code-Bugs sein? — weiß ich noch nicht, erst Env fixen"). Sehr nahe am GREEN-Verhalten.
-- **GREEN-Subagent** (mit Skill, gleicher Prompt): Identische Diagnose-Logik, aber strukturierter (Quick-Check-Procedure-Block aus Skill 1:1 übernommen) + höhere Confidence durch Pattern-Match mit dokumentiertem 26.05.-Realfall (gleiche Pfade, gleicher Modul, gleicher Cluster). Verifikations-Schritte präziser.
-- **Verdict**: GREEN nicht überlegen über *diesen* RED — aber RED-Subagent-Variabilität ist real (manche Subagents würden direkt in code-debug springen). Skill bleibt wertvoll als Tempo-Booster + Insurance.
+- **RED-Subagent** (without skill, 47-failures diagnosis task): remarkably smart — itself recognized that `requirements.txt` contains cachetools but import fails → env-mismatch hypothesis. Suggested env-check before code-debug. Counter-thesis check made explicit ("could the 15 failures be real code bugs? — don't know yet, first fix env"). Very close to GREEN behavior.
+- **GREEN-Subagent** (with skill, same prompt): identical diagnosis logic, but more structured (Quick-Check Procedure block from skill taken 1:1) + higher confidence through pattern-match with documented real case (same paths, same module, same cluster). Verification steps more precise.
+- **Verdict**: GREEN not superior over *this* RED — but RED-subagent variability is real (some subagents would jump directly into code-debug). Skill remains valuable as tempo booster + insurance.
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2-Backlog (Polish, non-blocking)
 
-1. **direnv / pyenv / poetry / uv** als alternative venv-Indirektionen erwähnen (`which python3` kann irreführen)
-2. **pre-commit-Hook-Konsistenz-Tipp**: nach venv-Switch sollte `pre-commit run --all-files` denselben Output liefern
-3. **Defensive Maßnahmen nach Fix**: `.envrc`-Snippet oder `Makefile`-Target `make test` zur dauerhaften Vermeidung
-4. **Fallback ohne venv-Dir** (Test-Scenario heute): „falls kein venv: erst `python3 -m venv venv && pip install -r requirements.txt` bevor du den Re-Run versuchst" als robusterer Branch
+1. **direnv / pyenv / poetry / uv** as alternative venv indirections to mention (`which python3` can mislead)
+2. **pre-commit hook consistency tip**: after venv switch, `pre-commit run --all-files` should deliver the same output
+3. **Defensive measures after fix**: `.envrc` snippet or `Makefile` target `make test` for permanent avoidance
+4. **Fallback without venv dir** (test scenario today): "if no venv: first `python3 -m venv venv && pip install -r requirements.txt` before attempting the re-run" as a more robust branch

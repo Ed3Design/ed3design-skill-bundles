@@ -1,176 +1,176 @@
 ---
 name: code-review-backlog-cost-warning
-description: Use when the user/agent is about to push code, merge a feature branch, or claim a body of work as "done" AND no code-review has happened in a while. Specifically trigger when ANY of these hold — (a) >7 days since last `requesting-code-review` invocation on this codebase, (b) >30 atomic commits accumulated since last review, (c) >5000 LoC changed since last review, (d) Pre-Push-Hook code-review-warning has been bypassed ≥2 times in succession (Bypass-Multiplikation), (e) the user types phrases like „wir haben seit Wochen kein Review gemacht", „ich pushe das einfach", „der Hook ist nur warning, ignoriere", „ist doch nur ein kleiner Fix obendrauf". STOP and surface a cost-estimate-warning to the user BEFORE the push — quantify the expected aufzuräumende Backlog-Cost (Wallclock + Token-Budget + Re-Review-Cycles) and offer chunked-parallel-review-dispatch as the alternative. Wolf-Maxime (26.05.2026): „Code-Review muss Standard werden" — encodes the painful proof-by-instance from 10.06.2026 where 4 weeks ohne Review = 5h Wallclock + €50 Token + 21 Commits in 6 Phases + 3 Re-Review-Cycles in ONE Session vs ~10min/Tag bei täglichem Review. Do NOT load for fresh-branches (≤3 commits, ≤500 LoC, ≤2 days), for explicitly-marked WIP-pushes the user asked you to do without review („push einfach, ich review später"), or when running inside a `requesting-code-review`-Session itself (you're already reviewing). Also skip for one-line typo fixes / pure documentation commits. Complements `superpowers:requesting-code-review` (this skill is the warning-before, that skill is the review-during) and `code-review-chunk-dispatch` (this skill recommends it, that skill executes it).
+description: Use when the user/agent is about to push code, merge a feature branch, or claim a body of work as "done" AND no code-review has happened in a while. Specifically trigger when ANY of these hold — (a) >7 days since last `requesting-code-review` invocation on this codebase, (b) >30 atomic commits accumulated since last review, (c) >5000 LoC changed since last review, (d) pre-push-hook code-review-warning has been bypassed ≥2 times in succession (bypass multiplication), (e) the user types phrases like "we haven't done a review in weeks", "I'll just push this", "the hook is only a warning, ignore it", "it's just a small fix on top". STOP and surface a cost-estimate-warning to the user BEFORE the push — quantify the expected backlog-cost (wallclock + token-budget + re-review cycles) and offer chunked-parallel-review-dispatch as the alternative. Maxim: "Code review must become standard" — encodes a painful proof-by-instance where 4 weeks without review = 5h wallclock + $50 tokens + 21 commits in 6 phases + 3 re-review cycles in ONE session vs ~10min/day with daily review. Do NOT load for fresh branches (≤3 commits, ≤500 LoC, ≤2 days), for explicitly-marked WIP pushes the user asked you to do without review ("just push, I'll review later"), or when running inside a `requesting-code-review` session itself (you're already reviewing). Also skip for one-line typo fixes / pure documentation commits. Complements `superpowers:requesting-code-review` (this skill is the warning-before, that skill is the review-during) and `code-review-chunk-dispatch` (this skill recommends it, that skill executes it).
 ---
 
 # Code-Review-Backlog Cost Warning
 
-> ✅ **PROMOTED 2026-06-10** — TDD Cycle 1 PASS (moderate value-add). RED-Subagent: refusedte den Push korrekt auf Basis der CLAUDE.md-Maxime, aber unstrukturiert und ohne konkrete Cost-Quantifizierung. GREEN-Subagent: lieferte strukturierten Pflicht-Output-Block mit konkreter Cost-Tabelle (45 Commits / 6.200 LoC / 13d → Tabellen-Zeile 4), explizite Option A/B, „Welche Option?"-Stopp gemäß Step 4. Mehrwert: Quantifizierung + Trajektorie-Hinweis (Cycle wiederholt sich gegenüber 10.06. Vormittag). Polish-Items im Cycle-2-Backlog am Ende.
+> ✅ **PROMOTED** — TDD Cycle 1 PASS (moderate value-add). RED-Subagent: correctly refused the push based on the CLAUDE.md maxim, but unstructured and without concrete cost-quantification. GREEN-Subagent: delivered a structured mandatory output block with concrete cost table (45 commits / 6,200 LoC / 13d → table row 4), explicit option A/B, "Which option?"-stop per Step 4. Value-add: quantification + trajectory hint (cycle repeats vs earlier instances). Polish items in the Cycle-2-Backlog at the end.
 
 ## Overview
 
-Code-Review-Backlogs sind **superlinear teurer** als tägliches Review — nicht linear. Bei 5× so vielen Commits ohne Review ist die Aufräum-Cost nicht 5× sondern 20-50× höher, weil:
+Code-review backlogs are **superlinearly more expensive** than daily review — not linear. With 5x as many commits without review, the cleanup cost is not 5x but 20-50x higher, because:
 
-- Re-Review-Cycles häufen sich (Fix-1 produziert Fix-2-Bug, Fix-2 produziert Fix-3-Bug)
-- Schema-Drifts kumulieren in mehreren Pfaden gleichzeitig
-- Pre-Push-Suite-Cycle-Time × #Push-Cycles wird zur dominanten Wallclock-Position
-- Wolf muss Domain-Entscheidungen rückwirkend für 4 Wochen Arbeit treffen
+- Re-review cycles accumulate (Fix-1 produces Fix-2-bug, Fix-2 produces Fix-3-bug)
+- Schema-drifts cumulate in multiple paths simultaneously
+- Pre-push suite cycle-time × #push-cycles becomes the dominant wallclock position
+- Domain decisions must be made retroactively for 4 weeks of work
 
-**Diese Maxime ist die Cost-Warning-Variante** der Wolf-Maxime „Code-Review muss Standard werden" (26.05.2026). Sie verhindert dass nächstes Mal wieder ein €50-Backlog entsteht weil die Pre-Push-Hook-Warnings „nur eine Warnung" sind.
+**This maxim is the cost-warning variant** of the maxim "code review must become standard". It prevents another large backlog from forming next time because the pre-push-hook warnings are "only a warning".
 
 ## When to use
 
-**Trigger-Schwellen (≥1 hinreichend)**:
-- ≥7 Tage seit letztem Code-Review auf diesem Repo
-- ≥30 atomare Commits seit letztem Review (`git log <last-review-sha>..HEAD --oneline | wc -l`)
-- ≥5000 LoC Diff (`git diff <last-review-sha> HEAD --stat | tail -1`)
-- ≥2× hintereinander Pre-Push-Code-Review-Hook bypassed (Bypass-Multiplikation)
+**Trigger thresholds (≥1 sufficient)**:
+- ≥7 days since last code review on this repo
+- ≥30 atomic commits since last review (`git log <last-review-sha>..HEAD --oneline | wc -l`)
+- ≥5000 LoC diff (`git diff <last-review-sha> HEAD --stat | tail -1`)
+- ≥2 consecutive pre-push code-review hook bypasses (bypass multiplication)
 
-**Trigger-Phrasen** (User oder du):
-- „wir haben seit Wochen kein Review gemacht"
-- „pushe das einfach"
-- „der Hook ist nur warning, kann ignoriert werden"
-- „ist doch nur ein kleiner Fix obendrauf"
-- „später machen wir mal ein Aggregate-Review"
-- „lass uns erst das Feature fertig machen"
+**Trigger phrases** (user or you):
+- "we haven't done a review in weeks"
+- "just push this"
+- "the hook is only a warning, can be ignored"
+- "it's just a small fix on top"
+- "we'll do an aggregate review later"
+- "let's first finish the feature"
 
-**Hochrisiko-Marker** (zusätzliche Verstärker):
-- Mehrere Trading-Pfade / DB-Migrations / ML-Modelle gleichzeitig touched
-- Mehrere Wolf-Domain-Entscheidungen sind eingeflossen ohne Test-Belegung
-- Pre-Push-Hook ist seit dem letzten Review ≥3× gefeuert (kumuliertes Risiko)
+**High-risk markers** (additional amplifiers):
+- Multiple critical paths / DB migrations / ML models touched simultaneously
+- Multiple domain decisions flowed in without test-backing
+- Pre-push-hook has fired ≥3x since last review (accumulated risk)
 
 ## When NOT to use
 
-- **Fresh-Branch** (≤3 Commits, ≤500 LoC, ≤2 Tage) — Backlog noch nicht aufgebaut
-- **Explizit-WIP-Push** vom User („push einfach, ich review später beim Merge")
-- **Während eines `requesting-code-review`-Aufrufs** — du reviewst gerade, würdest dich selbst warnen
-- **One-Line-Typo-Fixes** / pure Documentation-Commits
-- **Hotfix-Druck** (Live-Outage, Trade-Stop) — dann ist „push first, review after" der richtige Reflex, aber **dokumentiere** dass ein Follow-up-Review erforderlich ist
+- **Fresh branch** (≤3 commits, ≤500 LoC, ≤2 days) — backlog not yet built up
+- **Explicit WIP push** from user ("just push, I'll review later at merge")
+- **During a `requesting-code-review` call** — you're reviewing right now, would warn yourself
+- **One-line typo fixes** / pure documentation commits
+- **Hotfix pressure** (live outage, trade-stop) — then "push first, review after" is the correct reflex, but **document** that a follow-up review is required
 
 ## The 4-Step Warning Flow
 
-### Step 1 — Backlog-Größe messen (nicht schätzen)
+### Step 1 — Measure backlog size (don't guess)
 
 ```bash
-# Wann war der letzte Code-Review-Push?
+# When was the last code-review push?
 git log --grep="code-review\|code review\|CR-[A-Z][0-9]" --oneline -5
-# Oder: letzter PR-Merge nach Review
+# Or: last PR-merge after review
 git log --first-parent main --oneline -10
 
-# Backlog-Größe ab dem Punkt
+# Backlog size from that point
 LAST=<sha-of-last-reviewed-commit>
-git log $LAST..HEAD --oneline | wc -l         # #Commits
-git diff $LAST HEAD --shortstat               # LoC + Files
-git log $LAST..HEAD --since="7 days ago" --oneline | wc -l  # 7d-Rate
+git log $LAST..HEAD --oneline | wc -l         # #commits
+git diff $LAST HEAD --shortstat               # LoC + files
+git log $LAST..HEAD --since="7 days ago" --oneline | wc -l  # 7d rate
 ```
 
-Schreibe die 3 Zahlen explizit hin: **Commits / LoC / Tage**.
+Write the 3 numbers explicitly: **commits / LoC / days**.
 
-### Step 2 — Cost-Estimation gegen Schwellen-Tabelle
+### Step 2 — Cost-estimation against threshold table
 
-| Backlog-Größe | Erwartete Aufräum-Cost | Methode |
+| Backlog size | Expected cleanup cost | Method |
 |---|---|---|
-| ≤3 Commits / ≤500 LoC / ≤2 Tage | ~5min, einzelner Subagent | inline review |
-| 4-10 Commits / ≤2k LoC / ≤7 Tage | ~15-30min, 1-2 Subagents | `superpowers:requesting-code-review` |
-| 11-30 Commits / 2k-5k LoC / ≤14 Tage | ~1-2h, 2-3 chunks | `code-review-chunk-dispatch` (3 Chunks) |
-| **>30 Commits / >5k LoC / >14 Tage** | **>3h Wallclock + Re-Review-Cycles + Domain-Entscheidungen** | `code-review-chunk-dispatch` (6+ Chunks parallel) |
-| **>70 Commits / >10k LoC / >28 Tage** | **5h+ Wallclock + €50+ Token + 2 Sessions** | **STOPP — Wolf-Warning + Plan-B vorschlagen** |
+| ≤3 commits / ≤500 LoC / ≤2 days | ~5min, single subagent | inline review |
+| 4-10 commits / ≤2k LoC / ≤7 days | ~15-30min, 1-2 subagents | `superpowers:requesting-code-review` |
+| 11-30 commits / 2k-5k LoC / ≤14 days | ~1-2h, 2-3 chunks | `code-review-chunk-dispatch` (3 chunks) |
+| **>30 commits / >5k LoC / >14 days** | **>3h wallclock + re-review cycles + domain decisions** | `code-review-chunk-dispatch` (6+ chunks parallel) |
+| **>70 commits / >10k LoC / >28 days** | **5h+ wallclock + $50+ tokens + 2 sessions** | **STOP — user warning + plan-B proposal** |
 
-### Step 3 — User explizit warnen (nicht still arbeiten)
+### Step 3 — Warn user explicitly (don't silently work)
 
-**Pflicht-Output** bevor irgendein Code geschrieben wird:
+**Mandatory output** before any code is written:
 
 ```
-⚠️ Code-Review-Backlog-Warning
+⚠️ Code-Review Backlog Warning
 
-Stand: <N> Commits seit <SHA-short> (vor <K> Tagen)
-       <M> LoC Diff, <T> Files touched
-       Pre-Push-Hook seit <Datum> X× bypassed
+Status: <N> commits since <SHA-short> (<K> days ago)
+        <M> LoC diff, <T> files touched
+        Pre-push hook bypassed X times since <date>
 
-Erwartete Aufräum-Cost (siehe `code-review-backlog-cost-warning`):
-- Wallclock: ~<Stunden>
-- Token-Budget: ~$<Schätzung>
-- Re-Review-Cycles wahrscheinlich (Bug-Finding-Rate bei 4 Wochen Backlog: ~3 of 6 Phasen)
+Expected cleanup cost (see `code-review-backlog-cost-warning`):
+- Wallclock: ~<hours>
+- Token budget: ~$<estimate>
+- Re-review cycles likely (bug-finding rate at 4-week backlog: ~3 of 6 phases)
 
-Vorschlag:
-  Option A — `code-review-chunk-dispatch` (N parallele Subagents, ~1-2h)
-  Option B — Continue push + Schmerz später (€50+, 5h+, 2 Sessions)
+Proposal:
+  Option A — `code-review-chunk-dispatch` (N parallel subagents, ~1-2h)
+  Option B — Continue push + pain later ($50+, 5h+, 2 sessions)
 
-Wolf-Maxime 26.05.: "Code-Review muss Standard werden"
-Wolf-Maxime 10.06.: „...€50 verbrannt..."
+Maxim: "Code review must become standard"
+Maxim: "...$50 burned..."
 ```
 
-### Step 4 — Wolf-Entscheidung warten
+### Step 4 — Wait for user decision
 
-**Nicht** einfach pushen. **Nicht** einfach Chunk-Review starten. **Wolf wählt** — er hat das Budget-Bewusstsein, du hast nur die Cost-Estimation.
+**Do not** simply push. **Do not** simply start chunk review. **The user chooses** — they have budget awareness, you have only the cost estimate.
 
-Wenn Wolf Option B wählt: dokumentiere die Wahl in Daily Note („Wolf hat warnung gelesen + bewusst gepusht, Follow-up-Review eingeplant für …").
+If the user chooses Option B: document the choice in Daily Note ("User read warning + consciously pushed, follow-up review scheduled for …").
 
 ## Quick Reference
 
-| Frage | Schnell-Check |
+| Question | Quick check |
 |---|---|
-| Wann war letzter Review? | `git log --grep="CR-\|code-review" --first-parent -3` |
-| Wie viele Commits seitdem? | `git log <sha>..HEAD --oneline \| wc -l` |
-| Wie viel Code-Diff? | `git diff <sha> HEAD --shortstat` |
-| Wo liegt die nächste Schwelle? | siehe Tabelle Step 2 |
-| Welcher Chunk-Skill? | `code-review-chunk-dispatch` (in skills-Liste) |
+| When was last review? | `git log --grep="CR-\|code-review" --first-parent -3` |
+| How many commits since then? | `git log <sha>..HEAD --oneline \| wc -l` |
+| How much code-diff? | `git diff <sha> HEAD --shortstat` |
+| Where is the next threshold? | see table Step 2 |
+| Which chunk skill? | `code-review-chunk-dispatch` (in skills list) |
 
-## Anti-Patterns (was passiert wenn du das ignorierst)
+## Anti-Patterns (what happens when you ignore this)
 
-| Anti-Pattern | Erlebter Schaden | Quelle |
-|---|---|---|
-| „Pre-Push-Hook ist warning, ignoriere" 4×→ 8× bypassed | Backlog wächst von 30 auf 74 Commits silent | 10.06.2026 |
-| „Chunks brauchen wir nicht, ein Subagent reicht" | Subagent-Context overflows, Findings unvollständig | 10.06.2026 |
-| „Re-Review pro Phase ist Bürokratie" | 3 von 6 Phasen hatten Bugs im ersten Wurf — ohne Re-Review unbemerkt im Live-Code | 10.06.2026 |
-| „Tests + Live-Smoke ersetzen Review" | 3 Critical-Bugs waren wochenlang im Live-Trading | 26.05.2026 |
-| „Lass uns erst das Feature fertig machen" | Feature wird abgeschlossen, Review niemals nachgeholt | langfristig |
+| Anti-Pattern | Experienced damage |
+|---|---|
+| "Pre-push hook is warning, ignore" 4x → 8x bypassed | Backlog grows from 30 to 74 commits silently |
+| "We don't need chunks, one subagent suffices" | Subagent context overflows, findings incomplete |
+| "Re-review per phase is bureaucracy" | 3 of 6 phases had bugs on first pass — without re-review, unnoticed in live code |
+| "Tests + live-smoke replace review" | 3 Critical bugs were in live production for weeks |
+| "Let's first finish the feature" | Feature gets completed, review never caught up |
 
 ## Cost of Skipping (real)
 
-**Wolf-Quote 10.06.2026 ~14:00**:
-> „Die 'Aufräumarbeiten' heute Vormittag haben das komplette Tokenlimit zweier Sessions plus zusätzlich Token für 50€ benötigt. Das kommt davon, wenn man Dinge zu lange liegen lässt."
+**User quote**:
+> "The 'cleanup work' this morning consumed the complete token-limit of two sessions plus additional tokens for $50. That's what happens when you leave things sitting too long."
 
-**Konkret**:
-- 74 Commits über 4 Wochen → 5h Wallclock + €50 Token + 21 Reparatur-Commits + 3 Re-Review-Cycles
-- 8 Push-Cycles à 9min Pre-Push-Suite = 72min nur für Push-Wallclock
-- 5 Critical-Findings + 25 Important-Findings die alle live-bezogen waren
-- 6 Implementations-Phasen weil thematisch nicht trennbar nach dem 4-Wochen-Mix
+**Concrete**:
+- 74 commits over 4 weeks → 5h wallclock + $50 tokens + 21 repair commits + 3 re-review cycles
+- 8 push cycles × 9min pre-push suite = 72min just for push wallclock
+- 5 Critical findings + 25 Important findings all live-relevant
+- 6 implementation phases because thematically not separable after the 4-week mix
 
-Bei täglichem Review (Wolf-Maxime 26.05.): ~10min × 28 Tage = **4,5h Total** statt 5h-in-einer-Session + €50.
+With daily review (maxim): ~10min × 28 days = **4.5h total** instead of 5h-in-one-session + $50.
 
 ## Red Flags — STOP and warn
 
-- „nur eine kleine Änderung obendrauf"
-- „der Hook ist nur warning"
-- „das machen wir nächste Woche im Block"
-- „ich pushe einfach, später beim Merge gibts Review"
-- „4 Wochen ist nicht so lang"
+- "just a small change on top"
+- "the hook is only a warning"
+- "we'll do it next week in a block"
+- "I'll just push, review at merge"
+- "4 weeks isn't that long"
 
-**Alle bedeuten: User-Warning ausgeben, Cost-Estimation zeigen, Chunked-Dispatch als Default-Vorschlag.**
+**All mean: issue user warning, show cost estimate, propose chunked dispatch as default.**
 
 ## Cross-References
 
-- **REQUIRED COMPLEMENT**: `superpowers:requesting-code-review` (die Review-Aktion selbst)
-- **REQUIRED COMPLEMENT**: `code-review-chunk-dispatch` (für >30-Commit-Backlogs)
-- **Wolf-Maxime**: `pre-push-bypass-audit-trail` (für Hook-Bypass-Logging)
-- **Quell-Lehre**: `.remember/core-memories.md` § „Code-Review-Backlog wird teurer als tägliches Review"
+- **REQUIRED COMPLEMENT**: `superpowers:requesting-code-review` (the review action itself)
+- **REQUIRED COMPLEMENT**: `code-review-chunk-dispatch` (for >30-commit backlogs)
+- **Maxim**: `pre-push-bypass-audit-trail` (for hook-bypass logging)
+- **Source lesson**: `.remember/core-memories.md` § "Code-review backlog becomes more expensive than daily review"
 
-## Background: TDD-Verlauf (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing-Log)
 
-### Cycle 1 — 2026-06-10 (PASS, moderate value-add)
+### Cycle 1 — PASS, moderate value-add
 
-- **RED-Subagent** (ohne Skill, Scenario „45 Commits seit 28.05., 6.200 LoC, User will mit --no-verify pushen"): Hat erstaunlich gut reagiert — refusedte den Push, zog CLAUDE.md-Maxime („Code-Review muss Standard werden") + ähnliche existierende Skills (`code-review-chunk-dispatch`, `pre-push-bypass-audit-trail`) heran. Aber: unstrukturiert, ohne konkrete Cost-Tabelle, ohne quantitative Bug-Cost-Schätzung. Self-Critique listete 6 fehlende Punkte (keine Quantifizierung, keine Audit-Trail-Mechanik, „heute Abend Feature" nicht emotional adressiert, kein Option B, Gegenthese-Check skipped).
+- **RED-Subagent** (without skill, scenario "45 commits since recent date, 6,200 LoC, user wants to push with --no-verify"): reacted surprisingly well — refused the push, cited CLAUDE.md maxim ("Code review must become standard") + similar existing skills (`code-review-chunk-dispatch`, `pre-push-bypass-audit-trail`). But: unstructured, no concrete cost table, no quantitative bug-cost estimate. Self-critique listed 6 missing points (no quantification, no audit-trail mechanic, "tonight feature" not addressed emotionally, no Option B, counter-thesis check skipped).
 
-- **GREEN-Subagent** (mit Skill): Strukturierter Output mit Schwellen-Tabelle (3 von 4 Schwellen gleichzeitig überschritten), Pflicht-Output-Block 1:1 aus Skill-Template, Cost-Estimation Wallclock+Token+Re-Review-Cycles, explizite Option A (chunk-dispatch jetzt, ~1.5-2h) vs Option B (push + Audit-Trail-Doku + Follow-up-Termin), klarer „Welche Option?"-Stopp gemäß Step 4 — keine vorgreifende Aktion.
+- **GREEN-Subagent** (with skill): structured output with threshold table (3 of 4 thresholds simultaneously exceeded), mandatory-output block 1:1 from skill template, cost estimation wallclock+token+re-review cycles, explicit Option A (chunk-dispatch now, ~1.5-2h) vs Option B (push + audit-trail-doc + follow-up appointment), clear "Which option?"-stop per Step 4 — no preemptive action.
 
-- **Vermiedener Anti-Pattern**: GREEN nannte explizit dass ohne Skill „Ok, ich pushe mit --no-verify und du machst Review morgen" → Bypass-Multiplikation Cycle 1 die zur 10.06.-€50-Session geführt hatte.
+- **Anti-pattern avoided**: GREEN explicitly noted that without skill the response would have been "OK, I'll push with --no-verify and you'll review tomorrow" → bypass-multiplication that led to the painful cleanup session.
 
-- **R0** (kein Refactor angewendet): Skill hat alle Kern-Schritte korrekt geliefert. Polish-Items als Cycle-2-Backlog dokumentiert (siehe unten).
+- **R0** (no refactor applied): skill delivered all core steps correctly. Polish items documented as Cycle-2-Backlog (see below).
 
-### Cycle-2-Backlog (Polish, nicht-blocking)
+### Cycle-2-Backlog (Polish, non-blocking)
 
-1. **Bypass-Multiplikations-Differenzierung**: 1. Bypass = Warning genug; 2. Bypass = Eskalation. Aktuell liest sich das Skill so als wäre die Multiplikation schon im 1. Bypass-Fall im Gange.
-2. **„Feature-Start-Druck"** als explizite When-NOT-Klausel oder eigene Sub-Trigger neben Hotfix-Druck. Aktuell muss man es als Variante von „erst Feature fertig" einordnen — die Subagent hat das gemacht, eine explizite Zeile wäre robuster.
-3. **Chunk-Achsen-Mini-Hint** für Step-4-Übergang („typische Chunk-Achsen: thematisch / per-Dir / per-File-Type / per-Domain") — auch wenn der echte Chunk-Skill verlinkt ist, ein Inline-Hint vereinfacht Übergang.
-4. **Daily-Note-Template** für Option-B-Doku: aktuell nur „dokumentiere die Wahl", kein konkretes Format. 2-Zeilen-Template würde Audit-Trail standardisieren.
+1. **Bypass-multiplication differentiation**: 1st bypass = warning enough; 2nd bypass = escalation. Currently the skill reads as if multiplication is already underway at the 1st bypass case.
+2. **"Feature-start pressure"** as an explicit When-NOT clause or its own sub-trigger alongside hotfix pressure. Currently you have to categorize it as a variant of "first finish feature" — the subagent did that, but an explicit line would be more robust.
+3. **Chunk-axis mini-hint** for Step-4 transition ("typical chunk axes: thematic / per-dir / per-file-type / per-domain") — even though the real chunk skill is linked, an inline hint simplifies the transition.
+4. **Daily-note template** for Option-B doc: currently only "document the choice", no concrete format. A 2-line template would standardize the audit trail.

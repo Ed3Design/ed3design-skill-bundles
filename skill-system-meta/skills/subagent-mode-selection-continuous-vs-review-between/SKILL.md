@@ -1,6 +1,6 @@
 ---
 name: subagent-mode-selection-continuous-vs-review-between
-description: Use when starting a multi-task workflow via `superpowers:subagent-driven-development` (SDD) and the user needs to choose between two execution modes: (A) "Continuous Execution" — all tasks dispatched back-to-back without user-checkpoint between them (SDD-default), or (B) "Review-Between-Tasks" — user wants to inspect each task's output before authorizing the next. The choice depends on task-type-classification: mechanical-implementation-tasks (TDD with complete code in plan, deterministic outcomes) are continuous-safe — user can review at end. Judgment-heavy-tasks (forensik, interpretation-of-numbers, strategy-decisions, architectural-pivots based on subagent-output) require review-between because the next task's prompt depends on the prior task's outcome-interpretation. Trigger phrases like "soll ich continuous oder mit Pausen zwischen Tasks", "review zwischen den Schritten", "subagent-driven mit checkpoints", "nach jedem Task pausieren", "Continuous-Execution oder Pause-zwischen", "wie viele Tasks ohne Wolf-Wahl in Folge". Do NOT load for single-task workflows (no choice to make), for non-SDD workflows (use the direct task tool), for purely-mechanical TDD-implementations where all tasks have complete code in the plan and no judgment is needed (just go continuous), or for the very first task of a workflow (always start with one task — mode-choice comes after Wolf sees the first output). Encodes the 2026-06-02 Wolf-Choice-Pattern: Tasks 1-5 of C1-Backtest-Simulation (mechanical TDD with complete code in plan) were continuous = ~3h saved compared to 5× wait-for-Wolf-checkpoint. Tasks 6-8 (Live-Run, Forensik, Gate-Review = judgment-heavy with strategic implications) were continuous-execute but each had a Wolf-presentation-pause at end because the strategic findings required Wolf-direction. Phase 0 D1-D4 forensik (each interpretation-heavy) was REVIEW-BETWEEN — Wolf explicitly requested "Jeweils Review zwischen den Schritten" after the per-task outputs needed inspection-and-direction.
+description: Use when starting a multi-task workflow via `superpowers:subagent-driven-development` (SDD) and the user needs to choose between two execution modes: (A) "Continuous Execution" — all tasks dispatched back-to-back without a user checkpoint between them (SDD default), or (B) "Review-Between-Tasks" — user wants to inspect each task's output before authorizing the next. The choice depends on task-type classification: mechanical-implementation tasks (TDD with complete code in plan, deterministic outcomes) are continuous-safe — user can review at the end. Judgment-heavy tasks (forensics, interpretation of numbers, strategic decisions, architectural pivots based on subagent output) require review-between because the next task's prompt depends on the prior task's outcome interpretation. Trigger phrases like "should I run continuous or with pauses between tasks", "review between steps", "subagent-driven with checkpoints", "pause after each task", "continuous execution or pause-between", "how many tasks without user choice in a row". Do NOT load for single-task workflows (no choice to make), for non-SDD workflows (use the direct task tool), for purely mechanical TDD implementations where all tasks have complete code in the plan and no judgment is needed (just go continuous), or for the very first task of a workflow (always start with one task — mode choice comes after the user sees the first output). Encodes the choice pattern: in one production-domain workflow, Tasks 1-5 of a backtest simulation (mechanical TDD with complete code in plan) were continuous = ~3h saved compared to 5× wait-for-user checkpoints. Tasks 6-8 (live-run, forensics, gate-review = judgment-heavy with strategic implications) were continuous-execute but each had a user-presentation pause at end because the strategic findings required user direction. A separate Phase-0 forensic sequence was REVIEW-BETWEEN — user explicitly requested "Review between each step" after the per-task outputs needed inspection and direction.
 
 ---
 
@@ -8,113 +8,111 @@ description: Use when starting a multi-task workflow via `superpowers:subagent-d
 ## What this skill does
 
 When using `superpowers:subagent-driven-development` for a multi-task workflow, classify each task's risk-of-divergence-from-user-intent and propose either:
-- **Continuous Execution** (Default SDD behaviour, no user-checkpoint between tasks)
-- **Review-Between-Tasks** (user authorizes next-task only after seeing prior-task-output)
+- **Continuous Execution** (default SDD behaviour, no user checkpoint between tasks)
+- **Review-Between-Tasks** (user authorizes next task only after seeing prior-task output)
 
-Wrong choice has real cost: continuous on judgment-heavy tasks wastes resources and produces drift; review-between on mechanical tasks creates 5+ wait-cycles for the user.
+Wrong choice has real cost: continuous on judgment-heavy tasks wastes resources and produces drift; review-between on mechanical tasks creates 5+ wait cycles for the user.
 
-## Task-Type-Classification
+## Task-type classification
 
-The 3-factor-test for "is this task mechanical-enough to continuous?":
+The 3-factor test for "is this task mechanical-enough for continuous?":
 
-### Factor 1 — Spec-Completeness
+### Factor 1 — Spec completeness
 - ✅ Mechanical: Plan-Doc has complete code blocks for every step. Implementation = type-and-test.
 - ❌ Judgment-heavy: Plan-Doc says "decide which filter to apply first" or "interpret the numbers and write recommendation"
 
-### Factor 2 — Outcome-Determinism
-- ✅ Mechanical: Outcome is binary-checkable (test pass/fail, file exists, commit-SHA produced)
-- ❌ Judgment-heavy: Outcome is text-interpretation, strategic-implication, or downstream-task-influencing-data
+### Factor 2 — Outcome determinism
+- ✅ Mechanical: Outcome is binary-checkable (test pass/fail, file exists, commit SHA produced)
+- ❌ Judgment-heavy: Outcome is text interpretation, strategic implication, or downstream-task-influencing data
 
-### Factor 3 — Next-Task-Dependency
+### Factor 3 — Next-task dependency
 - ✅ Mechanical: Next task in plan starts regardless of prior task's specifics
-- ❌ Judgment-heavy: Next task's spec/prompt depends on what prior task found (e.g., "if D1 shows C1 is winner-dropper, then dispatch D2; if D1 shows otherwise, dispatch different forensik")
+- ❌ Judgment-heavy: Next task's spec/prompt depends on what prior task found (e.g., "if D1 shows X is winner-dropper, then dispatch D2; if D1 shows otherwise, dispatch a different forensic")
 
 **All 3 ✅** → Continuous Execution safe. **Any 1 ❌** → Review-Between.
 
-## The 2026-06-02 Wolf-Choice-Pattern (Genesis)
+## The choice pattern (Genesis)
 
 Three workflow segments illustrated the choice clearly:
 
-### Segment 1 — C1-Backtest-Simulation Tasks 1-5 → Continuous ✅
+### Segment 1 — Backtest-Simulation Tasks 1-5 → Continuous ✅
 
-| Task | All 3 Factors? | Mode |
+| Task | All 3 factors? | Mode |
 |---|---|---|
-| 1: simulate_pause_periods + 6 Tests | ✅✅✅ (complete code, test-pass binary, T2 wants paused_trade_ids in T1's spec) | Continuous |
-| 2: apply_z1_filters extension | ✅✅✅ | Continuous |
+| 1: simulate_pause_periods + 6 tests | ✅✅✅ (complete code, test-pass binary, T2 uses T1's output spec) | Continuous |
+| 2: apply_filters extension | ✅✅✅ | Continuous |
 | 3: _load_full_history loader | ✅✅✅ | Continuous |
 | 4: run_backtest integration | ✅✅✅ | Continuous |
-| 5: Aggregate-Cross-Commit-Review + Fixes | ✅✅ (findings are textual but downstream-actionable per fixes-routine) | Continuous |
+| 5: Aggregate cross-commit review + fixes | ✅✅ (findings are textual but downstream-actionable per fixes routine) | Continuous |
 
-Total continuous-time: ~3h, no Wolf-Wait-Cycles. Saved ~30-60 min of wait-time per checkpoint.
+Total continuous time: ~3h, no user wait cycles. Saved ~30-60 min of wait time per checkpoint.
 
-### Segment 2 — Tasks 6-8 (Live-Run, Forensik, Gate-Review) → Continuous-with-end-presentation ⚠
+### Segment 2 — Tasks 6-8 (live-run, forensics, gate-review) → Continuous-with-end-presentation ⚠
 
 | Task | Mechanical-enough? | Mode |
 |---|---|---|
-| 6: Live-Run on swatserver | ✅✅⚠ (mechanical, but output-numbers drive Task 7 spec) | Continuous, but pause AFTER for Wolf to direct Task 7-8 |
-| 7: Forensik-Note Phase 1 (C1-Befund) | ⚠⚠⚠ (interpretation-heavy, judgment in writing) | Continuous (writing is mechanical), but pause at end for Wolf review |
-| 8: Gate-Review Forensik (Phase 2) | ⚠⚠⚠ (verdict-judgment) | Continuous |
+| 6: Live-run on server | ✅✅⚠ (mechanical, but output numbers drive Task 7 spec) | Continuous, but pause AFTER for user to direct Task 7-8 |
+| 7: Forensics note (findings) | ⚠⚠⚠ (interpretation-heavy, judgment in writing) | Continuous (writing is mechanical), but pause at end for user review |
+| 8: Gate-review forensics | ⚠⚠⚠ (verdict judgment) | Continuous |
 
-Wolf was alerted before Task 6 (Live-Run): „Live-Run-Numbers könnten unexpected sein, dann Tasks 7-8 wollen Wolf-Direction". Wolf chose: continuous, but pause-after-Task-6 if numbers surprising. → Numbers WERE surprising → orchestrator paused at end of Task 6 with Wolf-Direction-Frage.
+The user was alerted before Task 6 (live-run): "Live-run numbers could be unexpected, then Tasks 7-8 want user direction". User chose: continuous, but pause-after-Task-6 if numbers surprising. → Numbers WERE surprising → orchestrator paused at end of Task 6 with a user-direction question.
 
-### Segment 3 — Phase 0 D1-D4 Forensik → Review-Between ❌-Continuous
+### Segment 3 — Phase 0 D1-D4 forensics → Review-Between ❌-Continuous
 
-| Task | Factor-Failures | Mode |
+| Task | Factor failures | Mode |
 |---|---|---|
-| D1 AvgPnL-Drop-Forensik | Factor 3 fail (D2-spec depends on D1-Befund — if C1 = Winner-Dropper, D2 audits look-ahead; if C1 = Loser-Dropper, D2 skipped) | Review-Between |
-| D2 KW13-Anomalie-Forensik | Factor 3 fail (D3-spec depends on D1+D2 jointly) | Review-Between |
-| D3 Multi-Run-Median-Stabilität | Factor 3 fail (D4-Compound-Gate-Werte depend on D3-Power-Analyse) | Review-Between |
-| D4 Compound-Gate-Spec | mechanical given D3-belegte Werte → könnte continuous, aber Wolf explizit „Review-zwischen-Schritten" | Review-Between |
+| D1 AvgPnL-drop forensic | Factor 3 fail (D2 spec depends on D1 finding — if result = Winner-Dropper, D2 audits look-ahead; if Loser-Dropper, D2 skipped) | Review-Between |
+| D2 anomaly forensic | Factor 3 fail (D3 spec depends on D1+D2 jointly) | Review-Between |
+| D3 multi-run median stability | Factor 3 fail (D4 compound-gate values depend on D3 power analysis) | Review-Between |
+| D4 compound-gate spec | mechanical given D3-confirmed values → could be continuous, but user explicitly asked "review between each step" | Review-Between |
 
-Wolf explizit: „Jeweils Review zwischen den Schritten" — because each task's output meaningfully changed the next task's prompt.
+User explicit: "Review between each step" — because each task's output meaningfully changed the next task's prompt.
 
 ## How to apply
 
-### At workflow-start
+### At workflow start
 
-1. **Read the Plan-Doc**: for each task, count Factor-Checks (✅ or ❌)
+1. **Read the Plan-Doc**: for each task, count factor checks (✅ or ❌)
 2. **Classify each task** as Mechanical / Hybrid / Judgment-heavy
 3. **Propose modes per segment**:
    - Sequence of all-Mechanical tasks → continuous, end-presentation
-   - Hybrid tasks (✅✅⚠) → continuous-with-pause-AFTER for next-task-direction
-   - Judgment-heavy tasks → review-between (default to "ask Wolf after each")
-4. **Surface the proposal to Wolf** with AskUserQuestion: "I propose: Tasks 1-5 continuous, then pause after 5 for review. Tasks 6-8 each pause after for Wolf-direction. OK?"
+   - Hybrid tasks (✅✅⚠) → continuous-with-pause-AFTER for next-task direction
+   - Judgment-heavy tasks → review-between (default to "ask user after each")
+4. **Surface the proposal to the user** with AskUserQuestion: "I propose: Tasks 1-5 continuous, then pause after 5 for review. Tasks 6-8 each pause after for user direction. OK?"
 
-### Mid-workflow Re-Classification
+### Mid-workflow re-classification
 
-Wenn ein Task einen unexpected Output liefert (mechanical task wirkt suddenly judgment-heavy):
-- STOP the continuous-execution
-- Present findings to Wolf
+If a task delivers an unexpected output (mechanical task suddenly looks judgment-heavy):
+- STOP the continuous execution
+- Present findings to the user
 - Re-classify remaining tasks
-- Resume per new mode-choice
+- Resume per new mode choice
 
-Beispiel heute: D1-Subagent fand "C1 = Winner-Dropper" (+4.54 % blocked-AvgPnL). Das war Subagent-Output-INTERPRETATION-required → orchestrator korrekt continuous-execute aber pause-at-end for Wolf-Direction.
+Example: D1 subagent found "winner-dropper" (+4.54% blocked-AvgPnL). That was subagent-output-INTERPRETATION-required → orchestrator correctly continuous-executed but paused-at-end for user direction.
 
 ## Anti-patterns
 
-- ❌ **All-Continuous-by-Default ohne Factor-Check** — heute klar gezeigt: D1-D4 hätten DRIFT verursacht wenn continuous gewesen (D2-prompt hätte D1-Befund nicht reflektiert)
-- ❌ **All-Review-Between-by-Default** — wäre für C1-Backtest-Tasks-1-5 5× wait-cycles à 30 Min = 2.5h verloren
-- ❌ **Mode-Wahl nur am Workflow-Start ohne Re-Klassifikation** — Outputs können Klassifikation umkippen
-- ❌ **Wolf-Wahl 'continuous' interpretieren als 'auch nach unerwarteten Outputs continuous'** — heute korrekt: Tasks 6-8 waren als 'continuous' begonnen, aber pause-after-Task-6 wegen Output-Surprise war richtig
+- ❌ **All-Continuous-by-Default without factor check** — clearly shown: D1-D4 would have caused DRIFT had they run continuous (D2 prompt would not have reflected D1's finding)
+- ❌ **All-Review-Between-by-Default** — for Tasks 1-5 above this would have been 5× wait cycles à 30 min = 2.5h lost
+- ❌ **Mode choice only at workflow start without re-classification** — outputs can flip the classification
+- ❌ **Interpreting user choice 'continuous' as 'still continuous after unexpected outputs'** — pausing after Task 6 due to output surprise was correct even though the segment was begun as 'continuous'
 
-## Komplementär zu `superpowers:subagent-driven-development`
+## Complementary to `superpowers:subagent-driven-development`
 
-Dieses Skill ist eine **Pre-Workflow-Klassifikations-Sub-Routine** für SDD. Es ersetzt nicht das SDD-Skill, sondern ergänzt es um eine Mode-Selection-Diszplin bevor die `Continuous execution` -Default-Setting des SDD-Workflows blind übernommen wird.
+This skill is a **pre-workflow classification sub-routine** for SDD. It does not replace the SDD skill but extends it with a mode-selection discipline before the `Continuous execution` default setting of the SDD workflow is blindly adopted.
 
-In SDD-Skill steht: „Continuous execution: Do not pause to check in with your human partner between tasks." Das ist der Standard. **Diese Skill liefert die Klassifikation, wann dieser Standard NICHT die richtige Wahl ist.**
+The SDD skill states: "Continuous execution: Do not pause to check in with your human partner between tasks." That is the standard. **This skill provides the classification of when that standard is NOT the right choice.**
 
 ## Promotion checklist (DRAFT → GA)
 
-- [ ] Integrate 3-factor-classification as a callable AskUserQuestion-template
-- [ ] Add concrete examples from at least 1 non-trading domain (e.g., a frontend-design-feature, a deploy-pipeline-refactor)
-- [ ] Coordinate with `superpowers:subagent-driven-development` skill — propose upstream-PR that integrates this as a section
-- [ ] Document the Re-Classification-Trigger („STOP and Re-Classify when") as a hard rule
-- [ ] Test in a Wolf-session where the choice is ambiguous and verify the AskUserQuestion-Template surfaces it clearly
+- [ ] Integrate 3-factor classification as a callable AskUserQuestion template
+- [ ] Add concrete examples from at least 1 non-trading domain (e.g., a frontend design feature, a deploy-pipeline refactor)
+- [ ] Coordinate with `superpowers:subagent-driven-development` skill — propose upstream PR that integrates this as a section
+- [ ] Document the re-classification trigger ("STOP and re-classify when") as a hard rule
+- [ ] Test in a session where the choice is ambiguous and verify the AskUserQuestion template surfaces it clearly
 
 ## Genesis-session metadata
 
-- **Date:** 2026-06-02
-- **Vault:** ClaudetteV
-- **Workflow-domains:** C1-Backtest-Engineering (8 Tasks SDD), Live-Run Forensik (4 D-Tasks)
-- **ABC-Verdict:** A ✅ Repeatable (3-Faktor-Check ist mechanisch), B ✅ Prevents-Error (heute klar: All-Continuous wäre für D1-D4 falsch gewesen), C ✅ Transferable (jede Multi-Task SDD-Workflow Wahl)
-- **Real-world impact estimate:** Heute durch korrekte Wahl ~3h gewonnen (Tasks 1-5 continuous statt ~5 Wolf-Wait-Cycles) UND DRIFT-VERMIEDEN (D1-D4 als Review-Between statt blind-continuous)
+- **Workflow domains:** backtest engineering (8 tasks SDD), live-run forensics (4 D-tasks)
+- **ABC verdict:** A ✅ Repeatable (3-factor check is mechanical), B ✅ Prevents error (all-continuous would have been wrong for D1-D4), C ✅ Transferable (any multi-task SDD workflow choice)
+- **Real-world impact estimate:** through correct choice ~3h gained (Tasks 1-5 continuous instead of ~5 user wait cycles) AND DRIFT AVOIDED (D1-D4 as review-between instead of blind-continuous)
