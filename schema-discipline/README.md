@@ -13,6 +13,12 @@
 | `schema-use-case-mismatch-detection` | DB schema doesn't fit the use case (e.g. NOT NULL where NULL is expected) |
 | `explicit-unknown-counter-vs-coalesce-mask` | COALESCE hides NULL values rendered as 0 |
 
+## 🤖 Sub-Agent (1)
+
+| Agent | Description |
+|---|---|
+| `schema-validator` | Read-only sub-agent. Cross-checks code SQL refs (SELECT/INSERT/UPDATE/WHERE) against `information_schema` ground truth. Detects wishful-column / silent-empty-result / NULL-on-NOT-NULL / dead-column / stale-enum-constant drift. Sonnet model |
+
 ## Complementary to
 
 - `db-schema-inspector.py` tool from the `token-savers` bundle — structured schema lookup as CLI tool

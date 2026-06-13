@@ -6,14 +6,14 @@
 
 | Bundle | Skills | Hooks | Agents | Tools | Status |
 |---|---|---|---|---|---|
-| [`token-savers`](./token-savers/) | 4 | — | — | 5 | ✅ v0.1.0 |
+| [`token-savers`](./token-savers/) | 4 | **1** | — | 5 | ✅ v0.2.0 |
 | [`code-quality`](./code-quality/) | 16 | **4** | **1** (`code-reviewer`) | — | ✅ v0.2.0 |
 | [`planning-disciplines`](./planning-disciplines/) | 10 | — | **1** (`planning-assistant`) | — | ✅ v0.2.0 |
 | [`async-forensik`](./async-forensik/) | 7 | — | **1** (`forensik-detective`) | — | ✅ v0.2.0 |
-| [`schema-discipline`](./schema-discipline/) | 6 | — | — | — | ✅ v0.1.0 |
-| [`skill-system-meta`](./skill-system-meta/) | 5 | — | — | — | ✅ v0.1.0 |
+| [`schema-discipline`](./schema-discipline/) | 6 | — | **1** (`schema-validator`) | — | ✅ v0.2.0 |
+| [`skill-system-meta`](./skill-system-meta/) | 5 | **1** | — | — | ✅ v0.2.0 |
 
-**Total**: 48 skills + 4 hooks + 3 sub-agents + 5 tools — patterns extracted from real-world engineering practice and structured for reuse.
+**Total**: 48 skills + 6 hooks + 4 sub-agents + 5 tools — patterns extracted from real-world engineering practice and structured for reuse.
 
 ## 🚀 Quickstart
 

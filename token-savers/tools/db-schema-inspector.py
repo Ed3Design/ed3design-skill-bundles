@@ -1,33 +1,46 @@
 #!/usr/bin/env python3
-"""db-schema-inspector.py — Erfüllt CLAUDE.md SQL-Maxime „Spalten via Schema verifizieren".
+"""db-schema-inspector.py — Schema verification via information_schema.
 
-Sprint 2 Item 5b aus token-optimierung-Roadmap (12.06.2026).
-
-Pattern: statt `\\d table` + ad-hoc Output-Parsen ein strukturiertes JSON
-mit column_name + data_type + is_nullable + column_default pro Spalte.
-Verhindert „Wishful-Column"-Anti-Pattern (08.06.2026 v3-Briefing-Bug).
-
-Default-Connection: swatserver ultimative-platform DB via ssh+docker exec.
-Override per `--db-url` oder env `DB_INSPECTOR_URL`.
+Pattern: instead of `\\d table` + ad-hoc output parsing, structured JSON with
+column_name + data_type + is_nullable + column_default per column. Prevents
+"wishful-column" anti-pattern (SELECT on non-existent columns).
 
 Usage:
-    db-schema-inspector.py v3_signals
-    db-schema-inspector.py v3_trades --connection ultimative
-    db-schema-inspector.py mieter --connection mfh
-    db-schema-inspector.py x --db-url postgresql://user:pass@host/db
+    db-schema-inspector.py <table>                       # uses default connection
+    db-schema-inspector.py <table> --connection <name>   # named connection from config
+    db-schema-inspector.py <table> --db-url postgresql://user:pass@host/db
+    db-schema-inspector.py --init                        # write example config
+
+Configuration:
+    Reads ~/.config/db-schema-inspector/config.json. Example:
+
+    {
+      "connections": {
+        "myapp": {
+          "ssh_host": "user@server",
+          "container": "myapp-db",
+          "user": "dbuser",
+          "db": "myapp"
+        },
+        "local": {
+          "db_url": "postgresql://user:pass@localhost/mydb"
+        }
+      },
+      "default_connection": "myapp"
+    }
 
 Output (JSON):
     {
-      "table": "v3_signals",
+      "table": "<table>",
       "schema": "public",
-      "column_count": 23,
+      "column_count": N,
       "columns": [
         {"name": "id", "type": "integer", "nullable": false, "default": "nextval(...)"},
         ...
       ]
     }
 
-Token-Cost: ~50-200 Tokens pro Inspect (vs ~500-1500 für `\\d table` Raw-Output).
+Token cost: ~50-200 tokens per inspect (vs ~500-1500 for `\\d table` raw output).
 """
 
 from __future__ import annotations
@@ -38,36 +51,56 @@ import os
 import shlex
 import subprocess
 import sys
+from pathlib import Path
 
 # ──────────────────────────────────────────────────────────────────────────
-# Config — Pre-Defined Connections (Wolf-Setup-spezifisch)
+# Config loading
 # ──────────────────────────────────────────────────────────────────────────
 
-CONNECTIONS = {
-    # ultimative-platform Trading-DB (default)
-    "ultimative": {
-        "ssh_host": "eddie@swatserver",
-        "container": "ultimative-db",
-        "user": "eddie",
-        "db": "trader",
+CONFIG_PATH = Path.home() / ".config" / "db-schema-inspector" / "config.json"
+
+EXAMPLE_CONFIG = {
+    "connections": {
+        "example-ssh": {
+            "ssh_host": "user@server",
+            "container": "myapp-db",
+            "user": "dbuser",
+            "db": "myapp"
+        },
+        "example-local": {
+            "db_url": "postgresql://user:pass@localhost/mydb"
+        }
     },
-    # Mietverwaltung-DB
-    "mfh": {
-        "ssh_host": "eddie@swatserver",
-        "container": "hausverwaltung-loebejun-hausverwaltung-db-1",
-        "user": "eddie",
-        "db": "mfh",
-    },
-    # pvista PV-Monitor-DB
-    "pvista": {
-        "ssh_host": "eddie@swatserver",
-        "container": "pvista-db",
-        "user": "pvista",
-        "db": "pvista",
-    },
+    "default_connection": "example-ssh"
 }
 
-DEFAULT_CONNECTION = "ultimative"
+
+def load_config() -> dict:
+    """Load config from ~/.config/db-schema-inspector/config.json or return empty."""
+    if not CONFIG_PATH.exists():
+        return {}
+    try:
+        return json.loads(CONFIG_PATH.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"⚠ Config-load error: {e}", file=sys.stderr)
+        return {}
+
+
+def init_config() -> int:
+    """Write example config to ~/.config/db-schema-inspector/config.json."""
+    if CONFIG_PATH.exists():
+        print(f"Config already exists: {CONFIG_PATH}", file=sys.stderr)
+        return 1
+    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG_PATH.write_text(json.dumps(EXAMPLE_CONFIG, indent=2))
+    print(f"✅ Example config written to {CONFIG_PATH}")
+    print("   Edit connections + default_connection for your setup.")
+    return 0
+
+
+CONFIG = load_config()
+CONNECTIONS = CONFIG.get("connections", {})
+DEFAULT_CONNECTION = CONFIG.get("default_connection")
 
 # ──────────────────────────────────────────────────────────────────────────
 # Core SQL
@@ -194,31 +227,50 @@ def query_via_url(db_url: str, table: str, schema: str = "public") -> dict:
 
 def main() -> int:
     p = argparse.ArgumentParser(
-        description="Schema-Inspect für Tabellen via information_schema."
+        description="Schema inspect for tables via information_schema."
     )
-    p.add_argument("table", help="Tabellen-Name (z.B. v3_signals)")
+    p.add_argument("table", nargs="?", help="Table name (e.g. v3_signals)")
     p.add_argument(
-        "--connection",
-        "-c",
+        "--init", action="store_true",
+        help=f"Write example config to {CONFIG_PATH} and exit",
+    )
+    p.add_argument(
+        "--connection", "-c",
         default=os.environ.get("DB_INSPECTOR_CONN", DEFAULT_CONNECTION),
-        help=f"Pre-defined connection ({list(CONNECTIONS.keys())}); default 'ultimative'",
+        help=f"Named connection from config ({list(CONNECTIONS.keys()) or 'none configured'})",
     )
     p.add_argument(
         "--db-url",
         default=os.environ.get("DB_INSPECTOR_URL"),
-        help="Override: postgresql://...-URL für lokales psql (skipt ssh+docker)",
+        help="Override: postgresql://...-URL for direct psql (skips ssh+docker)",
     )
     p.add_argument(
-        "--schema",
-        default="public",
-        help="Schema-Name (default: public)",
+        "--schema", default="public",
+        help="Schema name (default: public)",
     )
     p.add_argument(
-        "--names-only",
-        action="store_true",
-        help="Output nur Column-Namen-Array (kompakteste Form, ~10-30 Tokens)",
+        "--names-only", action="store_true",
+        help="Output only column name array (most compact, ~10-30 tokens)",
     )
     args = p.parse_args()
+
+    if args.init:
+        return init_config()
+
+    if not args.table:
+        p.error("table is required (or use --init to write example config)")
+
+    if not args.db_url and not args.connection:
+        print("ERROR: No connection configured.", file=sys.stderr)
+        print(f"  Either: db-schema-inspector.py --init   (write example config)", file=sys.stderr)
+        print(f"  Or:     db-schema-inspector.py <table> --db-url postgresql://...", file=sys.stderr)
+        return 2
+
+    # Allow connection-as-db_url via config
+    if args.connection and args.connection in CONNECTIONS:
+        conn_def = CONNECTIONS[args.connection]
+        if "db_url" in conn_def and not args.db_url:
+            args.db_url = conn_def["db_url"]
 
     try:
         if args.db_url:

@@ -1,0 +1,146 @@
+name: Bundle Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Minimum privilege — this workflow only validates structure, no writes anywhere.
+permissions:
+  contents: read
+
+jobs:
+  validate-bundles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Don't fetch PR head from forks with elevated perms. Default is safe but explicit.
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate plugin.json schemas
+        run: |
+          set -e
+          for bundle_dir in */; do
+            manifest="${bundle_dir}.claude-plugin/plugin.json"
+            if [ ! -f "$manifest" ]; then
+              echo "skip ${bundle_dir} (no manifest)"
+              continue
+            fi
+            echo "Validating $manifest..."
+            python3 -c "
+          import json, sys
+          m = json.load(open('$manifest'))
+          required = ['name', 'version', 'description', 'license']
+          missing = [k for k in required if k not in m]
+          assert not missing, f'Missing required keys: {missing}'
+          assert m['name'].replace('-', '').replace('_', '').isalnum(), f'Invalid name: {m[\"name\"]}'
+          assert m['version'].count('.') == 2, f'Invalid version (need semver): {m[\"version\"]}'
+          print(f'  ✅ {m[\"name\"]} v{m[\"version\"]}')
+          "
+          done
+
+      - name: Validate skill frontmatter
+        run: |
+          set -e
+          for skill_md in */skills/*/SKILL.md; do
+            python3 -c "
+          import sys, re
+          content = open('$skill_md').read()
+          assert content.startswith('---\n'), f'No frontmatter: $skill_md'
+          fm_end = content.index('\n---\n', 4)
+          fm = content[4:fm_end]
+          assert re.search(r'^name:\s*\S+', fm, re.M), f'No name in: $skill_md'
+          assert re.search(r'^description:\s*\S+', fm, re.M), f'No description in: $skill_md'
+          name_match = re.search(r'^name:\s*(\S+)', fm, re.M)
+          assert not name_match.group(1).endswith('-DRAFT'), f'DRAFT skill leaked: $skill_md'
+          assert not name_match.group(1).endswith('-STUB'), f'STUB skill leaked: $skill_md'
+          "
+          done
+          echo "  ✅ All skill frontmatters valid"
+
+      - name: Validate hook scripts
+        run: |
+          set -e
+          for hook_sh in */hooks/*.sh; do
+            [ ! -f "$hook_sh" ] && continue
+            test -x "$hook_sh" || (echo "FAIL: $hook_sh not executable" && exit 1)
+            head -1 "$hook_sh" | grep -q "^#!" || (echo "FAIL: $hook_sh missing shebang" && exit 1)
+            bash -n "$hook_sh" || (echo "FAIL: $hook_sh bash syntax error" && exit 1)
+            echo "  ✅ $hook_sh"
+          done
+
+      - name: Validate hooks.json
+        run: |
+          set -e
+          for hooks_json in */hooks/hooks.json; do
+            [ ! -f "$hooks_json" ] && continue
+            python3 -c "
+          import json
+          h = json.load(open('$hooks_json'))
+          assert 'hooks' in h, f'No hooks key in $hooks_json'
+          for event, configs in h['hooks'].items():
+              assert event in ('SessionStart', 'PreToolUse', 'PostToolUse', 'UserPromptSubmit', 'Stop'), f'Unknown event {event} in $hooks_json'
+              for cfg in configs:
+                  assert 'hooks' in cfg, f'No hooks list in $hooks_json'
+          print(f'  ✅ $hooks_json')
+          "
+          done
+
+      - name: Validate agent frontmatter
+        run: |
+          set -e
+          for agent_md in */agents/*.md; do
+            [ ! -f "$agent_md" ] && continue
+            python3 -c "
+          import re
+          content = open('$agent_md').read()
+          assert content.startswith('---\n'), f'No frontmatter: $agent_md'
+          fm_end = content.index('\n---\n', 4)
+          fm = content[4:fm_end]
+          for key in ('name', 'description', 'tools', 'model'):
+              assert re.search(rf'^{key}:\s*\S+', fm, re.M), f'No {key} in: $agent_md'
+          print(f'  ✅ $agent_md')
+          "
+          done
+
+      - name: Validate Python tools syntax
+        run: |
+          set -e
+          for tool_py in */tools/*.py; do
+            [ ! -f "$tool_py" ] && continue
+            python3 -m py_compile "$tool_py" || (echo "FAIL: $tool_py syntax error" && exit 1)
+            test -x "$tool_py" || (echo "FAIL: $tool_py not executable" && exit 1)
+            head -1 "$tool_py" | grep -q "^#!" || (echo "FAIL: $tool_py missing shebang" && exit 1)
+            echo "  ✅ $tool_py"
+          done
+
+      - name: Bundle structure check
+        run: |
+          set -e
+          for bundle_dir in */; do
+            [ ! -f "${bundle_dir}.claude-plugin/plugin.json" ] && continue
+            [ ! -d "${bundle_dir}skills" ] && echo "WARN: ${bundle_dir}skills/ missing"
+            [ ! -f "${bundle_dir}README.md" ] && (echo "FAIL: ${bundle_dir}README.md missing" && exit 1)
+            [ ! -f "${bundle_dir}LICENSE" ] && (echo "FAIL: ${bundle_dir}LICENSE missing" && exit 1)
+            echo "  ✅ ${bundle_dir%/} structure OK"
+          done
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "=== Bundle Inventory ==="
+          for bundle_dir in */; do
+            [ ! -f "${bundle_dir}.claude-plugin/plugin.json" ] && continue
+            skills=$(ls -1 ${bundle_dir}skills/ 2>/dev/null | wc -l | tr -d ' ')
+            hooks=$(ls -1 ${bundle_dir}hooks/*.sh 2>/dev/null | wc -l | tr -d ' ')
+            agents=$(ls -1 ${bundle_dir}agents/*.md 2>/dev/null | wc -l | tr -d ' ')
+            tools=$(ls -1 ${bundle_dir}tools/*.py 2>/dev/null | wc -l | tr -d ' ')
+            echo "  ${bundle_dir%/}: $skills skills, $hooks hooks, $agents agents, $tools tools"
+          done
