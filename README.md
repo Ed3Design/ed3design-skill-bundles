@@ -22,9 +22,9 @@
 
 Hardware-focused bundles (parametric CAD, FDM/maker workflows, embedded systems) moved to a **dedicated sibling repo** for clearer audience differentiation:
 
-→ **[`ed3design-engineering-bundles`](https://github.com/Ed3Design/ed3design-engineering-bundles)** (currently private — request access if interested)
+→ **[`ed3design-engineering-bundles`](https://github.com/Ed3Design/ed3design-engineering-bundles)** — 8 skills across 3 bundles (cad-design, maker-fdm, embedded-systems). Public, MIT licensed.
 
-That repo covers `cad-design`, `maker-fdm`, and `embedded-systems` bundles for makers, mechanical engineers, and hardware hobbyists.
+For makers, mechanical engineers, embedded hobbyists. Includes the Fusion 360 MCP-Bridge skill for Claude-driven CAD automation and the Victron Cerbo Modbus device-onboarding skill (encodes the non-obvious `Enabled=0` default).
 
 ## 🚀 Quickstart
 
