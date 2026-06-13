@@ -1,6 +1,9 @@
 # ed3design-skill-bundles
 
-> Engineering-discipline library for Claude Code power users. 48 skills + 5 Python tools + 4 hooks + 3 sub-agents across 6 thematic bundles.
+[![Bundle Validation](https://github.com/Ed3Design/ed3design-skill-bundles/actions/workflows/validate.yml/badge.svg)](https://github.com/Ed3Design/ed3design-skill-bundles/actions/workflows/validate.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+> Engineering-discipline library for Claude Code power users. 54 skills + 5 Python tools + 6 hooks + 4 sub-agents across 8 thematic bundles.
 
 ## 📦 Bundles
 
