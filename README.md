@@ -1,6 +1,6 @@
 # ed3design-skill-bundles
 
-> Engineering-Discipline-Bibliothek für Claude-Code-Power-User. 48 Skills + 5 Python-Tools in 6 thematischen Bundles.
+> Engineering-discipline library for Claude Code power users. 48 skills + 5 Python tools + 4 hooks + 3 sub-agents across 6 thematic bundles.
 
 ## 📦 Bundles
 
@@ -13,7 +13,7 @@
 | [`schema-discipline`](./schema-discipline/) | 6 | — | — | — | ✅ v0.1.0 |
 | [`skill-system-meta`](./skill-system-meta/) | 5 | — | — | — | ✅ v0.1.0 |
 
-**Total**: 48 Skills + 4 Hooks + 3 Sub-Agents + 5 Tools, ~67% des Wolf-Personal-Skill-Catalogs als generalisierte Bundles verfügbar.
+**Total**: 48 skills + 4 hooks + 3 sub-agents + 5 tools — patterns extracted from real-world engineering practice and structured for reuse.
 
 ## 🚀 Quickstart
 
@@ -22,55 +22,59 @@
 git clone https://github.com/Ed3Design/ed3design-skill-bundles
 cd ed3design-skill-bundles
 
-# Install one bundle (z.B. token-savers)
+# Install one bundle (e.g. token-savers)
 ln -s "$(pwd)/token-savers/skills"/* ~/.claude/skills/
 cp token-savers/tools/*.py ~/.claude/tools/
 chmod +x ~/.claude/tools/*.py
 
-# Optional-Deps für token-savers
-pip install certifi  # html2md SSL
-brew install tesseract tesseract-lang poppler  # img-preprocess OCR + pdf-text-extract
+# Optional dependencies (token-savers):
+pip install certifi              # html2md SSL
+brew install tesseract tesseract-lang poppler  # OCR + PDF
 ```
 
-Oder via Claude-Code-Marketplace (wenn registered):
+Or via Claude Code marketplace (when registered):
 
 ```
 /plugin install ed3design-skill-bundles/<bundle-name>
 ```
 
-## 💡 Strategie hinter den Bundles
+## 💡 Design Philosophy
 
-Diese Bundles entstanden aus **4 Wochen Wolf-Vault-Praxis** (Mai-Juni 2026) — alle Patterns sind empirisch in echten Trading/Maker/Engineering-Sessions gehärtet, nicht theoretisch konzipiert.
+These bundles emerged from intensive engineering practice — every pattern is empirically hardened in real software engineering sessions, not theoretically designed.
 
-**Klassifikations-Quelle**: `02 Projekte/token-optimierung/skill-catalog-classification.md` im Wolf-Vault (~67% des 118-Skill-Catalogs als generalisierbar identifiziert).
+**Pattern Discovery Methodology**: each skill goes through a TDD-promotion cycle (RED + GREEN sub-agent test) before being added to a bundle. See `skill-system-meta/skills/skill-tdd-promotion-workflow/`.
 
-**Pattern-Discovery**: jeder Skill durchläuft TDD-Promotion-Cycle (RED+GREEN-Subagent-Test) bevor er in einen Bundle aufgenommen wird. Siehe `skill-system-meta/skills/skill-tdd-promotion-workflow/`.
+**Generalization Criterion**: a skill is bundled only if it's cross-domain useful — independent of specific projects, business domains, or proprietary infrastructure. Project-specific patterns stay in the original catalog.
 
-## 📐 Bundle-Format
+## 📐 Bundle Format
 
-Jeder Bundle hat:
+Each bundle follows the Claude Code plugin convention:
 
 ```
 <bundle-name>/
 ├── .claude-plugin/
-│   └── plugin.json        # Claude-Code-Plugin-Manifest
-├── skills/                # SKILL.md pro Skill (Frontmatter + Content)
+│   └── plugin.json          # Plugin manifest
+├── skills/                  # SKILL.md per skill (frontmatter + content)
 │   └── <skill-name>/SKILL.md
-├── tools/                 # Optional: Python-Helper-Scripts
-└── README.md              # Bundle-Description + Trigger-Tabelle
+├── hooks/                   # Optional: PreToolUse/Stop/UserPromptSubmit hooks
+│   ├── hooks.json
+│   └── <hook-name>.sh
+├── agents/                  # Optional: custom sub-agent definitions
+│   └── <agent-name>.md
+├── tools/                   # Optional: Python helper scripts
+└── README.md                # Bundle description + trigger table
 ```
 
-**Portable Tool-Pfade**: Skills referenzieren Tools via `${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/X.py` — funktioniert sowohl im Plugin-Kontext als auch lokal installiert.
+**Portable Tool Paths**: skills reference tools via `${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/X.py` — works both in the plugin context and locally installed.
 
-## 🔗 Verwandte Projekte
+## 🔗 Related Projects
 
-- [superpowers] von Jesse Vincent — Plugin-Format-Inspiration + TDD-für-Skills-Pattern
-- [obsidian-vault] — viele Bundles entstanden aus Obsidian-Vault-Practice
+- [superpowers](https://github.com/obra/superpowers) by Jesse Vincent — plugin format inspiration + TDD-for-skills pattern
 
-## 📜 Lizenz
+## 📜 License
 
-MIT. Patterns aus 4 Wochen Wolf-Praxis formalisiert.
+MIT.
 
 ## 🙏 Acknowledgements
 
-Methodik aus dem [superpowers](https://github.com/obra/superpowers) Plugin-Ökosystem (Jesse Vincent). TDD-Promotion-Workflow + post-session-skill-review-Discipline aus Wolf-Vault-Practice.
+Methodology draws from the [superpowers](https://github.com/obra/superpowers) plugin ecosystem (Jesse Vincent). The TDD-promotion-workflow + post-session-skill-review discipline emerged from sustained practice.

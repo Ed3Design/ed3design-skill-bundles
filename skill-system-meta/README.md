@@ -1,32 +1,32 @@
 # skill-system-meta
 
-> Skill-System-Disziplinen für Claude-Code-Power-User die eigene Skills bauen.
+> Skill-system disciplines for Claude Code power users who build their own skills.
 
 ## Skills (5)
 
-| Skill | Trigger | Wert |
+| Skill | Trigger | Value |
 |---|---|---|
-| `post-session-skill-review` | Session-Ende, „remember", „wrap up" | ABC-Filter erkennt Skill-Kandidaten aus wiederkehrenden Patterns |
-| `skill-tdd-promotion-workflow` | DRAFT-Skill zu GA promoten | RED+GREEN-Subagent-Dispatch validiert Skill-Wert vor Auto-Discovery |
-| `subagent-mode-selection-continuous-vs-review-between` | Multi-Subagent-Dispatch | Mode-Auswahl: continuous-flow vs review-between (Iron-Law-Disziplin) |
-| `subagent-self-reflection-prompt-pattern` | Subagent-Prompt-Design | Pflicht-Sektion „## Skill-Self-Reflection" liefert Cycle-2-Polish-Items |
-| `design-first-iteration` | Vor jedem creative Work | Brainstorming → Design → Implementation, nicht direkt zu Code |
+| `post-session-skill-review` | Session end, "remember", "wrap up" | ABC filter identifies skill candidates from recurring patterns |
+| `skill-tdd-promotion-workflow` | Promote DRAFT skill to GA | RED+GREEN sub-agent dispatch validates skill value before auto-discovery |
+| `subagent-mode-selection-continuous-vs-review-between` | Multi-sub-agent dispatch | Mode selection: continuous-flow vs review-between (TDD discipline) |
+| `subagent-self-reflection-prompt-pattern` | Sub-agent prompt design | Mandatory `## Skill-Self-Reflection` section yields cycle-2 polish items |
+| `design-first-iteration` | Before any creative work | Brainstorming → design → implementation, not straight to code |
 
 ## Installation
 
 ```bash
-# Via marketplace (wenn registered):
+# Via marketplace (when registered):
 /plugin install ed3design-skill-bundles/skill-system-meta
 
-# Manuell:
+# Manually:
 git clone https://github.com/Ed3Design/ed3design-skill-bundles
 ln -s "$(pwd)/ed3design-skill-bundles/skill-system-meta/skills"/* ~/.claude/skills/
 ```
 
-## Pattern-Compound
+## Pattern Compound
 
-Diese 5 Skills sind **kumulativ** wertvoll: post-session-review identifiziert Kandidaten → design-first-iteration brainstormt sie → skill-tdd-promotion validiert sie → subagent-Patterns optimieren Dispatch. Investition macht sich nach ~3 Re-Anwendungen pro Skill bezahlt (empirisch belegt 11.06.2026 8-Skill-Promotion-Block).
+These 5 skills are **cumulatively** valuable: post-session-review identifies candidates → design-first-iteration brainstorms them → skill-tdd-promotion validates them → sub-agent patterns optimize dispatch. Investment pays off after ~3 re-applications per skill (empirically measured).
 
-## Lizenz
+## License
 
-MIT. Discipline-Discovery aus 4 Wochen Wolf-Vault-Practice formalisiert.
+MIT.

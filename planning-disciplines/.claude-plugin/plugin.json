@@ -1,10 +1,9 @@
 {
   "name": "planning-disciplines",
-  "version": "0.1.0",
-  "description": "Planning + Decision-Disziplinen vor jedem Multi-Phase-Projekt. 10 Skills für Brain-Dump-zu-Roadmap, Decision-Matrix, Reality-Inventur vor Code-Touch, Strategic-Questions, Spec-Drift-Detection. Process-Disziplin die Wished-for-Implementation strukturell vermeidet.",
+  "version": "0.2.0",
+  "description": "Planning + decision disciplines for any multi-phase project. 10 skills for brain-dump-to-roadmap, decision matrix, reality inventory before code touch, strategic questions, spec-drift detection. Plus 1 planning-assistant sub-agent. Process discipline that structurally prevents wished-for implementation.",
   "author": {
-    "name": "Wolf / ed3Dworks",
-    "email": "oestreichwolf@gmail.com"
+    "name": "ed3Dworks"
   },
   "homepage": "https://github.com/Ed3Design/ed3design-skill-bundles",
   "repository": "https://github.com/Ed3Design/ed3design-skill-bundles",
@@ -14,7 +13,7 @@
     "roadmap",
     "decision-making",
     "spec-drift",
-    "reality-inventur",
+    "reality-inventory",
     "strategic-questions",
     "ed3design"
   ],

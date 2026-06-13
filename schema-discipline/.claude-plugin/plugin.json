@@ -1,10 +1,9 @@
 {
   "name": "schema-discipline",
   "version": "0.1.0",
-  "description": "SQL/Schema-Disziplinen die Bug-Klassen strukturell vermeiden. 6 Skills für Schema-Verify, SQL-Validation, Enum-Discovery, NULL-Counter-vs-COALESCE. Pattern-Korrektheit über DB-Engine hinaus (PostgreSQL/MySQL/SQLite).",
+  "description": "SQL/schema disciplines that structurally prevent bug classes. 6 skills for schema verification, SQL validation, enum discovery, NULL-counter-vs-COALESCE. Pattern correctness across DB engines (PostgreSQL/MySQL/SQLite).",
   "author": {
-    "name": "Wolf / ed3Dworks",
-    "email": "oestreichwolf@gmail.com"
+    "name": "ed3Dworks"
   },
   "homepage": "https://github.com/Ed3Design/ed3design-skill-bundles",
   "repository": "https://github.com/Ed3Design/ed3design-skill-bundles",

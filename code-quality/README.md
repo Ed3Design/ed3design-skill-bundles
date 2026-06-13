@@ -1,67 +1,67 @@
 # code-quality
 
-> Code-Quality + Git-Disziplinen — größtes Bundle (16 Skills). Sprach-/Framework-agnostisch.
+> Code-quality + Git discipline skills — the largest bundle (16 skills + 4 hooks + 1 agent). Language-/framework-agnostic.
 
-## Skills (16) nach Sub-Domain
+## Skills (16) by sub-domain
 
-### Code-Review (4)
+### Code Review (4)
 
 | Skill | Trigger |
 |---|---|
-| `code-review-backlog-cost-warning` | Backlog wächst → Review-Cost vs Inkrement-Cost |
-| `code-review-chunk-dispatch` | >30 Commits Backlog → parallele Subagent-Chunks |
-| `code-review-findings-als-red-tests` | Findings = Test-Cases → RED-Test pro Finding |
-| `aggregate-code-review-after-tdd-tasks` | Multi-TDD-Task → ein Aggregat-Review |
+| `code-review-backlog-cost-warning` | Backlog grows → review cost vs. increment cost |
+| `code-review-chunk-dispatch` | >30 commits backlog → parallel sub-agent chunks |
+| `code-review-findings-als-red-tests` | Findings = test cases → RED test per finding |
+| `aggregate-code-review-after-tdd-tasks` | Multi-TDD task → one aggregate review |
 
-### Git-Hygiene (3)
+### Git Hygiene (3)
 
-| Skill | Verhindert |
+| Skill | Prevents |
 |---|---|
-| `commit-message-honesty-precheck` | Subject lügt über Inhalt der Diff |
-| `pre-push-bypass-audit-trail` | `--no-verify` ohne Audit-Eintrag |
-| `cross-repo-state-inspection-before-commit` | Blind `add .` in Mono-Repo mit untracked Subdirs |
+| `commit-message-honesty-precheck` | Subject lies about content of the diff |
+| `pre-push-bypass-audit-trail` | `--no-verify` without audit entry |
+| `cross-repo-state-inspection-before-commit` | Blind `add .` in mono-repo with untracked subdirs |
 
-### Code-Patterns (5)
+### Code Patterns (5)
 
 | Skill | Pattern |
 |---|---|
-| `cross-file-source-of-truth-grep` | DB-Spalten + Code-Refs cross-grep statt aus Erinnerung |
-| `silent-except-versteckt-schema-drift` | `except: pass` versteckt Schema-Drift-Errors |
-| `static-source-bug-class-coverage-test` | Bug-Klassen-Coverage via static grep |
-| `library-subclass-explicit-type-classification` | Subclass-Typ explizit benennen, nicht implizit |
-| `lazy-module-getattr-for-settings-override` | Module-Level-Freeze → Lazy-Read in Functions (env-Override wirkt) |
+| `cross-file-source-of-truth-grep` | DB columns + code refs cross-grep instead of from memory |
+| `silent-except-versteckt-schema-drift` | `except: pass` hides schema-drift errors |
+| `static-source-bug-class-coverage-test` | Bug class coverage via static grep |
+| `library-subclass-explicit-type-classification` | Name subclass type explicitly, not implicitly |
+| `lazy-module-getattr-for-settings-override` | Module-level freeze → lazy read in functions (env override works) |
 
 ### Tooling (4)
 
-| Skill | Wofür |
+| Skill | Purpose |
 |---|---|
-| `subprocess-ssh-arg-quoting-via-shlex` | SSH-Arg-Injection verhindern via shlex.quote |
-| `bash-output-filtering-disciplines` | 12 Pattern-Katalog für Bash-Output-Triage |
-| `ga-skill-edit-tdd-workflow` | GA-Skill editieren mit TDD-Cycle |
-| `pytest-venv-first-triage` | venv-Aktivierung vor pytest-Triage |
+| `subprocess-ssh-arg-quoting-via-shlex` | Prevent SSH arg injection via shlex.quote |
+| `bash-output-filtering-disciplines` | 12-pattern catalog for bash-output triage |
+| `ga-skill-edit-tdd-workflow` | Edit GA skill with TDD cycle |
+| `pytest-venv-first-triage` | venv activation before pytest triage |
 
-## 🪝 Hooks (4) — Automatische Enforcement
+## 🪝 Hooks (4) — Automatic enforcement
 
-Aktiv nach Plugin-Install via `hooks/hooks.json`. PreToolUse auf Bash-Commands:
+Active after plugin install via `hooks/hooks.json`. PreToolUse on bash commands:
 
-| Hook | Trigger | Verhalten |
+| Hook | Trigger | Behavior |
 |---|---|---|
-| `cross-repo-state-inspect.sh` | `git add .` / `git add -A` / `git commit -a` | Warnt vor blind-add in Mono-Repos |
-| `commit-message-honesty.sh` | `git commit -m "<generic>"` | Warnt bei WIP/update/misc/various Subjects |
-| `pre-push-bypass-audit.sh` | `git push --no-verify` etc. | Audit-Log + Warnung |
-| `pytest-venv-first.sh` | direkter `pytest`-Aufruf | Warnt wenn venv nicht aktiv aber `.venv/` vorhanden |
+| `cross-repo-state-inspect.sh` | `git add .` / `git add -A` / `git commit -a` | Warns against blind-add in mono-repos |
+| `commit-message-honesty.sh` | `git commit -m "<generic>"` | Warns on WIP/update/misc/various subjects |
+| `pre-push-bypass-audit.sh` | `git push --no-verify` etc. | Audit log + warning |
+| `pytest-venv-first.sh` | direct `pytest` call | Warns if venv not active but `.venv/` exists |
 
-Alle Hooks: **warn-only (exit 0)**, kein Block. Stderr-Messages landen im Claude-Context → künftige Tool-Calls sehen die Warnung.
+All hooks: **warn-only (exit 0)**, no block. Stderr messages land in the Claude context → subsequent tool calls see the warning.
 
 ## 🤖 Sub-Agent (1)
 
-| Agent | Beschreibung |
+| Agent | Description |
 |---|---|
-| `code-reviewer` | Read-only Subagent. 5 Pflicht-Linsen (Convention, Silent-Failure, Hardcoded-Defaults, Cross-File-Consistency, Commit-Honesty). Sonnet-Modell, Tools: Read+Grep+Glob+Bash |
+| `code-reviewer` | Read-only sub-agent. 5 mandatory lenses (convention, silent-failure, hardcoded defaults, cross-file consistency, commit honesty). Sonnet model, tools: Read+Grep+Glob+Bash |
 
 Dispatch via:
 ```python
-Agent(subagent_type="general-purpose", description="Code-Review Range X", prompt="Lies via Skill-Tool den Agent 'code-quality:code-reviewer' und folge dessen Anweisungen für git diff HEAD~5..HEAD")
+Agent(subagent_type="general-purpose", description="Code-Review Range X", prompt="Load via Skill tool the agent 'code-quality:code-reviewer' and follow its instructions for git diff HEAD~5..HEAD")
 ```
 
 ## Installation
@@ -71,10 +71,10 @@ git clone https://github.com/Ed3Design/ed3design-skill-bundles
 ln -s "$(pwd)/ed3design-skill-bundles/code-quality/skills"/* ~/.claude/skills/
 ```
 
-## Pattern-Compound
+## Pattern Compound
 
-`cross-repo-state-inspection-before-commit` + `commit-message-honesty-precheck` + `pre-push-bypass-audit-trail` bilden eine **3-Layer-Git-Defense**: Scope-Klärung → Wahrheits-Subject → Bypass-Audit. Greift bei jedem `git push` für jedes Repo.
+`cross-repo-state-inspection-before-commit` + `commit-message-honesty-precheck` + `pre-push-bypass-audit-trail` form a **3-layer Git defense**: scope clarification → truthful subject → bypass audit. Triggers on every `git push` for every repo.
 
-## Lizenz
+## License
 
 MIT.

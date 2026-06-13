@@ -1,10 +1,9 @@
 {
   "name": "async-forensik",
-  "version": "0.1.0",
-  "description": "Forensik-Disziplinen für asyncio-Python + Container-Stacks. 7 Skills die hard-won Debugging-Lehren aus echten Production-Issues kodifizieren: DB-Telemetry > Docker-Logs, Hypothesen-widerlegt → Code-Read weiter, Fire-and-Forget-Tracing, Reporting-Artefakt-Detection vor Anomalie-Claim.",
+  "version": "0.2.0",
+  "description": "Forensic disciplines for asyncio Python + container stacks. 7 skills encoding hard-won debugging lessons from real production issues: DB telemetry > Docker logs, hypotheses-disproved → keep reading code, fire-and-forget tracing, reporting artefact detection before claiming anomaly. Plus 1 forensik-detective sub-agent for hypothesis-test pipelines.",
   "author": {
-    "name": "Wolf / ed3Dworks",
-    "email": "oestreichwolf@gmail.com"
+    "name": "ed3Dworks"
   },
   "homepage": "https://github.com/Ed3Design/ed3design-skill-bundles",
   "repository": "https://github.com/Ed3Design/ed3design-skill-bundles",

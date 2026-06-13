@@ -1,86 +1,82 @@
 # token-savers
 
-> Token-Optimierung-Bundle für Claude-Code. 4 Skills + 5 Python-Tools mit empirisch belegten 70-98% Saving-Raten.
+> Token optimization bundle for Claude Code. 4 skills + 5 Python tools with empirically measured 70-98% savings.
 
-## 📊 Empirische Token-Saving-Empirik (12.-13.06.2026)
+## 📊 Empirical Token Savings
 
-| Workflow | Vorher | Nachher | Saving | Tool/Skill |
+| Workflow | Before | After | Saving | Tool/Skill |
 |---|---|---|---|---|
-| PDF-Read 20 Seiten | ~100k Vision-Tokens | ~12k Text-Tokens | **~85%** | `pdf-text-extract-without-vision` |
-| Image-Vision (4032×3024 iPhone) | ~10k Tokens | ~1.2k Tokens | **~88%** | `image-preprocessing-helper` |
-| Vault-First-Check (5 Calls) | ~14k Tokens | ~3.5k Tokens | **~75%** | `vault-search-helper` |
-| `\d table` Schema-Verify | ~1500 Tokens | ~30 Tokens (compact) | **~98%** | `db-schema-inspector.py` |
-| `git diff --stat HEAD~5..HEAD` | ~2-5k Tokens | ~600 Tokens | **~75%** | `diff-summary.py` |
-| Wikipedia-Article-Read | ~92k Tokens | ~1.5k Tokens | **~98%** | `html2md.py` |
-| `docker logs` Filter | ~3-5k Tokens | ~300 Tokens | **~85%** | `bash-output-filtering-disciplines` |
+| PDF read (20 pages) | ~100k vision tokens | ~12k text tokens | **~85%** | `pdf-text-extract-without-vision` |
+| Image vision (4032×3024) | ~10k tokens | ~1.2k tokens | **~88%** | `image-preprocessing-helper` |
+| Vault search (5 calls) | ~14k tokens | ~3.5k tokens | **~75%** | `vault-search-helper` |
+| `\d table` schema verify | ~1500 tokens | ~30 tokens (compact) | **~98%** | `db-schema-inspector.py` |
+| `git diff --stat HEAD~5..HEAD` | ~2-5k tokens | ~600 tokens | **~75%** | `diff-summary.py` |
+| Wikipedia article read | ~92k tokens | ~1.5k tokens | **~98%** | `html2md.py` |
+| `docker logs` filter | ~3-5k tokens | ~300 tokens | **~85%** | `bash-output-filtering-disciplines` |
 
-## 🛠 Was ist drin
+## 🛠 Contents
 
 ### Skills (4)
 
-- **`pdf-text-extract-without-vision`** — `pdftotext` (poppler) oder OCR-Fallback (`ocrmypdf`) statt Claude Vision für PDFs
-- **`image-preprocessing-helper`** — resize/ocr/info/colors via lokales Python-Tool vor Vision-Call
-- **`vault-search-helper`** — Single-Call ranked Search statt mehrere Glob+Grep
-- **`bash-output-filtering-disciplines`** — 12 Pattern-Katalog-Items für Bash-Output-Triage (head, tail, grep, jq, awk Patterns)
+- **`pdf-text-extract-without-vision`** — `pdftotext` (poppler) or OCR fallback (`ocrmypdf`) instead of Claude Vision for PDFs
+- **`image-preprocessing-helper`** — resize/ocr/info/colors via local Python tool before vision call
+- **`vault-search-helper`** — single-call ranked search instead of multiple Glob+Grep
+- **`bash-output-filtering-disciplines`** — 12-pattern catalog for bash-output triage (head, tail, grep, jq, awk patterns)
 
-### Tools (5 Python-Skripte)
+### Tools (5 Python scripts)
 
-- **`img-preprocess.py`** — PIL-basiert. Sub-Commands: resize/ocr/info/colors/describe
-- **`vault-search.py`** — Multi-Word-Query + Score-Heuristik + Top-N JSON-Output
-- **`db-schema-inspector.py`** — `information_schema.columns` via ssh+docker exec oder direkt psql. JSON-Output, compact-mode
-- **`diff-summary.py`** — `git diff --numstat` + Change-Type-Klassifikation (refactor/feat/fix/test/migration)
-- **`html2md.py`** — bs4 content-extraction + Markdown-Konvertierung. certifi-SSL (best-practice), kein insecure-Fallback
+- **`img-preprocess.py`** — PIL-based. Sub-commands: resize/ocr/info/colors/describe
+- **`vault-search.py`** — multi-word query + score heuristic + top-N JSON output
+- **`db-schema-inspector.py`** — `information_schema.columns` via ssh+docker exec or direct psql. JSON output, compact mode
+- **`diff-summary.py`** — `git diff --numstat` + change-type classification (refactor/feat/fix/test/migration)
+- **`html2md.py`** — bs4 content extraction + Markdown conversion. certifi SSL (best-practice), no insecure fallback
 
 ## 🚀 Installation
 
 ```bash
-# Als Plugin via marketplace (Claude-Code Setting)
+# Via marketplace (when registered):
 /plugin install ed3design-skill-bundles/token-savers
 
-# Oder manuell:
+# Or manually:
 git clone https://github.com/Ed3Design/ed3design-skill-bundles
 ln -s "$(pwd)/ed3design-skill-bundles/token-savers/skills"/* ~/.claude/skills/
 cp ed3design-skill-bundles/token-savers/tools/*.py ~/.claude/tools/
 chmod +x ~/.claude/tools/*.py
 
-# Optional-Deps für volle Funktionalität:
-pip install certifi  # html2md SSL
+# Optional dependencies for full functionality:
+pip install certifi             # html2md SSL
 brew install tesseract tesseract-lang  # img-preprocess OCR
-brew install poppler  # pdf-text-extract
+brew install poppler            # pdf-text-extract
 ```
 
-## 💡 Trigger-Patterns
+## 💡 Trigger Patterns
 
-| User-Phrase | Skill/Tool das triggert |
+| User phrase | Skill/tool triggered |
 |---|---|
-| „schau dir das Screenshot an" | `image-preprocessing-helper` |
-| „PDF lesen" / „aus PDF extrahieren" | `pdf-text-extract-without-vision` |
-| „Vault-First-Check zu X" | `vault-search-helper` |
-| „Schema-Verify für Tabelle X" | `db-schema-inspector.py` |
-| „was hat sich seit X geändert?" | `diff-summary.py` |
-| „lies diese Webseite" | `html2md.py` |
-| „docker logs zeigt zu viel" | `bash-output-filtering-disciplines` |
+| "look at this screenshot" | `image-preprocessing-helper` |
+| "read this PDF" / "extract from PDF" | `pdf-text-extract-without-vision` |
+| "vault-first check for X" | `vault-search-helper` |
+| "schema verify for table X" | `db-schema-inspector.py` |
+| "what changed since X?" | `diff-summary.py` |
+| "read this webpage" | `html2md.py` |
+| "docker logs too verbose" | `bash-output-filtering-disciplines` |
 
-## 📐 Design-Prinzipien
+## 📐 Design Principles
 
-1. **Lokale Tool-Ausführung > Vision-API** wo möglich. Vision nur wenn semantisches Bildverständnis nötig.
-2. **Pre-Processing statt Raw-Input** in Context. 90% des HTML/PDF/Screenshot-Inhalts ist Boilerplate.
-3. **Best-Practice-Security**: certifi statt `verify=False`. Klare Setup-Errors bei Missing-Deps statt Insecure-Fallback.
-4. **Strukturierter JSON-Output** statt Raw-Text wo möglich. Spart Tokens beim weiteren Reasoning.
-5. **Single-Source-of-Truth**: Tools sind Wrapper um stdlib + 1-2 well-tested Libs (PIL, bs4, certifi). Kein eigenes HTML-Parsing oder PDF-Extraction.
+1. **Local tool execution > Vision API** where possible. Vision only when semantic image understanding is required.
+2. **Pre-processing instead of raw input** in context. 90% of HTML/PDF/screenshot content is boilerplate.
+3. **Security best-practice**: certifi instead of `verify=False`. Clear setup errors on missing deps instead of insecure fallback.
+4. **Structured JSON output** instead of raw text where possible. Saves tokens on downstream reasoning.
+5. **Single source of truth**: tools are wrappers around stdlib + 1-2 well-tested libs (PIL, bs4, certifi). No custom HTML parsing or PDF extraction.
 
-## 🔗 Verwandte Bundles (Roadmap)
+## 🔗 Related Bundles
 
-- `code-quality` — 16 Skills für Code-Review + Git-Disziplin
-- `schema-discipline` — 6 Skills für SQL/Schema-Patterns
-- `async-forensik` — 7 Skills für asyncio + Container-Debugging
-- `planning-disciplines` — 10 Skills für Roadmap + Decision-Making
-- `skill-system-meta` — 5 Skills für Skill-Building selbst
+- `code-quality` — 16 skills for code-review + Git discipline
+- `schema-discipline` — 6 skills for SQL/schema patterns
+- `async-forensik` — 7 skills for asyncio + container debugging
+- `planning-disciplines` — 10 skills for roadmap + decision-making
+- `skill-system-meta` — 5 skills for skill-building itself
 
-## 📜 Lizenz
+## 📜 License
 
-MIT. Pattern-Empirik aus Wolfs Trading + Maker + Vault-Praxis. Beitrag willkommen — siehe [CONTRIBUTING.md] (kommt).
-
-## 🙏 Acknowledgements
-
-Pattern-Discovery-Methodik aus dem [superpowers] Plugin-Ökosystem (Jesse Vincent). TDD-Promotion-Workflow + post-session-skill-review-Discipline aus 4 Wochen Wolf-Practice formalisiert.
+MIT.

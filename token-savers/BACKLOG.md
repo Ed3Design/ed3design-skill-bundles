@@ -1,47 +1,48 @@
-# Bundle-Backlog (token-savers)
+# Bundle Backlog (token-savers)
 
-## ✅ Cycle-2 erledigt 13.06.2026
+## ✅ Cycle 2 done 2026-06-13
 
-**Path-Refactor**: alle Skill-Pfade von `~/.claude/tools/X.py` auf `${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/X.py` umgestellt. **Fallback-Pattern** (`:-$HOME/.claude`) bedeutet:
-- Plugin-Install: `$CLAUDE_PLUGIN_ROOT` gesetzt → `<plugin-dir>/tools/`
-- Lokale Skills (Wolf-Setup): `$CLAUDE_PLUGIN_ROOT` nicht gesetzt → `$HOME/.claude/tools/`
+**Path refactor**: all skill paths migrated from `~/.claude/tools/X.py` to `${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/X.py`. The **fallback pattern** (`:-$HOME/.claude`) means:
 
-→ funktioniert beides, kein Konflikt mit Wolfs lokalem Skill-Catalog.
+- Plugin install: `$CLAUDE_PLUGIN_ROOT` set → `<plugin-dir>/tools/`
+- Locally installed skills: `$CLAUDE_PLUGIN_ROOT` unset → `$HOME/.claude/tools/`
 
-Verifizierung:
-- image-preprocessing-helper: 7 Replaces
-- vault-search-helper: 4 Replaces
-- bash-output-filtering-disciplines: keine Tool-Refs (rein Pattern)
-- pdf-text-extract-without-vision: nutzt System-Binaries, keine Refs
+→ Works in both contexts, no conflict with locally-installed skill catalogs.
 
-## 📋 Andere Cycle-2-Items
+Verification:
+- `image-preprocessing-helper`: 7 replaces
+- `vault-search-helper`: 4 replaces
+- `bash-output-filtering-disciplines`: no tool refs (pattern-only skill)
+- `pdf-text-extract-without-vision`: uses system binaries, no refs
 
-1. **vault-search.py Config-Refactor**: `~/.config/vault-search/config.json` für Vault-Pfad (aktuell hartcoded `~/Documents/Vault/ClaudetteV/`)
-2. **db-schema-inspector.py Config-Refactor**: `~/.config/db-schema-inspector/connections.json` für Connection-Profiles (aktuell hartcoded Wolf-Setup)
-3. **html2md.py Optional-Deps**: `requirements.txt` für certifi + bs4 als install-time-Hint
-4. **LICENSE-File** (MIT) hinzufügen
-5. **Tests-Verzeichnis** mit Smoke-Tests pro Tool (CI-bereit)
-6. **CONTRIBUTING.md** für externe Beiträge
-7. **CI via GitHub-Actions**: pytest + lint + Bundle-Format-Validation
+## 📋 Other Cycle-2 Items
 
-## 🎯 Pre-Publish-Checkliste
+1. **vault-search.py config refactor**: `~/.config/vault-search/config.json` for vault path (currently hardcoded to a single vault location)
+2. **db-schema-inspector.py config refactor**: `~/.config/db-schema-inspector/connections.json` for connection profiles (currently hardcoded sample setup)
+3. **html2md.py optional deps**: `requirements.txt` for certifi + bs4 as install-time hints
+4. **LICENSE file** per bundle (currently top-level only)
+5. **Tests directory** with smoke tests per tool (CI-ready)
+6. **CONTRIBUTING.md** for external contributions
+7. **CI via GitHub Actions**: pytest + lint + bundle format validation
 
-Bevor Plugin als Marketplace-Eintrag veröffentlicht werden kann:
+## 🎯 Pre-Publish Checklist
 
-- [ ] Path-Refactor (siehe oben)
-- [ ] Tools-Config-Refactor (vault-search + db-schema-inspector)
-- [ ] LICENSE-File
-- [ ] CI-Tests grün
-- [ ] README mit `/plugin install`-Befehl verifiziert
-- [ ] Real-User-Test auf fremdem macOS-System
-- [ ] Smoke-Test in Linux-Container
+Before this bundle can be published to a marketplace:
 
-## 📊 Bundle-Status 2026-06-13
+- [x] Path refactor (done)
+- [ ] Tools config refactor (vault-search + db-schema-inspector)
+- [ ] LICENSE file
+- [ ] CI tests green
+- [ ] README with `/plugin install` command verified
+- [ ] Real-user test on a fresh macOS system
+- [ ] Smoke test in a Linux container
 
-- ✅ Struktur (plugin.json + skills/ + tools/)
-- ✅ 4 Skills kopiert (mit name-Field validiert)
-- ✅ 5 Tools kopiert (executable + shebang)
-- ✅ README mit empirischer Token-Saving-Tabelle
-- ❌ Pfad-Refactor pending (Cycle-2 #1)
-- ❌ GitHub-Repo `Ed3Design/ed3design-skill-bundles` noch nicht erstellt
-- ❌ Marketplace-Submission pending
+## 📊 Bundle Status 2026-06-13
+
+- ✅ Structure (plugin.json + skills/ + tools/)
+- ✅ 4 skills copied (name field validated)
+- ✅ 5 tools copied (executable + shebang)
+- ✅ README with empirical token saving table
+- ✅ Path refactor (Cycle-2 #1)
+- ❌ Tool config refactor pending
+- ❌ Marketplace submission pending
