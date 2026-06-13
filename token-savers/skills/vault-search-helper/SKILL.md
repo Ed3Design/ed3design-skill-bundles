@@ -45,24 +45,24 @@ Multi-word query is OK. Tool stopword-filters (in, im, an, auf, und, oder, the, 
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py "stop too tight" --max 5
-${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py "leverage certificate" --scope projekte
-${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py "negotiation retirement" --include-archiv
+${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py "leverage certificate" --scope projects
+${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py "negotiation retirement" --include-archive
 ```
 
 ### Step 2 — Choose scope
 
 | `--scope` | Searches in |
 |---|---|
-| `projekte` | `02 Projekte/` |
-| `bereiche` | `03 Bereiche/` |
-| `ressourcen` | `04 Ressourcen/` |
+| `projects` | `02 Projects/` |
+| `areas` | `03 Areas/` |
+| `resources` | `04 Resources/` |
 | `daily` | `05 Daily Notes/` |
 | `inbox` | `01 Inbox/` |
 | `kontext` | `00 Kontext/` |
-| `all` (default) | all except `06 Archiv/` |
-| `+--include-archiv` | also `06 Archiv/` |
+| `all` (default) | all except `06 Archive/` |
+| `+--include-archive` | also `06 Archive/` |
 
-For a Vault-First check with unclear scope: `--scope all` (default). For production-domain questions: `--scope projekte`. For daily search: `--scope daily`.
+For a Vault-First check with unclear scope: `--scope all` (default). For production-domain questions: `--scope projects`. For daily search: `--scope daily`.
 
 ### Step 3 — Interpret output
 
@@ -76,8 +76,8 @@ For a Vault-First check with unclear scope: `--scope all` (default). For product
     {
       "rank": 1,
       "score": 109.0,
-      "wikilink": "[[02 Projekte/token-optimierung/token-optimierung]]",
-      "path_rel": "02 Projekte/token-optimierung/token-optimierung.md",
+      "wikilink": "[[02 Projects/token-optimierung/token-optimierung]]",
+      "path_rel": "02 Projects/token-optimierung/token-optimierung.md",
       "breakdown": {
         "filename": 2, "heading": 7, "content": 64,
         "tag": 2, "recency": 6.0
@@ -145,13 +145,13 @@ Smoke test with `"token optimierung"`:
 ### Cycle 1 — PASS
 
 - **RED-Subagent** (without skill): 5 tool calls (broad Grep + focused Grep -C=2 + 2× Glob + Read of top-2), ~14k tokens total. Systematically overlooked `.remember/core-memories.md`, CLAUDE.md itself, the skill directory. "Drift risk high — only 60-70% coverage on first iteration."
-- **GREEN-Subagent** (with skill): 1× `vault-search.py "stop loss too tight" --max 5` + 1 refinement `--scope projekte` + 3 grep excerpts, ~3.5k tokens. **Saving 70-80%** exactly in the skill-promised corridor. Also discovered stopword-score-inflation (score 124 for a false positive on a multi-word stopword query).
+- **GREEN-Subagent** (with skill): 1× `vault-search.py "stop loss too tight" --max 5` + 1 refinement `--scope projects` + 3 grep excerpts, ~3.5k tokens. **Saving 70-80%** exactly in the skill-promised corridor. Also discovered stopword-score-inflation (score 124 for a false positive on a multi-word stopword query).
 - **Refactor**: none blocking; Cycle-2 backlog expanded.
 
 ### Cycle-2 Backlog (Polish, non-blocking)
 
 - **Anti-pattern "stopword-score-inflation"**: with score >100 without filename/tag boost → counter-grep with exact phrase as disambiguation layer
-- **Scope selection heuristic**: production-domain topics → `--scope projekte` default; daily-note cross-check optional
+- **Scope selection heuristic**: production-domain topics → `--scope projects` default; daily-note cross-check optional
 - **Cross-references to non-vault sources**: skill should explicitly mention that `.remember/`, CLAUDE.md, `~/.claude/skills/` are not indexed by the tool — caller must check separately
 - Embedding-based ranking (sentence-transformers locally)
 - Persistent index (SQLite or JSON cache)

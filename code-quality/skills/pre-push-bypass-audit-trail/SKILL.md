@@ -69,7 +69,7 @@ Without this audit-trail entry, the push is NOT compliant with user discipline. 
 
 The blocking issue needs to be tracked as separate work. Either:
 - Add a row to existing backlog table in the project's roadmap note
-- Or create a NEW backlog item in `01 Inbox/` with frontmatter `tags: [backlog, <project>]`
+- Or create a NEW backlog item in `<inbox-folder>` with frontmatter `tags: [backlog, <project>]`
 - Or update existing item if blocker already known (most common — set "last-seen" date)
 
 Goal: future you can find the blocker in your vault even after the audit-trail entry is buried in old Daily Notes.
