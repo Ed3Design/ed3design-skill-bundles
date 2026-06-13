@@ -5,7 +5,7 @@ description: Use when the code-review-backlog is large (>30 commits OR >5,000 Lo
 
 # code-review-chunk-dispatch
 
-> ✅ **PROMOTED**: TDD-Cycle-1 (caller-context refactor) + TDD-Cycle-2 (Mini-Verify-Fallback PASS, S3-Pattern-Mode-Value-Prop CONFIRMED) passed. Auto-discoverable. Polish items from Mini-Verify subagent feedback incorporated: sample definition, counter-thesis depth hierarchy (Critical=mandatory / Important=recommended / Minor=optional), tabular trust-verdict format in fallback, TDD progression as Background label.
+> ✅ **PROMOTED**: TDD Cycle 1 (caller-context refactor) + TDD Cycle 2 (Mini-Verify-Fallback pass, S3 Pattern-Mode value-prop confirmed) passed. Auto-discoverable. Polish items from Mini-Verify subagent feedback incorporated: sample definition, counter-thesis depth hierarchy (Critical=mandatory / Important=recommended / Minor=optional), tabular trust-verdict format in fallback, TDD progression as Background label.
 
 ## STOP — Caller-Context-Check (before anything else)
 
@@ -18,7 +18,7 @@ This skill recommends **parallel dispatch via sub-subagents**. That presumes: **
 | Do I have access to the `Agent` tool (top-level orchestrator, main Claude session)? | ✓ → continue with `## Pattern (short form)` and dispatch |
 | I do NOT have the `Agent` tool (e.g., I'm a subagent myself)? | → jump to `## Fallback: Sequential-Triage-Mode` BELOW. **Do not try to force the chunk pattern sequentially.** |
 
-**Anti-pattern**: blindly following the skill and chunking sequentially even though you can't parallel-dispatch — that's **worse** than natural risk-based triage. Proven by TDD-Test (see `## TDD progression` below): GREEN-Subagent without Agent-tool produced WORSE result (1 instead of 4 Critical findings, +70% wallclock) through forced chunking than a baseline subagent without skill that applied natural risk-based triage.
+**Anti-pattern**: blindly following the skill and chunking sequentially even though you can't parallel-dispatch — that's **worse** than natural risk-based triage. Proven by TDD-Test (see `## TDD progression` below): GREEN subagent without Agent-tool produced WORSE result (1 instead of 4 Critical findings, +70% wallclock) through forced chunking than a baseline subagent without skill that applied natural risk-based triage.
 
 **Rationalization trap**:
 
@@ -175,7 +175,7 @@ After parallel dispatch you have 4 structures. Aggregation:
 - ❌ Don't aggregate findings, show 4 separate reports — user has to synthesize themselves, loses overview
 - ❌ Subagent prompts without repo path (subagent has no conversation context, doesn't know where the code is)
 
-## Background: TDD progression (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing log)
 
 > This section is history + design-decision rationale, NOT instruction for the executing caller. Caller follows the sections above (STOP, Pattern, Fallback).
 
@@ -194,7 +194,7 @@ After parallel dispatch you have 4 structures. Aggregation:
 - Result: **1 Critical (+re-verification of today's fixes) / 7 Important / 5 Minor**
 - Wallclock: 566 s (+70%) | Tokens: 134k (-37%) | Tool-uses: 54
 - Meta-awareness bonus: recognized "today's commits are themselves code-review fixes, I'm reviewing re-reviews"
-- **Output objectively WORSE than RED** for bug discovery (1 vs 4 Critical) despite more wallclock
+- **Output objectively WORSE than RED** for bug discovery (1 vs 4 Critical) despite consuming more wallclock time
 
 **Skill design bug discovered**: caller-context-mismatch. Skill implicitly presumes the caller has Agent tool. With subagent-caller without Agent tool, chunking is pure overhead and blocks natural risk-based triage.
 
@@ -203,16 +203,16 @@ After parallel dispatch you have 4 structures. Aggregation:
 - **R2** (Fallback mode): new section "Sequential-Triage-Mode" with risk-based-triage template for non-dispatch callers
 - **R3** (description filter): description extended with "AND caller has Agent/Task-tool" + Do-NOT-load for subagent-caller (removes at the same time the description-trap of the workflow-summary)
 
-### Cycle 2 — Mini-Verify-Fallback-PASS + S3-Pattern-Mode-Value-Prop-CONFIRMED
+### Cycle 2 — Mini-Verify-Fallback pass + S3 Pattern-Mode value-prop confirmed
 
-**Mini-Verify-RED** (general-purpose subagent, 35 commits, skill directive "load & use"):
+**Mini-Verify RED** (general-purpose subagent, 35 commits, skill directive "load & use"):
 - Subagent read STOP section FIRST, recognized missing Agent tool, jumped to fallback mode (explicitly documented in skill self-reflection)
 - Risk-based triage applied, **2 Critical (real bugs) / 7 Important / 7 Minor** in 380s / 255k tokens
 - Coverage disclosure as own section, counter-thesis check per Critical
 - R1-guard works. R2-fallback-mode works. R3-description filters correctly.
 - Subagent returned 4 constructive polish hints (incorporated: sample definition, counter-thesis depth hierarchy, tabular trust-verdict in fallback, TDD progression as Background label)
 
-**S3-Pattern-Mode-Value-Prop-Test** (top-level caller with Agent tool, 80 commits, 5 chunks A-E dispatched in parallel):
+**S3 Pattern-Mode value-prop test** (top-level caller with Agent tool, 80 commits, 5 chunks A-E dispatched in parallel):
 - Wallclock: **488s parallel** vs ~1500s sequential-estimated = **3x speedup**
 - Tokens: 581k total (5 chunks). Per finding: **10.4k vs 16k single-subagent = 38% efficiency win**
 - Findings: **10 Critical / 20 Important / 27 Minor**

@@ -107,9 +107,9 @@ Fix: tasks tracked in `advisor_tasks: list[asyncio.Task]`, `await asyncio.wait_f
 
 ### Cycle 1 — PASS via Subagent-Pair-Dispatch (Tempo-Booster class)
 
-- **RED-Subagent** (without skill, prompt: review a v3_orchestrator snippet with `create_task(advisor_consult)` + asyncio.run): **found the critical bug on its own**! Wrote a precise fix with `await asyncio.gather(*advisor_tasks, return_exceptions=True)` — nearly identical to the skill's 3-step fix. RED was surprisingly smart; the skill here is not a "bug preventer" but a "tempo booster + consistency guarantee".
+- **RED subagent** (without skill, prompt: review a v3_orchestrator snippet with `create_task(advisor_consult)` + asyncio.run): **found the critical bug on its own**! Wrote a precise fix with `await asyncio.gather(*advisor_tasks, return_exceptions=True)` — nearly identical to the skill's 3-step fix. RED was surprisingly smart; the skill here is not a "bug preventer" but a "tempo booster + consistency guarantee".
 
-- **GREEN-Subagent** (with skill, identical prompt): structured output, impact quote 0-50% explicitly computed, `wait_for + timeout` added, `return_exceptions=True` rationale clean. Additionally discovered an important issue "sync-IO in async context as an aggravator" — RED without the skill would not have included that in the review.
+- **GREEN subagent** (with skill, identical prompt): structured output, impact quote 0-50% explicitly computed, `wait_for + timeout` added, `return_exceptions=True` rationale clean. Additionally discovered an important issue "sync-IO in async context as an aggravator" — RED without the skill would not have included that in the review.
 
 - **Refactor applied**: section "Edge-Cases & Aggravators" added (sync-IO, Extended-Thinking-Timeouts, uvicorn reload mode) — from GREEN self-reflection. Improves the depth of the detection checklist.
 

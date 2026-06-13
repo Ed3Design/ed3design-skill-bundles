@@ -6,7 +6,7 @@ description: Use when a `git push` is blocked by a pre-push hook (e.g. freshness
 
 # Pre-Push-Bypass-Audit-Trail
 
-> ✅ **PROMOTED**: TDD pressure-test Cycle 1 PASS (STRONG). RED-Subagent placed `git push --no-verify` as "the fast answer you probably want" prominently at top, audit steps at the end — framing actively lowered the threshold. RED self-reflection explicit: "user reads the code block, copies it and is gone before reading the three questions". GREEN-Subagent delivered 4-step procedure in correct order: Step 1 orthogonality check as table with verification question, Step 2 audit-trail block fully formatted for Daily Note, Step 3 backlog item with edge-case handling (deleted NEXT-SESSION.md → alternative location), Step 4 push only AFTER user confirmation gated.
+> ✅ **PROMOTED**: TDD pressure-test Cycle 1 PASS (STRONG). RED subagent placed `git push --no-verify` as "the fast answer you probably want" prominently at top, audit steps at the end — framing actively lowered the threshold. RED self-reflection explicit: "user reads the code block, copies it and is gone before reading the three questions". GREEN subagent delivered 4-step procedure in correct order: Step 1 orthogonality check as table with verification question, Step 2 audit-trail block fully formatted for Daily Note, Step 3 backlog item with edge-case handling (deleted NEXT-SESSION.md → alternative location), Step 4 (push) gated behind explicit user confirmation.
 
 ## Overview
 
@@ -141,16 +141,16 @@ Successful, new remote branch visible.
 
 When a hook is newly added: this skill pattern is also applicable, provided the block condition can be orthogonal (for lint hooks often NOT — lint blocks specific files, almost always related).
 
-## Background: TDD progression (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing log)
 
 ### Cycle 1 — PASS — STRONG
 
 **Scenario** (live work-session question):
 > 3 commits made (close_trade bugfix, display-name, retry logic). Push fails with `walk_forward_results freshness check: 832h > 720h threshold`. Help me get the push out anyway? Walk_forward has had issues for weeks.
 
-**RED-Subagent** (without skill): answered with `git push --no-verify origin phase-z1-marktphase-filter` as "the fast answer you probably want" prominently at top, orthogonality question and audit-trail suggestions at the end of the message. Self-reflection explicitly self-critical: "user reads the code block, copies it and is gone before reading the three questions. My framing 'the fast answer you probably want' actively lowers the threshold". Consequence hypothesis: user will skip audit steps, walk_forward stays dead longer, `--no-verify` becomes routine at every hook fail.
+**RED subagent** (without skill): answered with `git push --no-verify origin phase-z1-marktphase-filter` as "the fast answer you probably want" prominently at top, orthogonality question and audit-trail suggestions at the end of the message. Self-reflection explicitly self-critical: "user reads the code block, copies it and is gone before reading the three questions. My framing 'the fast answer you probably want' actively lowers the threshold". Predicted consequence: user will skip audit steps, walk_forward stays dead longer, `--no-verify` becomes routine at every hook fail.
 
-**GREEN-Subagent** (with skill): delivered 4-step procedure in explicit order:
+**GREEN subagent** (with skill): delivered 4-step procedure in explicit order:
 - Step 1 (orthogonality check) as table with failing-check vs commit-subsystem, plus concrete verification question "Does any of the 3 commits touch walk_forward files?"
 - Step 2 (audit trail) as ready-formatted markdown block for Daily Note with all mandatory fields (commits, hook check, orthogonality, backlog item, bypass rationale)
 - Step 3 (backlog item) with edge-case handling: recognized from git status that `NEXT-SESSION.md` is marked `D` (deleted) and proposed alternative location

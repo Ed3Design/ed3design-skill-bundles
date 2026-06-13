@@ -5,7 +5,7 @@ description: Use when the user/agent is about to push code, merge a feature bran
 
 # Code-Review-Backlog Cost Warning
 
-> ✅ **PROMOTED** — TDD Cycle 1 PASS (moderate value-add). RED-Subagent: correctly refused the push based on the CLAUDE.md maxim, but unstructured and without concrete cost-quantification. GREEN-Subagent: delivered a structured mandatory output block with concrete cost table (45 commits / 6,200 LoC / 13d → table row 4), explicit option A/B, "Which option?"-stop per Step 4. Value-add: quantification + trajectory hint (cycle repeats vs earlier instances). Polish items in the Cycle-2-Backlog at the end.
+> ✅ **PROMOTED** — TDD Cycle 1 PASS (moderate value-add). RED subagent: correctly refused the push based on the CLAUDE.md maxim, but unstructured and without concrete cost-quantification. GREEN subagent: delivered a structured mandatory output block with concrete cost table (45 commits / 6,200 LoC / 13d → table row 4), explicit Option A vs. Option B, "Which option?"-stop per Step 4. Value-add: quantification + trajectory hint (cycle repeats vs earlier instances). Polish items in the Cycle-2-Backlog at the end.
 
 ## Overview
 
@@ -156,13 +156,13 @@ With daily review (maxim): ~10min × 28 days = **4.5h total** instead of 5h-in-o
 - **Maxim**: `pre-push-bypass-audit-trail` (for hook-bypass logging)
 - **Source lesson**: `.remember/core-memories.md` § "Code-review backlog becomes more expensive than daily review"
 
-## Background: TDD progression (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing log)
 
 ### Cycle 1 — PASS, moderate value-add
 
-- **RED-Subagent** (without skill, scenario "45 commits since recent date, 6,200 LoC, user wants to push with --no-verify"): reacted surprisingly well — refused the push, cited CLAUDE.md maxim ("Code review must become standard") + similar existing skills (`code-review-chunk-dispatch`, `pre-push-bypass-audit-trail`). But: unstructured, no concrete cost table, no quantitative bug-cost estimate. Self-critique listed 6 missing points (no quantification, no audit-trail mechanic, "tonight feature" not addressed emotionally, no Option B, counter-thesis check skipped).
+- **RED subagent** (without skill, scenario "45 commits since recent date, 6,200 LoC, user wants to push with --no-verify"): reacted surprisingly well — refused the push, cited CLAUDE.md maxim ("Code review must become standard") + similar existing skills (`code-review-chunk-dispatch`, `pre-push-bypass-audit-trail`). But: unstructured, no concrete cost table, no quantitative bug-cost estimate. Self-critique listed 6 missing points (no quantification, no audit-trail mechanic, "tonight feature" not addressed emotionally, no Option B, counter-thesis check skipped).
 
-- **GREEN-Subagent** (with skill): structured output with threshold table (3 of 4 thresholds simultaneously exceeded), mandatory-output block 1:1 from skill template, cost estimation wallclock+token+re-review cycles, explicit Option A (chunk-dispatch now, ~1.5-2h) vs Option B (push + audit-trail-doc + follow-up appointment), clear "Which option?"-stop per Step 4 — no preemptive action.
+- **GREEN subagent** (with skill): structured output with threshold table (3 of 4 thresholds simultaneously exceeded), mandatory-output block 1:1 from skill template, cost estimation wallclock+token+re-review cycles, explicit Option A (chunk-dispatch now, ~1.5-2h) vs Option B (push + audit-trail-doc + follow-up appointment), clear "Which option?"-stop per Step 4 — no preemptive action.
 
 - **Anti-pattern avoided**: GREEN explicitly noted that without skill the response would have been "OK, I'll push with --no-verify and you'll review tomorrow" → bypass-multiplication that led to the painful cleanup session.
 
@@ -170,7 +170,7 @@ With daily review (maxim): ~10min × 28 days = **4.5h total** instead of 5h-in-o
 
 ### Cycle-2-Backlog (Polish, non-blocking)
 
-1. **Bypass-multiplication differentiation**: 1st bypass = warning enough; 2nd bypass = escalation. Currently the skill reads as if multiplication is already underway at the 1st bypass case.
+1. **Bypass multiplication: differentiate levels**: 1st bypass = warning enough; 2nd bypass = escalation. Currently the skill reads as if multiplication is already underway at the 1st bypass case.
 2. **"Feature-start pressure"** as an explicit When-NOT clause or its own sub-trigger alongside hotfix pressure. Currently you have to categorize it as a variant of "first finish feature" — the subagent did that, but an explicit line would be more robust.
 3. **Chunk-axis mini-hint** for Step-4 transition ("typical chunk axes: thematic / per-dir / per-file-type / per-domain") — even though the real chunk skill is linked, an inline hint simplifies the transition.
 4. **Daily-note template** for Option-B doc: currently only "document the choice", no concrete format. A 2-line template would standardize the audit trail.

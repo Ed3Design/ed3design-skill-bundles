@@ -6,7 +6,7 @@ description: Use before writing or finalizing a git commit message, especially w
 
 # commit-message-honesty-precheck
 
-> ✅ **PROMOTED**: RED-Subagent identified "NO-OP" as false and suggested a better message — good basis. GREEN-Subagent applied all 3 steps + smell-table in a structured way, quantified the effect (40 trades blocked, +0.43pp WR), and emitted "PRECHECK: FAILED — message is a lie."
+> ✅ **PROMOTED**: RED subagent identified "NO-OP" as false and suggested a better message — good basis. GREEN subagent applied all 3 steps + smell-table in a structured way, quantified the effect (40 trades blocked, +0.43pp WR), and emitted "PRECHECK: FAILED — message is a lie."
 
 ## The pattern
 
@@ -54,12 +54,12 @@ Per the maxim "NEW commits rather than amending":
 - **Forward-document** in the next commit's message + daily note
 - Example: `"Clarification regarding 3247e28: original message 'NO-OP' was misleading — the change actually blocks cc=4/5 days"`
 
-## Background: TDD progression (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing log)
 
 ### Cycle 1 — PASS
 
-- **RED-Subagent** (without skill): identified "NO-OP" as false ("a NO-OP change by definition has no effect"). Suggested a better message. Missing: structured smell-table, 3-step flow, quantification of the effect (how many trades affected?).
-- **GREEN-Subagent** (with skill): applied smell-table ("NO-OP" + "default bump" both hit). Formulated: "PRECHECK: FAILED — message is a lie." Delivered two variants of the correct message (with and without quantification). Identified the core trap: "intent was NO-OP" ≠ "diff is NO-OP".
+- **RED subagent** (without skill): identified "NO-OP" as false ("a NO-OP change by definition has no effect"). Suggested a better message. Missing: structured smell-table, 3-step flow, quantification of the effect (how many trades affected?).
+- **GREEN subagent** (with skill): applied smell-table ("NO-OP" + "default bump" both hit). Formulated: "PRECHECK: FAILED — message is a lie." Delivered two variants of the correct message (with and without quantification). Identified the core trap: "intent was NO-OP" ≠ "diff is NO-OP".
 - **Refactor**: positive example for correct default-change message added (was missing in original). Fallback protocol for "precheck without live-code access" added.
 
 ### Cycle-2-Backlog (non-blocking)

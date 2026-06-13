@@ -5,13 +5,13 @@ description: Use when you are about to refactor a value, constant, helper-functi
 
 # Cross-File Source-of-Truth Grep
 
-> ✅ **PROMOTED** — TDD Cycle 1 PASS. RED-Subagent gave a heuristic "grep first" recommendation, but without the decisive 4th grep pass on mapping values. GREEN-Subagent added the 4th pass `grep -rn "'CL=F'\s*:\s*'WTI"` — which catches copies of the mapping structure under deviating variable names (`_DISPLAY_MAP`, `LABELS`, dicts embedded inside helper functions). Precisely this pass would have caught the `signal_dispatcher.py:_get_display_name` bug before the refactor. **R1 refactor applied**: 4th grep pass in Quick Reference as a separate line + hint block.
+> ✅ **PROMOTED** — TDD Cycle 1 PASS. RED subagent gave a heuristic "grep first" recommendation, but without the decisive 4th grep pass on mapping values. GREEN subagent added the 4th pass `grep -rn "'CL=F'\s*:\s*'WTI"` — which catches copies of the mapping structure under deviating variable names (`_DISPLAY_MAP`, `LABELS`, dicts embedded inside helper functions). Precisely this pass would have caught the `signal_dispatcher.py:_get_display_name` bug before the refactor. **R1 refactor applied**: 4th grep pass in Quick Reference as a separate line + hint block.
 
 ## Overview
 
 **Before every refactor: grep -r for the OLD pattern, not the NEW one.**
 
-When you replace an old pattern (column name, helper call, inline dict, default string, deprecated import) with a new one, **2-5 additional callers** often burn in that you didn't have in the mental model of "the 3 relevant files":
+When you replace an old pattern (column name, helper call, inline dict, default string, deprecated import) with a new one, **2-5 additional callers** often lurk that you didn't have in the mental model of "the 3 relevant files":
 
 - `notifications/` dispatcher (Telegram, email, webhook)
 - Scheduler jobs (cron-triggered, often rarely touched)
@@ -21,11 +21,11 @@ When you replace an old pattern (column name, helper call, inline dict, default 
 
 Skill = simple discipline: **`grep -rn "<old-pattern>"` BEFORE you write the first new call.** 30 seconds of effort prevents hours of re-review cycle.
 
-This maxim is the refactor-variant of the "Single Source of Truth" maxim: the SoT migration is only complete when grep on the old pattern is empty.
+This maxim is the refactor-variant of the "Single Source of Truth" maxim: the SoT migration is only complete when grep for the old pattern returns nothing.
 
 ## When to use
 
-**Trigger phrases (you would just be saying)**:
+**Trigger phrases (the kind you'd be about to use)**:
 - "I'm refactoring <X> to <Y>"
 - "fix schema drift in <table>.<column>"
 - "introduce SoT for <Display-Name / config-var / helper>"
@@ -35,7 +35,7 @@ This maxim is the refactor-variant of the "Single Source of Truth" maxim: the So
 - "extract config defaults from code"
 
 **High-risk markers** (additional trigger):
-- You have a small list of affected files in mind (≤5) — precisely then grep, because that's the under-estimation-prone case
+- You have a small list of affected files in mind (≤5) — precisely then grep, because that's the case most prone to under-estimation
 - The new pattern already lives somewhere ("we standardized this in `core/`") — meaning older spots are not migrated yet
 - Module belongs to **notification / dispatcher / scheduler / cron / batch** — these paths are rarely touched, drift accumulates
 
@@ -142,13 +142,13 @@ grep -rn "<old-pattern>" --include="*.py" | wc -l
 - **COMPLEMENT**: `silent-except-versteckt-schema-drift` (same bug class from the symptom side)
 - Maxim: "Single Source of Truth — hardcoded defaults are ticking time bombs"
 
-## Background: TDD progression (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing log)
 
 ### Cycle 1 — PASS with R1 refactor
 
-- **RED-Subagent** (without skill, scenario "migrate display_names inline-dicts to central `instrument_label()`, 3 known files"): heuristically recommended "first grep for further occurrences" — surprisingly good, but **only the variable-name grep** (`grep -rn "display_names"`). Self-critique listed 7 points (repo not inspected, DB as SoT not addressed, migration order with imports, tests before deletion, tooling hint, anti-pattern arc, no dict diff before merge).
+- **RED subagent** (without skill, scenario "migrate display_names inline-dicts to central `instrument_label()`, 3 known files"): heuristically recommended "first grep for further occurrences" — surprisingly good, but **only the variable-name grep** (`grep -rn "display_names"`). Self-critique listed 7 points (repo not inspected, DB as SoT not addressed, migration order with imports, tests before deletion, tooling hint, anti-pattern arc, no dict diff before merge).
 
-- **GREEN-Subagent** (with skill): brought the decisive added value — the **4th grep pass on mapping values** (`grep -rn "'CL=F'\s*:\s*'WTI"`) that catches copies of the mapping structure under deviating variable names. Plus: named concrete high-risk paths for the codebase (`notifications/signal_dispatcher.py`, `notifications/telegram_*.py`, `scheduler/jobs/*.py`, `briefings/*.py`), cross-reference to `pre-deploy-code-drift-detection` as complement after the refactor, schema-use-case-mismatch hint (`display_name IS NULL` check).
+- **GREEN subagent** (with skill): brought the decisive added value — the **4th grep pass on mapping values** (`grep -rn "'CL=F'\s*:\s*'WTI"`) that catches copies of the mapping structure under deviating variable names. Plus: named concrete high-risk paths for the codebase (`notifications/signal_dispatcher.py`, `notifications/telegram_*.py`, `scheduler/jobs/*.py`, `briefings/*.py`), cross-reference to `pre-deploy-code-drift-detection` as complement after the refactor, schema-use-case-mismatch hint (`display_name IS NULL` check).
 
 - **R1 refactor applied**: Quick Reference table extended with row "Inline-dict → SoT (value substring, catches obscured names)" + hint block that this is the most critical variant (would have caught the bug).
 

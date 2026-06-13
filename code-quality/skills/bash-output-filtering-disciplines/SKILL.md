@@ -6,7 +6,7 @@ description: Use BEFORE running any Bash command that could produce more than ~5
 
 # Bash Output Filtering Disciplines
 
-> ✅ **PROMOTED** via TDD-Cycle. RED-Subagent reflected: "my default is significantly not token-efficient — 50x more tokens than necessary". GREEN-Subagent achieved with skill **~98% saving** (~500 tokens instead of ~50k) via 1 SSH-Call with server-side for-loop instead of 5 sequential SSH calls.
+> ✅ **PROMOTED** via TDD-Cycle. RED subagent reflected: "my default is significantly less token-efficient — 50x more tokens than necessary". GREEN subagent achieved with skill **~98% saving** (~500 tokens instead of ~50k) via 1 SSH-Call with server-side for-loop instead of 5 sequential SSH calls.
 
 ## Overview
 
@@ -239,13 +239,13 @@ Empirical estimates from work sessions:
 - **`code-review-chunk-dispatch`** (GA): code-review subagents return output — if each subagent dumps raw Bash-output, multiplied token burn.
 - **`enum-known-values-via-insert-grep`** (GA): when this skill does `grep -rn ... | head -20` (instead of all), its own cost stays small.
 
-## Background: TDD progression (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing log)
 
-### Cycle 1 — PASS (98% Token-Saving validated)
+### Cycle 1 — PASS (98% token saving validated)
 
-- **RED-Subagent** (without skill, scenario: health-check 5 containers on a server via SSH): wrote 5 sequential SSH calls (`docker logs --since 30m | grep error` without `| head`, `--tail 100` "in case user asks" reflex), estimated 6k-28k token consumption. Self-assessment: "significantly not token-efficient — 20-50x more tokens than the efficient approach". Itself formulated the correct approach ("`for c in ...; do ... done` in ONE SSH call") — but **only as retrospective reflection**, not as default.
+- **RED subagent** (without skill, scenario: health-check 5 containers on a server via SSH): wrote 5 sequential SSH calls (`docker logs --since 30m | grep error` without `| head`, `--tail 100` "in case user asks" reflex), estimated 6k-28k token consumption. Self-assessment: "significantly not token-efficient — 20-50x more tokens than the efficient approach". Itself formulated the correct approach ("`for c in ...; do ... done` in ONE SSH call") — but **only as retrospective reflection**, not as default.
 
-- **GREEN-Subagent** (with skill via Read tool, same task): 1 SSH call with server-side `for`-loop, `docker ps --format "{{.Names}}: {{.Status}}"`, `--since 30m | grep -iE "error|critical" | tail -5`. Token consumption ~500 tokens vs ~50k naïve = **~98% saving empirically**. Identified skill gap: SSH-multiplex pattern not explicitly documented (derived from anti-pattern).
+- **GREEN subagent** (with skill via Read tool, same task): 1 SSH call with server-side `for`-loop, `docker ps --format "{{.Names}}: {{.Status}}"`, `--since 30m | grep -iE "error|critical" | tail -5`. Token consumption ~500 tokens vs ~50k naïve = **~98% saving empirically**. Identified skill gap: SSH-multiplex pattern not explicitly documented (derived from anti-pattern).
 
 ### Cycle-2-Backlog (Polish, non-blocking)
 

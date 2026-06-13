@@ -134,7 +134,7 @@ Before GA promotion of this skill:
 3. **Expected RED failure mode**: 5-10min mid-execution discovery vs GREEN's 30sec pre-check
 4. **Verdict criterion**: GREEN presents mode verdict + plan annotation BEFORE code action
 
-## Background: TDD log (Bulletproofing-Log)
+## Background: TDD log (Bulletproofing log)
 
 ### Cycle 1 (DRAFT phase)
 

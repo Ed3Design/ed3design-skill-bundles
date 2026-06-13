@@ -5,7 +5,7 @@ description: Use BEFORE writing or debugging Python subprocess.run(["ssh", host,
 
 # Subprocess SSH Arg Quoting via shlex
 
-> ✅ **PROMOTED** via TDD cycle (RED+GREEN subagent pair). RED-Subagent wrote naive list form and itself recognized while writing "my code is probably broken for the `-F '|'` part" — skill prevents exactly this silent shell interpretation. GREEN-Subagent additionally used Step 4 (SQL via stdin instead of `-c`) and verified 10 edge cases.
+> ✅ **PROMOTED** via TDD cycle (RED+GREEN subagent pair). RED subagent wrote naive list form and RED recognized on its own while writing "my code is probably broken for the `-F '|'` part" — skill prevents exactly this silent shell interpretation. GREEN subagent additionally used Step 4 (SQL via stdin instead of `-c`) and verified 10 edge cases.
 
 ## Overview
 
@@ -155,7 +155,7 @@ A real MCP-server refactor session:
 - Iteration 2: `-i + stdin` for SQL, but `-F "\t"` still broken → 8 min (tab whitespace-eaten)
 - Iteration 3: switch to `-F "|"` for tab-replacement → 7 min (pipe = remote shell pipeline)
 - Iteration 4: `shlex.quote + join` → 5 min, finally works
-- **Total cost: ~30 min + cognitive overhead** for one bug-class that 5 min of skill-application would prevent
+- **Total cost: ~30 min + cognitive overhead** for one bug-class that 5 min of applying the skill would have prevented
 
 At 3-4 SSH-bridge projects per year × 30 min = 1.5-2h annual savings + frustration reduction.
 
@@ -167,13 +167,13 @@ At 3-4 SSH-bridge projects per year × 30 min = 1.5-2h annual savings + frustrat
 
 ---
 
-## Background: TDD progression (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing log)
 
 ### Cycle 1 — PASS
 
-- **RED-Subagent** (without skill, scenario: MCP-server function `query_trading_db(sql)` for a remote DB via SSH+docker exec+psql with `-F '|'` and test query with single quotes): wrote naive list form `["ssh", host, "docker", "exec", ..., "psql", ..., "-F", "|", "-c", sql]`. **While writing**, RED itself recognized: "my code is probably broken for the `-F '|'` part. The SQL might get through because it's already quoted, but that's luck, not design." Identified the correct pattern (`shlex.quote + join`) **only as an option**, not as spontaneous default. Classic anti-pattern: known but not applied without skill trigger.
+- **RED subagent** (without skill, scenario: MCP-server function `query_trading_db(sql)` for a remote DB via SSH+docker exec+psql with `-F '|'` and test query with single quotes): wrote naive list form `["ssh", host, "docker", "exec", ..., "psql", ..., "-F", "|", "-c", sql]`. **While writing**, RED recognized on its own: "my code is probably broken for the `-F '|'` part. The SQL might get through because it's already quoted, but that's luck, not design." Identified the correct pattern (`shlex.quote + join`) **only as an option**, not as spontaneous default. Classic anti-pattern: known but not applied without skill trigger.
 
-- **GREEN-Subagent** (with skill via Read tool): first read `description` frontmatter (trigger check), then "The Pattern" (visual ✅/❌ comparison), then "Steps to apply" as a checklist. Additionally used Step 4 (SQL via stdin instead of `-c`) — the most powerful lever because it removes the SQL payload completely from the quoting game. Wrote 10 edge-case tests (pipe, single-quote, parens, semicolon, dollar-sign, tab, glob, syntax-error, timeout, BatchMode). Caller-context check: `shlex` is Python stdlib, available out-of-the-box.
+- **GREEN subagent** (with skill via Read tool): first read `description` frontmatter (trigger check), then "The Pattern" (visual ✅/❌ comparison), then "Steps to apply" as a checklist. Additionally used Step 4 (SQL via stdin instead of `-c`) — the most powerful lever because it removes the SQL payload completely from the quoting game. Wrote 10 edge-case tests (pipe, single-quote, parens, semicolon, dollar-sign, tab, glob, syntax-error, timeout, BatchMode). Caller-context check: `shlex` is Python stdlib, available out-of-the-box.
 
 - **Refactor applied before PROMOTE**:
   - **Polish-1**: anti-pattern "f-string construction" extended with concrete code example with `symbol="CL=F"` — previously only one line mentioned, now with ❌/✅ comparison

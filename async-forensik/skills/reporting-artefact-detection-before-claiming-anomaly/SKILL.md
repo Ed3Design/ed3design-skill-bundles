@@ -6,7 +6,7 @@ description: Use when observing a "surprising anomaly" in backtest output, SQL q
 
 # reporting-artefact-detection-before-claiming-anomaly
 
-> ✅ **PROMOTED**: TDD pressure test passed. RED-Subagent walked straight into the pause + forensic-dispatch trap (classic anti-pattern), recognized the bias only post-hoc in self-reflection. GREEN-Subagent immediately identified the NULL-handling hypothesis from the genesis-case table, delivered a 30-second SQL check instead of a 1h forensic subagent. Refactor R1 (decision tree for Step-2-skip condition) + R2 (caller-context requirements for callers without DB access) included before promotion. Genesis: confirmed 4× in one day — D1 double-counting, KW13 NULL artefact, C1-1055 cross-window, 24h methodology drift.
+> ✅ **PROMOTED**: TDD pressure test passed. RED subagent walked straight into the pause + forensic-dispatch trap (classic anti-pattern), recognized the bias only post-hoc in self-reflection. GREEN subagent immediately identified the NULL-handling hypothesis from the genesis-case table, delivered a 30-second SQL check instead of a 1h forensic subagent. Refactor R1 (decision tree for Step-2-skip condition) + R2 (caller-context requirements for callers without DB access) included before promotion. Genesis: confirmed 4× in one day — D1 double-counting, KW13 NULL artefact, C1-1055 cross-window, 24h methodology drift.
 
 ## What this skill does
 
@@ -140,13 +140,13 @@ The 3-step triage was informally run that day — but only AFTER 3 subagent fore
 
 ### Cycle 1 — PASS (RED in trap, GREEN clean)
 
-- **RED-Subagent** (without skill, scenario: "KW18 WR 0.5% at n=180 with 4 preceding schema migrations in context"):
+- **RED subagent** (without skill, scenario: "KW18 WR 0.5% at n=180 with 4 preceding schema migrations in context"):
   - Top recommendation: **"pause strategy immediately + dispatch forensic subagent in parallel"** — exactly the anti-pattern the skill aims to prevent
   - Action plan: 5 steps, all forensics-related, none pre-triage
   - Self-reflection (at the end, post-hoc): **"unchecked core assumption — I accepted the number as a real production-domain outcome. Four out of four context items are reporting-pipeline changes. The action plan should have had Step 0: check whether anomaly is reporting artefact."** — RED recognized the bias on its own, but too late (the pause action would already be out)
   - **Hypothetical outcome without skill**: 1h subagent time + real-money pause on an artefact
 
-- **GREEN-Subagent** (with skill, identical scenario):
+- **GREEN subagent** (with skill, identical scenario):
   - Top recommendation: **"before anything is dispatched/paused: 3-step triage (~5 min) — WR 0.5% is with high probability a NULL-handling artefact from a rename migration"**
   - Structural pattern match against genesis-case table: "KW13 1.12% / 83-of-89 NULL is structurally isomorphic to today's KW18 0.5%"
   - SQL template directly for Step 1 NULL handling check delivered, copy-paste ready

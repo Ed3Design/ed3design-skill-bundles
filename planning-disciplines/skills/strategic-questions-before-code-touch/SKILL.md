@@ -110,12 +110,12 @@ Counterfactual without skill: wished-for-implementation would trigger 2-3 user p
 
 Pattern discovered after maxim "Outcome > Tool" + Phase B+C+D experience.
 
-## Background: TDD log (Bulletproofing-Log)
+## Background: TDD log (Bulletproofing log)
 
 ### Cycle 1 (PASS)
 
-- **RED-Subagent** (without skill): 6 assumptions without user question (leverage-relative vs strike-delta, JSONB vs new column, sizing semantics, migration order). Wished-for implementation as default. Self-reflection identified worst case correctly: "live trades with wrong sizing → trust damage to entire vision-spec model." But self-reflection is not the default workflow.
-- **GREEN-Subagent** (with skill): Formulated 3 strategic questions with 2-3 options each + Recommended marker. Caller-context bias (subagent without AskUserQuestion tool) explicitly addressed via markdown-simulated block. NO-code-touch gate before user answer maintained.
+- **RED subagent** (without skill): 6 assumptions without user question (leverage-relative vs strike-delta, JSONB vs new column, sizing semantics, migration order). Wished-for implementation as default. Self-reflection identified worst case correctly: "live trades with wrong sizing → trust damage to entire vision-spec model." But self-reflection is not the default workflow.
+- **GREEN subagent** (with skill): Formulated 3 strategic questions with 2-3 options each + Recommended marker. Caller-context bias (subagent without AskUserQuestion tool) explicitly addressed via markdown-simulated block. NO-code-touch gate before user answer maintained.
 - **Refactor**: no blocker; cycle-2 backlog extended with subagent caller-context section.
 
 ### Cycle-2 backlog (polish, non-blocking)

@@ -91,7 +91,7 @@ GATE 5 — Don't adjust blindly:
 | Skipping cross-component revalidation | Components built in old frame become silently invalid | After ANY component fix, re-audit ALL related components |
 | Falling back to spec when mesh-audit feels like extra work | The 30-second audit prevents 4-hour debug session | The audit IS the work; treat it as required scaffolding |
 | Filleting without checking wall thickness | Radius > wall thickness destroys body | Always: `r_fillet ≤ wall_thickness × 0.8` |
-| Running comprehensive mesh-audit in one big script | 60k samples × 80 Z-bins × 36 angle-bins blocks the Fusion UI thread, hangs the bridge | Cap at ~20k subsamples; split per-region (cut zone, sockel, top) into separate calls |
+| Running comprehensive mesh-audit in one big script | 60k samples × 80 Z-bins × 36 angle-bins blocks the Fusion UI thread, hangs the bridge | Cap at ~20k subsamples; split per-region (cut zone, pedestal, top) into separate calls |
 
 ---
 

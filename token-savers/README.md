@@ -16,12 +16,13 @@
 
 ## 🛠 Contents
 
-### Skills (4)
+### Skills (3)
 
 - **`pdf-text-extract-without-vision`** — `pdftotext` (poppler) or OCR fallback (`ocrmypdf`) instead of Claude Vision for PDFs
 - **`image-preprocessing-helper`** — resize/ocr/info/colors via local Python tool before vision call
 - **`vault-search-helper`** — single-call ranked search instead of multiple Glob+Grep
-- **`bash-output-filtering-disciplines`** — 12-pattern catalog for bash-output triage (head, tail, grep, jq, awk patterns)
+
+For bash-output filtering disciplines (head, tail, grep, jq, awk patterns), see the `code-quality` bundle.
 
 ### Tools (5 Python scripts)
 

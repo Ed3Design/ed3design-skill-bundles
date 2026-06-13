@@ -155,9 +155,9 @@ When the naive regex isn't enough (e.g. moving from internal dashboard to extern
 
 ### Cycle 1 — PASS with Polish
 
-- **RED-Subagent** (without skill, Flask + psycopg2 for `POST /sql`): Wrote extensive validator with multi-layer defense (regex + `set_session(readonly=True)` + statement_timeout + read-only PG role). **Found 7 gaps in its own code**: SELECT INTO bypass, dollar-quoting not handled, string-literal-with-`--` false-positive, SELECT FOR UPDATE row-lock side-effect, CTE-RETURNING, identifier collisions (`"drop"` column), unicode whitespace. Very honest self-assessment.
+- **RED subagent** (without skill, Flask + psycopg2 for `POST /sql`): Wrote extensive validator with multi-layer defense (regex + `set_session(readonly=True)` + statement_timeout + read-only PG role). **Found 7 gaps in its own code**: SELECT INTO bypass, dollar-quoting not handled, string-literal-with-`--` false-positive, SELECT FOR UPDATE row-lock side-effect, CTE-RETURNING, identifier collisions (`"drop"` column), unicode whitespace. Very honest self-assessment.
 
-- **GREEN-Subagent** (with skill via Read tool, same task): Applied 4-step pattern + additionally multi-statement defense (semicolon detection) + RETURNING denylist + audit log with decoded SQL. Identified skill adaptation from FastAPI/asyncpg to Flask/psycopg2 as trivial. Found the EXECUTE anti-pattern particularly valuable ("sounds like 'execute query', but is prepared-statement mutation").
+- **GREEN subagent** (with skill via Read tool, same task): Applied 4-step pattern + additionally multi-statement defense (semicolon detection) + RETURNING denylist + audit log with decoded SQL. Identified skill adaptation from FastAPI/asyncpg to Flask/psycopg2 as trivial. Found the EXECUTE anti-pattern particularly valuable ("sounds like 'execute query', but is prepared-statement mutation").
 
 - **Refactor applied before PROMOTE** (based on RED self-findings):
   - **Polish-1**: `pg_sleep/pg_terminate_backend` with concrete code snippet as function denylist

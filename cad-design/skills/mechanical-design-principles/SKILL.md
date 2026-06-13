@@ -110,7 +110,7 @@ The product will be assembled once, but may need to be serviced many times. Desi
 - **Asymmetric snap release:** snaps that release from a specific access direction (plastic card slot, small screwdriver notch) rather than pure compression that might require specialized tools
 - **Cable disconnection before structural removal:** cable connectors should be accessible without removing a structural member first
 - **Labeled orientation:** if a part is orientation-sensitive, mark it (arrow, embossed text, keyed geometry) rather than relying on the technician's memory
-- **Fastener consistency:** if screws are needed, use one size throughout the product. Mixed fasteners ("2× M3×8, 4× M2.5×6, 1× M4×10") lose in the field within the first service cycle
+- **Fastener consistency:** if screws are needed, use one size throughout the product. Mixed fasteners ("2× M3×8, 4× M2.5×6, 1× M4×10") get lost in the field within the first service cycle
 
 **Heuristic:** Sketch the "exploded view" of the product, showing each part pulled out in its disassembly order. If the exploded view is awkward, the design is awkward.
 

@@ -5,7 +5,7 @@ description: Captures a pattern from a Phase-A execution session: when executing
 
 # Roadmap-Phase-Execution: Verify-Before-Touch
 
-> ✅ **PROMOTED**: TDD pressure test passed. RED-Subagent showed a reasonable verify-first proposal (scan daily notes, DB query, Pi status). GREEN-Subagent went one step further: read the EXISTING Phase-A roadmap in the vault and discovered **Phase A is already completed** (audit log + commit hashes present) → drift table shown, 3-scenarios sanity question instead of check-mark setting, Phase 3 (execution) explicitly not started. Skill prevented false-positive "done" setting. Cycle-2 backlog: fallback-mode no-SSH-subagent, "phase already done" anti-pattern line, trust-boundary check.
+> ✅ **PROMOTED**: TDD pressure test passed. RED subagent showed a reasonable verify-first proposal (scan daily notes, DB query, Pi status). GREEN subagent went one step further: read the EXISTING Phase-A roadmap in the vault and discovered **Phase A is already completed** (audit log + commit hashes present) → drift table shown, 3-scenarios sanity question instead of check-mark setting, Phase 3 (execution) explicitly not started. Skill prevented false-positive "done" setting. Cycle-2 backlog: fallback-mode no-SSH-subagent, "phase already done" anti-pattern line, trust-boundary check.
 
 ## Overview
 
@@ -124,26 +124,18 @@ Phase-A consolidation session of `your-app` (6 items A1-A6):
 
 ## Cross-References
 
-- `superpowers:writing-skills` — iron-law protocol (why this skill is marked as STUB)
-- `vault-decision-cross-file-sync` (also stub) — how discovery issues are multi-file anchored
+- `superpowers:writing-skills` — TDD-iron-law protocol for skill creation
+- `vault-decision-cross-file-sync` — how discovery issues are multi-file anchored
 - `brain-dump-to-phased-roadmap` — predecessor step (roadmap design) supplying this skill with material
-- Maxim "Current Truth before Timeline" in core memories — the mindset foundation
+- Maxim "Current Truth before Timeline" — the mindset foundation
 - Maxim "In construction, measure, never estimate" — the engineering root of the pattern
 
-## TODO before STUB marker is removed
-
-1. **RED phase**: Run subagent with pressure scenario "implement Phase Y, prior files present with mixed drift" without this skill. Document which drift items get checked off instead of verify-discovered.
-2. **GREEN phase**: Activate skill, repeat pressure scenario, verify that subagent now does verify-first.
-3. **REFACTOR phase**: 2-3 pressure iterations (time pressure, "the predecessor prepared everything, I can build directly on top", "the user wants tempo, I skip the verify steps").
-4. **Loopholes plugged**: Build rationalization table, create red-flags list.
-5. **Remove `-STUB` suffix from `name` field** → auto-discoverable.
-
-## Background: TDD log (Bulletproofing-Log)
+## Background: TDD log (Bulletproofing log)
 
 ### Cycle 1 (PASS — with surprising GREEN behavior)
 
-- **RED-Subagent** (without skill, Phase-A execution task): Sensible answer (b) reality-check first. Cited CLAUDE.md maxims directly ("first read logs/code/DB", "avoid closed-as-done"). Proposed concrete reality-check order (scan daily notes, git log, live trades, Pi status, service-map comparison). Very close to GREEN behavior — RED is also clever here.
-- **GREEN-Subagent** (with skill, same prompt): Went beyond RED — **read the existing roadmap file in the vault** and discovered: Phase A is already marked as ✅ DONE with full audit log (commits and snapshot present). Built drift table against the user instruction. Asked 3-scenarios sanity question (test? check-mark catch-up? rollback?). **No check-mark set, no file edited** — Phase 3 (execution) gated until user answers.
+- **RED subagent** (without skill, Phase-A execution task): Sensible answer (b) reality-check first. Cited CLAUDE.md maxims directly ("first read logs/code/DB", "avoid closed-as-done"). Proposed concrete reality-check order (scan daily notes, git log, live trades, Pi status, service-map comparison). Very close to GREEN behavior — RED is also clever here.
+- **GREEN subagent** (with skill, same prompt): Went beyond RED — **read the existing roadmap file in the vault** and discovered: Phase A is already marked as ✅ DONE with full audit log (commits and snapshot present). Built drift table against the user instruction. Asked 3-scenarios sanity question (test? check-mark catch-up? rollback?). **No check-mark set, no file edited** — Phase 3 (execution) gated until user answers.
 - **Verdict**: GREEN clearly superior — avoided false-positive "check-mark by check-mark" execution although phase was already done. RED would probably have gotten stuck in Phase 1 (reality check) without opening the roadmap itself.
 
 ### Cycle-2 backlog (polish, non-blocking)

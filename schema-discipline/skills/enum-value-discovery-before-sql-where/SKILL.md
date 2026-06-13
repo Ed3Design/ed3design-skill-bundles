@@ -5,7 +5,7 @@ description: Use BEFORE writing any SQL WHERE-clause that filters on a string/en
 
 # enum-value-discovery-before-sql-where
 
-> ✅ **PROMOTED**: Pattern emerged from a production domain forensic session. TDD pressure test passed: GREEN-Subagent recognized the example as a 1:1 scenario and avoided the `WHERE user_response='accept'` anti-pattern; RED produced the same anti-pattern (was self-critical, but would have delivered a wrong query to the user).
+> ✅ **PROMOTED**: Pattern emerged from a production domain forensic session. TDD pressure test passed: GREEN subagent recognized the example as a 1:1 scenario and avoided the `WHERE user_response='accept'` anti-pattern; RED produced the same anti-pattern (was self-critical, but would have delivered a wrong query to the user).
 
 ## Pattern (short form)
 
@@ -127,9 +127,9 @@ If you have no live `psql` (subagent context, code review without prod access, n
 
 ### Cycle 1 — PASS via Subagent-Pair-Dispatch
 
-- **RED-Subagent** (without skill, prompt: "Write SQL for 4-week accepts on `v3_signals.user_response`"): wrote `WHERE user_response = 'accepted'` from training-data heuristic. Was self-critical in step 3 ("guessed heuristically, I did NOT check which distinct values are actually in the column") — recognized the gap but did not act on it. Would have given the user a wrong `count=0` query.
+- **RED subagent** (without skill, prompt: "Write SQL for 4-week accepts on `v3_signals.user_response`"): wrote `WHERE user_response = 'accepted'` from training-data heuristic. Was self-critical in step 3 ("guessed heuristically, I did NOT check which distinct values are actually in the column") — recognized the gap but did not act on it. Would have given the user a wrong `count=0` query.
 
-- **GREEN-Subagent** (with skill, identical prompt): prepended a discovery query as Step 0 → `SELECT user_response, COUNT(*) FROM v3_signals GROUP BY user_response`. Recognized the example in the skill as a 1:1 match → adopted `'taken'` as verified code value. Additionally documented "if count=0 do not draw naive conclusion" as anti-pattern.
+- **GREEN subagent** (with skill, identical prompt): prepended a discovery query as Step 0 → `SELECT user_response, COUNT(*) FROM v3_signals GROUP BY user_response`. Recognized the example in the skill as a 1:1 match → adopted `'taken'` as verified code value. Additionally documented "if count=0 do not draw naive conclusion" as anti-pattern.
 
 - **Refactor applied**: Section "Discovery surrogates without live DB access" added (from GREEN self-reflection: "hint for what to do when a subagent has NO live DB access — the skill implicitly assumes executable `psql`"). Closes caller-context bias for subagents without DB tool.
 

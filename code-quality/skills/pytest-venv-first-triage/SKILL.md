@@ -5,7 +5,7 @@ description: Use when pytest shows multiple failures or errors (especially Modul
 
 # pytest venv-first Triage
 
-> ✅ **PROMOTED**: TDD pressure-test passed with interesting variability. RED-Subagent itself recognized the env-mismatch pattern (smart-RED) and recommended env-check before code-debug — but with a longer reasoning tour. GREEN-Subagent delivered identical diagnosis in <60s via Quick-Check-Procedure block + pattern-match confidence from skill data. Skill is valuable as a tempo booster + insurance against less-smart subagents. Cycle-2 backlog: direnv/pyenv/poetry/uv mention, pre-commit hook hint, Makefile `make test` pattern.
+> ✅ **PROMOTED**: TDD pressure-test passed with interesting variability. RED subagent itself recognized the env-mismatch pattern (smart-RED) and recommended env-check before code-debug — but with a longer reasoning tour. GREEN subagent delivered identical diagnosis in <60s via Quick-Check-Procedure block + pattern-match confidence from skill data. Skill is valuable as a tempo booster + insurance against less-smart subagents. Cycle-2 backlog: direnv/pyenv/poetry/uv mention, pre-commit hook hint, Makefile `make test` pattern.
 
 ## Pattern (short form)
 
@@ -130,12 +130,12 @@ With venv-python re-run:
 
 If this skill had been available: 60s env check immediately, 5min real-bug fix, done.
 
-## Background: TDD progression (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing log)
 
 ### Cycle 1 — PASS — with variability note
 
-- **RED-Subagent** (without skill, 47-failures diagnosis task): remarkably smart — itself recognized that `requirements.txt` contains cachetools but import fails → env-mismatch hypothesis. Suggested env-check before code-debug. Counter-thesis check made explicit ("could the 15 failures be real code bugs? — don't know yet, first fix env"). Very close to GREEN behavior.
-- **GREEN-Subagent** (with skill, same prompt): identical diagnosis logic, but more structured (Quick-Check Procedure block from skill taken 1:1) + higher confidence through pattern-match with documented real case (same paths, same module, same cluster). Verification steps more precise.
+- **RED subagent** (without skill, 47-failures diagnosis task): remarkably smart — itself recognized that `requirements.txt` contains cachetools but import fails → env-mismatch hypothesis. Suggested env-check before code-debug. Counter-thesis check made explicit ("could the 15 failures be real code bugs? — don't know yet, first fix env"). Very close to GREEN behavior.
+- **GREEN subagent** (with skill, same prompt): identical diagnosis logic, but more structured (Quick-Check Procedure block from skill taken 1:1) + higher confidence through pattern-match with documented real case (same paths, same module, same cluster). Verification steps more precise.
 - **Verdict**: GREEN not superior over *this* RED — but RED-subagent variability is real (some subagents would jump directly into code-debug). Skill remains valuable as tempo booster + insurance.
 
 ### Cycle-2-Backlog (Polish, non-blocking)

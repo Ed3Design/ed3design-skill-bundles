@@ -5,7 +5,7 @@ description: Use BEFORE implementing a non-trivial decision-driven task where mu
 
 # Decision-Plan-Hypothesis-Matrix
 
-> ✅ **PROMOTED**: TDD-Pressure-Test Cycle 1 PASS (STRONG). RED-Subagent delivered a pro/con list with maxim references but no formal hypothesis matrix — no success criterion BEFORE analysis, no distinguishing-metric table, no Compound-GO. GREEN-Subagent delivered a complete 7-step plan note with 4 hypotheses + counter-theses + distinguishing-metric + Compound-GO branches + out-of-scope + done-checklist. Auto-discoverable.
+> ✅ **PROMOTED**: TDD-Pressure-Test Cycle 1 PASS (STRONG). RED subagent delivered a pro/con list with maxim references but no formal hypothesis matrix — no success criterion BEFORE analysis, no distinguishing-metric table, no Compound-GO. GREEN subagent delivered a complete 7-step plan note with 4 hypotheses + counter-theses + distinguishing-metric + Compound-GO branches + out-of-scope + done-checklist. Auto-discoverable.
 
 ## Overview
 
@@ -164,16 +164,16 @@ GO ⇔ H1 confirmed AND H3 confirmed AND Delta-Expectancy ≥ +0.05R
 - `superpowers:test-driven-development` — runs AFTER for the implementation step
 - `compound-gate-over-single-metric-DRAFT` — related but smaller scope (no hypothesis matrix part)
 
-## Background: TDD log (Bulletproofing-Log)
+## Background: TDD log (Bulletproofing log)
 
 ### Cycle 1 (PASS — STRONG)
 
 **Scenario** (typical question for production system):
 > I'm considering building an RSI-divergence filter (14-bar bullish divergence as required for long signal) as Layer 3. Should I build that?
 
-**RED-Subagent** (without skill): Delivered a structured pro/con list with maxim references (Cardwell, Backtest-First, coin-flip problem). Implicitly at the end formulated "3 criteria Compound-GO". Self-reflection honest: "no formal hypothesis matrix, no real H/counter-thesis with distinguishing metric, success criteria constructed during (not before) the answer from gut feeling". Had the user followed it, 5 uncalibrated risks would have remained open (divergence-definition drift, WR-only metric, sample size, overfitting door, implicit layer-1+2 filterability assumption).
+**RED subagent** (without skill): Delivered a structured pro/con list with maxim references (Cardwell, Backtest-First, coin-flip problem). Implicitly at the end formulated "3 criteria Compound-GO". Self-reflection honest: "no formal hypothesis matrix, no real H/counter-thesis with distinguishing metric, success criteria constructed during (not before) the answer from gut feeling". Had the user followed it, 5 uncalibrated risks would have remained open (divergence-definition drift, WR-only metric, sample size, overfitting door, implicit layer-1+2 filterability assumption).
 
-**GREEN-Subagent** (with skill): Delivered complete plan note in skill format:
+**GREEN subagent** (with skill): Delivered complete plan note in skill format:
 - Success criterion concrete + falsifiable (Δ-Expectancy ≥ +0.05R, N ≥ 80, Wilson-LB-WR ≥ 40%)
 - 4 hypotheses with real counter-theses + concrete distinguishing metrics (Bootstrap-CI, Wilson-CI, retention share, per-instrument top-2)
 - Compound-GO with AND-conjunction across all 4 H, plus re-test branch for borderline cases
@@ -187,7 +187,7 @@ GO ⇔ H1 confirmed AND H3 confirmed AND Delta-Expectancy ≥ +0.05R
 
 ### Cycle-2 backlog (polish, non-blocking)
 
-1. **Heuristic when 3 vs 5 hypotheses** — Skill says "3-5", but gives no bottom-up rule. Proposal: "minimum 1 edge-H + 1 robustness-H + 1 tradability-H" (from GREEN-Subagent proposal)
+1. **Heuristic when 3 vs 5 hypotheses** — Skill says "3-5", but gives no bottom-up rule. Proposal: "minimum 1 edge-H + 1 robustness-H + 1 tradability-H" (from GREEN subagent proposal)
 2. **Power-check sub-step in Step 1** — for statistics-driven decisions (Bootstrap-CI, Wilson) additionally power analysis: "is N realistic for effect size E with significance level α?"
 3. **Out-of-Sample validation as required in re-test branch** — currently only implicit, should be explicit as decision hygiene
 4. **Live-application log** — tracking mechanic to count how often the skill triggers (for future promotion-audit logs)

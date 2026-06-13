@@ -5,7 +5,7 @@ description: NOT YET TDD-TESTED. Do not auto-trigger. Use when designing or audi
 
 # ephemeral-container-file-detection
 
-> ⚠️ **DRAFT STATUS**: skill emerged from a pre-flight forensic session (before a Phase-X.0 plan for your-app). The pattern prevented ~6h of wasted plan-work. Promotion via `skill-tdd-promotion-workflow` with RED+GREEN-Subagent-Test in the next skill-building session.
+> ⚠️ **DRAFT STATUS**: skill emerged from a pre-flight forensic session (before a Phase-X.0 plan for your-app). The pattern prevented ~6h of wasted plan-work. Promotion via `skill-tdd-promotion-workflow` with RED+GREEN subagent-Test in the next skill-building session.
 
 ## Pattern (short form)
 

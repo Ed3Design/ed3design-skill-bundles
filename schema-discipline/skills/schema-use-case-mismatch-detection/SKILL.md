@@ -115,9 +115,9 @@ This reframe MUST happen with the user — the assistant cannot decide E1/E2/E3 
 
 ### Cycle 1 — PASS via Subagent-Pair-Dispatch, reframe-discipline class
 
-- **RED-Subagent** (without skill, prompt: `claude_assessments.verdict` always NULL, file A active, file B legacy): **verbally identified the mismatch** ("schema-use-case-mismatch") — but STILL fell into the patch trap. Proposed concrete code actions: table split (Option 1) or DROP COLUMN (Option 2). Marked assumptions honestly but chose itself instead of asking the user — exactly the anti-pattern "decide oneself instead of reframing".
+- **RED subagent** (without skill, prompt: `claude_assessments.verdict` always NULL, file A active, file B legacy): **verbally identified the mismatch** ("schema-use-case-mismatch") — but STILL fell into the patch trap. Proposed concrete code actions: table split (Option 1) or DROP COLUMN (Option 2). Marked assumptions honestly but chose itself instead of asking the user — exactly the anti-pattern "decide oneself instead of reframing".
 
-- **GREEN-Subagent** (with skill, identical prompt): explicitly returned the E1/E2/E3 reframe to the user instead of choosing itself. Calculated quantitative plausibility (168 ticks vs 53 rows = 31% gate-pass-rate). Explicitly stated "Do not: add verdict to the INSERT of file A — the LLM response does not contain the field" — directly flagged the anti-pattern. Clear risk differentiation (naive fix = HIGH, E2 = LOW).
+- **GREEN subagent** (with skill, identical prompt): explicitly returned the E1/E2/E3 reframe to the user instead of choosing itself. Calculated quantitative plausibility (168 ticks vs 53 rows = 31% gate-pass-rate). Explicitly stated "Do not: add verdict to the INSERT of file A — the LLM response does not contain the field" — directly flagged the anti-pattern. Clear risk differentiation (naive fix = HIGH, E2 = LOW).
 
 - **Refactor applied**: Added "Edge-Cases" section: rare-writer differentiation, schema-hygiene recommendation (second table at E1), migration-shadow-record demarcation. From GREEN self-reflection: "Schema hygiene at E1 should be more explicit. Currently only implicit in anti-patterns."
 

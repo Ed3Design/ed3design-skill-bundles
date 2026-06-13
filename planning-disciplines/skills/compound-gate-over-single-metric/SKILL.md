@@ -5,7 +5,7 @@ description: Use when designing or reviewing a Go/No-Go-Gate, Backtest-Acceptanc
 
 # compound-gate-over-single-metric
 
-> ✅ **PROMOTED**: RED-Subagent recognized the sample-size problem and missing metrics independently — good baseline. GREEN-Subagent explicitly applied all 3 compound dimensions, identified missing AvgPnL/Throughput as auto-NO-GO due to incomplete data basis, and gave attribution "why NO-GO" instead of just "NO-GO".
+> ✅ **PROMOTED**: RED subagent recognized the sample-size problem and missing metrics independently — good baseline. GREEN subagent explicitly applied all 3 compound dimensions, identified missing AvgPnL/Throughput as auto-NO-GO due to incomplete data basis, and gave attribution "why NO-GO" instead of just "NO-GO".
 
 ## What this skill does
 
@@ -87,12 +87,12 @@ Two verdicts agree on REJECT but disagree on **WHY**. The attribution drives the
 - ❌ **No per-dimension attribution** — "FAIL" without "because X = value vs threshold Y" loses diagnostic value.
 - ❌ **Cargo-culting genesis-case-thresholds (40/2/30)** — those are empirically tied to trading-KO-strategies. Re-derive for your domain.
 
-## Background: TDD log (Bulletproofing-Log)
+## Background: TDD log (Bulletproofing log)
 
 ### Cycle 1 (PASS)
 
-- **RED-Subagent** (without skill): Recognized the sample-size problem at n=89 independently. Requested profit-factor, drawdown, slippage. Verdict: NO-GO. Reasoning correct, but structurally incomplete (no formal 3-class dimension, no AND-conjunction requirement).
-- **GREEN-Subagent** (with skill): Explicitly applied all 3 compound dimensions. AvgPnL and Throughput missing → auto-NO-GO (DATA MISSING = not `PASS`). Emitted attribution with PASS/FAIL/DATA-MISSING per dimension. Recognized genesis-case analogy and wrote anti-pattern warning.
+- **RED subagent** (without skill): Recognized the sample-size problem at n=89 independently. Requested profit-factor, drawdown, slippage. Verdict: NO-GO. Reasoning correct, but structurally incomplete (no formal 3-class dimension, no AND-conjunction requirement).
+- **GREEN subagent** (with skill): Explicitly applied all 3 compound dimensions. AvgPnL and Throughput missing → auto-NO-GO (DATA MISSING = not `PASS`). Emitted attribution with PASS/FAIL/DATA-MISSING per dimension. Recognized genesis-case analogy and wrote anti-pattern warning.
 - **Refactor**: "Incomplete Data → Auto-NO-GO" section inserted as first block. Was missing in original.
 
 ### Cycle-2 backlog (non-blocking)

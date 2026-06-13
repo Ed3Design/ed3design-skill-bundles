@@ -133,6 +133,6 @@ Token saving from active application of this skill: ~25-35k per avoided re-disco
 ## Promotion notes (DRAFT → GA)
 
 Created after user pushback on missing persistence of previous-session strategic proposals. Promote via `skill-tdd-promotion-workflow` after:
-- 1 RED-Subagent pressure test: edge cases like "proposal partially persisted (50% in daily note, 50% in conversation buffer)" and "proposal contradicts existing cluster"
+- 1 RED subagent pressure test: edge cases like "proposal partially persisted (50% in daily note, 50% in conversation buffer)" and "proposal contradicts existing cluster"
 - 1 real-world catch where the skill fires correctly at session-end and identifies an un-persisted strategic block
 - Cross-link to `post-session-skill-review` with explicit "run me FIRST" coordination note

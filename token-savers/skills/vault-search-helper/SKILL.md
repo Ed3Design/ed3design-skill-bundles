@@ -123,7 +123,7 @@ With wikilink → `Read` directly on `path_rel`. On score-tie between top-2: rea
 | Recursive subagent for vault search | Overhead eats the saving, vault-search is sync enough |
 | Vault search for code files | only for `.md`, not for `.py`/`.ts`/`.yaml` |
 
-## Token-Saving Empirics
+## token saving Empirics
 
 Smoke test with `"token optimierung"`:
 - **96 candidates** searched (all .md in 6 scopes)
@@ -144,8 +144,8 @@ Smoke test with `"token optimierung"`:
 
 ### Cycle 1 — PASS
 
-- **RED-Subagent** (without skill): 5 tool calls (broad Grep + focused Grep -C=2 + 2× Glob + Read of top-2), ~14k tokens total. Systematically overlooked `.remember/core-memories.md`, CLAUDE.md itself, the skill directory. "Drift risk high — only 60-70% coverage on first iteration."
-- **GREEN-Subagent** (with skill): 1× `vault-search.py "stop loss too tight" --max 5` + 1 refinement `--scope projects` + 3 grep excerpts, ~3.5k tokens. **Saving 70-80%** exactly in the skill-promised corridor. Also discovered stopword-score-inflation (score 124 for a false positive on a multi-word stopword query).
+- **RED subagent** (without skill): 5 tool calls (broad Grep + focused Grep -C=2 + 2× Glob + Read of top-2), ~14k tokens total. Systematically overlooked `.remember/core-memories.md`, CLAUDE.md itself, the skill directory. "Drift risk high — only 60-70% coverage on first iteration."
+- **GREEN subagent** (with skill): 1× `vault-search.py "stop loss too tight" --max 5` + 1 refinement `--scope projects` + 3 grep excerpts, ~3.5k tokens. **Saving 70-80%** exactly in the skill-promised corridor. Also discovered stopword-score-inflation (score 124 for a false positive on a multi-word stopword query).
 - **Refactor**: none blocking; Cycle-2 backlog expanded.
 
 ### Cycle-2 Backlog (Polish, non-blocking)

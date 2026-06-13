@@ -121,8 +121,8 @@ Pattern discovered after a user-directed forensic investigation into a direction
 
 ### Cycle 1 — PASS (with caveat)
 
-- **RED-Subagent** (without skill): self-identified that "all MY hypotheses disproved = hypothesis set was incomplete" — surprisingly strong. But delivered an unstructured path list (Telegram layer, retry pattern, DB trigger, multiple senders) as "possibly missed", no systematic approach.
-- **GREEN-Subagent** (with skill): structured 5-step approach (document disproof → continue code-read → second-order anomalies → bonus findings with severity → report). Delivered 4 bonus findings with severity table (Critical/Important/Minor) + sequencing recommendation to the user.
+- **RED subagent** (without skill): self-identified that "all MY hypotheses disproved = hypothesis set was incomplete" — surprisingly strong. But delivered an unstructured path list (Telegram layer, retry pattern, DB trigger, multiple senders) as "possibly missed", no systematic approach.
+- **GREEN subagent** (with skill): structured 5-step approach (document disproof → continue code-read → second-order anomalies → bonus findings with severity → report). Delivered 4 bonus findings with severity table (Critical/Important/Minor) + sequencing recommendation to the user.
 - **Skill value**: RED is "lucky engineer with self-awareness", GREEN is "structured forensic process". Skill replaces luck with system.
 - **Refactor**: none blocking.
 

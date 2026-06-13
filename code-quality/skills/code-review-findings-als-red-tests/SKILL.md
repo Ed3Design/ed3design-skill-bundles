@@ -127,12 +127,12 @@ Counterfactual: in a later refactor, the knockout-render-trap (C1) could easily 
 
 Pattern formalized after a Phase-B+C+D review cycle. Reinforces the maxim "code review as standard" with the **systematic-test aspect** — review findings are tests-in-disguise.
 
-## Background: TDD progression (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing log)
 
 ### Cycle 1 — PASS
 
-- **RED-Subagent** (without skill): direct-edit + spot-check, ~45min. Self-reflection acknowledged the risks (no regression test, bug classes uncovered, "done" is claim rather than proof) — but default was direct-edit.
-- **GREEN-Subagent** (with skill): 4 bug-pattern tests (test_sl_knocked_out_renders_warning_not_zero_eur, test_sl_above_ko_ask_rejected_no_positive_pnl, test_sl_equals_ko_ask_rejected, test_quantity_fallback_raises_not_silently_defaults_to_100) + RED-verify obligation. Bonus: GREEN added edge-case test (sl == ko_ask) that the skill didn't explicitly require. ~31min total (+19min vs RED for regression protection).
+- **RED subagent** (without skill): direct-edit + spot-check, ~45min. Self-reflection acknowledged the risks (no regression test, bug classes uncovered, "done" is claim rather than proof) — but default was direct-edit.
+- **GREEN subagent** (with skill): 4 bug-pattern tests (test_sl_knocked_out_renders_warning_not_zero_eur, test_sl_above_ko_ask_rejected_no_positive_pnl, test_sl_equals_ko_ask_rejected, test_quantity_fallback_raises_not_silently_defaults_to_100) + RED-verify obligation. Bonus: GREEN added edge-case test (sl == ko_ask) that the skill didn't explicitly require. ~31min total (+19min vs RED for regression protection).
 - **Refactor**: none blocking.
 
 ### Cycle-2-Backlog (Polish, non-blocking)

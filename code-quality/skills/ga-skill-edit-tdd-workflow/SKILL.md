@@ -175,7 +175,7 @@ Before GA promotion of this skill itself:
 3. GREEN with THIS skill: loads Pre-Step-0 check A/B/C, identifies EDIT mode, dispatches RED+GREEN for JSONB capability, renames with Option A
 4. Expectation: GREEN structurally cleaner, more explicit in workflow pick
 
-## Background: TDD progression (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing log)
 
 ### Cycle 1 — DRAFT phase
 

@@ -6,7 +6,7 @@ description: Use BEFORE reading any PDF file when the goal is to extract textual
 
 # PDF-Text-Extract without Vision
 
-> ✅ **PROMOTED** via TDD-Cycle (RED+GREEN subagent pair). RED-Subagent self-reflected "my default approach (direct Read with pages param) is suboptimal" — skill prevents exactly this default-Vision trap. GREEN-Subagent achieved ~90% token reduction with `-layout` deliberately chosen for a tabular datasheet.
+> ✅ **PROMOTED** via TDD-Cycle (RED+GREEN subagent pair). RED subagent self-reflected "my default approach (direct Read with pages param) is suboptimal" — skill prevents exactly this default-Vision trap. GREEN subagent achieved ~90% token reduction with `-layout` deliberately chosen for a tabular datasheet.
 
 ## Overview
 
@@ -149,17 +149,17 @@ At 10 PDFs/month, savings = $3-8/month from this skill alone.
 
 ### Cycle 1 — PASS
 
-- **RED-Subagent** (without skill, scenario: 20-page audio-driver datasheet, extract 3 sections): default reflex `Read(file_path=..., pages="1-10")` + `pages="11-20")` — would cost 10-25k Vision tokens. Self-assessment at the end: "My default approach is suboptimal — I start with the most expensive tool (Read with Vision possibility) without first checking whether pdftotext is enough." RED-Subagent identified pdftotext as "the disciplined approach" **only afterwards** in reflection, not as a spontaneous default. Classic anti-pattern: known from training but not applied without a skill trigger.
+- **RED subagent** (without skill, scenario: 20-page audio-driver datasheet, extract 3 sections): default reflex `Read(file_path=..., pages="1-10")` + `pages="11-20")` — would cost 10-25k Vision tokens. Self-assessment at the end: "My default approach is suboptimal — I start with the most expensive tool (Read with Vision possibility) without first checking whether pdftotext is enough." RED subagent identified pdftotext as "the disciplined approach" **only afterwards** in reflection, not as a spontaneous default. Classic anti-pattern: known from training but not applied without a skill trigger.
 
-- **GREEN-Subagent** (with skill via Read tool): read `Overview` first (token-cost reasoning), then `When to Trigger` (match check), then `Steps`. Explicitly held the anti-patterns block against its own plan (`-layout` deliberately chosen for tabular datasheet, NOT as default). Token-cost estimate 1-3k instead of 40-100k — **~90% saving empirically confirmed**. Caller-context check: `pdftotext v26.04.0` available locally (`/opt/homebrew/bin/pdftotext`).
+- **GREEN subagent** (with skill via Read tool): read `Overview` first (token-cost reasoning), then `When to Trigger` (match check), then `Steps`. Explicitly held the anti-patterns block against its own plan (`-layout` deliberately chosen for tabular datasheet, NOT as default). Token-cost estimate 1-3k instead of 40-100k — **~90% saving empirically confirmed**. Caller-context check: `pdftotext v26.04.0` available locally (`/opt/homebrew/bin/pdftotext`).
 
 - **Refactor applied before PROMOTE**:
-  - **Polish-1**: Added Step 0 `pdfinfo` metadata probe — verifies user claims like "20 pages" before approach selection (RED-Subagent rightly recognized that user claims are often wrong)
+  - **Polish-1**: Added Step 0 `pdfinfo` metadata probe — verifies user claims like "20 pages" before approach selection (RED subagent rightly recognized that user claims are often wrong)
   - **Polish-2**: Added Step 3b "Multi-Modal-PDF pattern" — hybrid (text via pdftotext + only chart page via Vision) as explicitly documented pattern, was previously hidden in Alt-3
 
 ### Cycle-2 Backlog (Polish, non-blocking)
 
-1. **Cleanup hint for /tmp/ files** — avoid vault-CWD relative paths, always use absolute `/tmp/` (GREEN-Subagent self-discipline, should be explicitly documented)
+1. **Cleanup hint for /tmp/ files** — avoid vault-CWD relative paths, always use absolute `/tmp/` (GREEN subagent self-discipline, should be explicitly documented)
 2. **Privacy boundary note** — for confidential-tagged PDFs (notary, contracts, retirement data) a temp file in `/tmp/` bypasses hook detection. Edge case but relevant for privacy discipline
 3. **Token-cost-tracking practice** — how to actually measure the token difference? `~/Library/Logs/anthropic-billing/` is heuristic; a better metric would be desirable
 4. **Cross-skill with `obsidian-vault-folder-restructure`** — when extracted text files should permanently land in the vault, they belong in resources, not `/tmp/`

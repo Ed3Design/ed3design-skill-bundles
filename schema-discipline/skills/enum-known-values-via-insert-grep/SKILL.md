@@ -5,7 +5,7 @@ description: Use BEFORE writing or editing a Python-side constants/enum/validato
 
 # Enum Known-Values via INSERT-Grep
 
-> ✅ **PROMOTED** — TDD Cycle 1 **STRONG PASS**. RED-Subagent reacted heuristically correct ("grep first") but without concrete verification at a real repo (7 self-critique points). GREEN-Subagent executed **18 Bash-Tool-Uses** in a real production domain repo and delivered substantial findings that would not have been reached without the skill: (1) current `_KNOWN_SOURCES` is already different from what the scenario assumed (recent hotfix), (2) missing productive value `'real'` from `ml/real_trade_bridge.py:142` — would silently trigger `unknown source: real`-warnings for weeks, (3) Cross-Table-False-Positives explicitly rejected (`'optimizer'`, `'manual'@strategy_params`, `'av_earnings'`), (4) `_MODE_TO_SOURCES`-Mapping + DB-Constraint-Implications identified. **R1-Refactor applied**: Step 4b "DB-Constraint-Verify" added as own sub-section — if a CHECK-Constraint / PG-ENUM limits the value-range, a constants-edit alone is ineffective.
+> ✅ **PROMOTED** — TDD Cycle 1 **strong pass**. RED subagent reacted heuristically correct ("grep first") but without concrete verification at a real repo (7 self-critique points). GREEN subagent executed **18 Bash tool uses** in a real production domain repo and delivered substantial findings that would not have been reached without the skill: (1) current `_KNOWN_SOURCES` is already different from what the scenario assumed (recent hotfix), (2) missing productive value `'real'` from `ml/real_trade_bridge.py:142` — would silently trigger `unknown source: real`-warnings for weeks, (3) cross-table false positives explicitly rejected (`'optimizer'`, `'manual'@strategy_params`, `'av_earnings'`), (4) `_MODE_TO_SOURCES`-Mapping + DB constraint implications identified. **R1-Refactor applied**: Step 4b "DB constraint verification" added as own sub-section — if a CHECK-Constraint / PG-ENUM limits the value-range, a constants-edit alone is ineffective.
 
 ## Overview
 
@@ -15,7 +15,7 @@ When you write `_KNOWN_X = {...}`, `VALID_<DIMENSION>`, `pydantic.Field(regex="^
 
 - **False-positive**: typo values slip through ("shadow" gets accepted even though nobody inserts that)
 - **False-negative**: real values get warned / rejected ("manual" triggers `unknown source` warning even though it's legitimate)
-- **Cross-Table-Drift**: columns of the same name exist in multiple tables with different value-spaces — Python side mixes them accidentally
+- **cross-table drift**: columns of the same name exist in multiple tables with different value-spaces — Python side mixes them accidentally
 
 Skill = discipline: **`grep -rn "INSERT INTO <table>"` + all `<column> =` setters BEFORE the constant is written.**
 
@@ -75,7 +75,7 @@ grep -rn "\.source\s*=\s*['\"]" --include="*.py" \
 # Pass 3: UPDATE statements
 grep -rn "UPDATE virtual_trades SET" --include="*.py" | grep "source"
 
-# Pass 4 (Cross-Table-Check): same column-name in other tables
+# Pass 4 (cross-table check): same column-name in other tables
 grep -rn "['\"]source['\"]" --include="*.sql" | head -20
 grep -rn "\.source\s*=" --include="*.py" | head -20  # without table filter
 ```
@@ -111,7 +111,7 @@ In the validator or logger-warning:
 - Use `_KNOWN_PHASE_MODES` for `system_phase.mode`
 - Never mix
 
-### Step 4b — DB-Constraint-Verify (R1-Refactor)
+### Step 4b — DB constraint verification (R1-Refactor)
 
 **If the column in the DB is constrained by a `CHECK` constraint, a PG `ENUM` type definition, or a foreign-key lookup table, the constants-edit alone is ineffective** — new values will be rejected by the DB engine with `CheckViolation` or `InvalidTextRepresentation`.
 
@@ -188,17 +188,17 @@ Order: **DB-Migration → Python-Constants-Update → Setter-Code → Test**. Re
 
 ## Background: TDD progress (Bulletproofing Log)
 
-### Cycle 1 — STRONG PASS with R1 Refactor
+### Cycle 1 — strong pass with R1 refactor
 
-- **RED-Subagent** (without skill, scenario "Extend _KNOWN_SOURCES with 'paper' for paper-trading mode"): Reacted heuristically correct from prior pattern ("grep first"), but **without repo access** — gave commands instead of executing them. Self-critique listed 7 points (no concrete verification, ignored migration history, did not mention test fixtures, overlooked logging downstream, did not check naming convention, did not search user-specific notes, did not directly answer "is that enough?").
+- **RED subagent** (without skill, scenario "Extend _KNOWN_SOURCES with 'paper' for paper-trading mode"): Reacted heuristically correct from prior pattern ("grep first"), but **without repo access** — gave commands instead of executing them. Self-critique listed 7 points (no concrete verification, ignored migration history, did not mention test fixtures, overlooked logging downstream, did not check naming convention, did not search user-specific notes, did not directly answer "is that enough?").
 
-- **GREEN-Subagent** (with skill): **Executed 18 Bash-Tool-Uses** in the real production repo `your-app/` and delivered 4 substantial findings:
+- **GREEN subagent** (with skill): **Executed 18 Bash tool uses** in the real production repo `your-app/` and delivered 4 substantial findings:
   1. **Code-state drift**: `_KNOWN_SOURCES` is currently `{"training", "live", "backtest", "manual", "replay"}` — NOT the list claimed in the scenario. A recent Phase-5-Re-Review hotfix had already happened.
   2. **Outstanding tech-debt discovered**: `ml/real_trade_bridge.py:142` writes `source='real'` into `virtual_trades`, but it is missing from `_KNOWN_SOURCES` → silent `unknown source: real` warnings.
-  3. **Cross-Table-False-Positives correctly rejected**: `'optimizer'`, `'av_earnings'`, `'combo_optimizer'` → other tables (`strategy_params.source`, etc.), do NOT belong in `virtual_trades.source` set.
-  4. **`_MODE_TO_SOURCES`-Mapping + DB-Constraint-Implication**: When `system_phase.mode='paper'` triggers, additionally `_MODE_TO_SOURCES` AND possibly PG-ENUM/CHECK-Constraint must be extended — otherwise the first `SET mode='paper'` attempt crashes.
+  3. **cross-table false positives correctly rejected**: `'optimizer'`, `'av_earnings'`, `'combo_optimizer'` → other tables (`strategy_params.source`, etc.), do NOT belong in `virtual_trades.source` set.
+  4. **`_MODE_TO_SOURCES`-Mapping + DB constraint implication**: When `system_phase.mode='paper'` triggers, additionally `_MODE_TO_SOURCES` AND possibly PG-ENUM/CHECK-Constraint must be extended — otherwise the first `SET mode='paper'` attempt crashes.
 
-- **R1 Refactor applied**: Step 4b "DB-Constraint-Verify" added as own sub-section with code examples for CHECK constraint update, PG ENUM extension, FK lookup insert. Order documented explicitly: DB-Migration → Python-Constants → Setter → Test.
+- **R1 Refactor applied**: Step 4b "DB constraint verification" added as own sub-section with code examples for CHECK constraint update, PG ENUM extension, FK lookup insert. Order documented explicitly: DB-Migration → Python-Constants → Setter → Test.
 
 - **Avoided Anti-Pattern**: GREEN explicitly noted that the obvious answer "Yes, just add 'paper'" would have produced 4 bugs: (a) misses the recent hotfix, (b) leaves `'real'` missing, (c) cements `'shadow'` cross-table error, (d) lets DB constraint crash.
 
@@ -206,5 +206,5 @@ Order: **DB-Migration → Python-Constants-Update → Setter-Code → Test**. Re
 
 1. **Test pattern for completeness check**: Test that compares `_KNOWN_X` against `_MODE_TO_X` mapping (every mode value must be in sources set). GREEN suggested this.
 2. **CWD-mismatch hint** for subagents: make repo path explicit when CWD is not the production repo.
-3. **DB-Live-Verify as optional Step 4c**: `SELECT source, COUNT(*) FROM <table> GROUP BY source` for existing-values audit. Complementary to Step 2 INSERT-grep.
+3. **DB live verification as optional Step 4c**: `SELECT source, COUNT(*) FROM <table> GROUP BY source` for existing-values audit. Complementary to Step 2 INSERT-grep.
 4. **Cross-Reference**: `schema-use-case-mismatch-detection` as complement when DB-side value-range is limited.

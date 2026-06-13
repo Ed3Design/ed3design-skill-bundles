@@ -102,7 +102,7 @@ Combines info + ocr-preview + dimensions in one call.
 | "Brand-color check via Vision" | `colors` — quantized palette is exact and deterministic |
 | Multiple resizes during Vision round-trips | 1× resize, then reuse the resized file multiple times |
 
-## Token-Saving Empirics
+## token saving Empirics
 
 Smoke test with a sample dashboard chart PNG (2884×1808):
 
@@ -125,8 +125,8 @@ Smoke test with a sample dashboard chart PNG (2884×1808):
 
 ## Promotion Checklist (for later TDD cycle)
 
-1. RED-Subagent without skill: receives a 4000×3000 image question, sends it directly to Vision → token waste documented
-2. GREEN-Subagent with skill: performs Step 0 question classification + corresponding pre-processing
+1. RED subagent without skill: receives a 4000×3000 image question, sends it directly to Vision → token waste documented
+2. GREEN subagent with skill: performs Step 0 question classification + corresponding pre-processing
 3. Pressure tests:
    - Multi-image batch (skill correctly skips → backlog workflow)
    - Tiny image (<500×500) → skill skips resize (no saving)
@@ -138,8 +138,8 @@ Smoke test with a sample dashboard chart PNG (2884×1808):
 
 ### Cycle 1 — PASS
 
-- **RED-Subagent** (without skill): reactive strategy — direct `Read` on a 4032×3024 iPhone photo without pre-processing, hoping for auto-resize in the harness. Self-reflection: doesn't actively know about Vision token scaling, reacts only to errors. Worst case ~10k Vision tokens for a photo that, after resize, delivers identical recognition quality at 1.2k.
-- **GREEN-Subagent** (with skill): Step 0 classification (material check = Vision path needed) → `info` + `resize --max 1024` → Vision on the 1024 PNG. ~1.2-1.5k tokens total. **Saving: ~88%**.
+- **RED subagent** (without skill): reactive strategy — direct `Read` on a 4032×3024 iPhone photo without pre-processing, hoping for auto-resize in the harness. Self-reflection: doesn't actively know about Vision token scaling, reacts only to errors. Worst case ~10k Vision tokens for a photo that, after resize, delivers identical recognition quality at 1.2k.
+- **GREEN subagent** (with skill): Step 0 classification (material check = Vision path needed) → `info` + `resize --max 1024` → Vision on the 1024 PNG. ~1.2-1.5k tokens total. **Saving: ~88%**.
 - **Refactor applied**: none — skill works as specified.
 
 ## Background

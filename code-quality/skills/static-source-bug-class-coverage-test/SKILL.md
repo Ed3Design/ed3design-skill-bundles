@@ -82,13 +82,13 @@ def test_status_module_no_unfiltered_win_aggregations():
 
 Query-fix session: 4 aggregation spots, 1 static-source test covers all plus regression guard for future aggregations. Test found 4 bug spots naively (2 of them false-positive due to f-string). Refinement to 2 real with whitelist skip was ironically a 2-iteration cycle, the skill does that in 1.
 
-## Background: TDD progression (Bulletproofing-Log)
+## Background: TDD progression (Bulletproofing log)
 
 ### Cycle 1 — PASS
 
-- **RED-Subagent** (without skill): also chose static inspection (no endpoint mock) — surprisingly smart. BUT: used relative path `Path("api/routes/analytics/metrics.py")` (breaks at different cwd), and complex heuristic f-string-variable-definition regex (searches var definition in whole module — fragile with multi-module imports). Honesty caveat self-named.
+- **RED subagent** (without skill): also chose static inspection (no endpoint mock) — surprisingly smart. BUT: used relative path `Path("api/routes/analytics/metrics.py")` (breaks at different cwd), and complex heuristic f-string-variable-definition regex (searches var definition in whole module — fragile with multi-module imports). Honesty caveat self-named.
 
-- **GREEN-Subagent** (with skill): `Path(__file__).resolve().parents[2]` correct, triple-quote regex clean, whitelist skip with explanatory comment. Self-reflection identified skill gap: f-string-concatenated SQL not covered → polish item incorporated.
+- **GREEN subagent** (with skill): `Path(__file__).resolve().parents[2]` correct, triple-quote regex clean, whitelist skip with explanatory comment. Self-reflection identified skill gap: f-string-concatenated SQL not covered → polish item incorporated.
 
 - **Refactor**: no R1-R3 needed. Polish item (f-string concatenation limitation note) directly incorporated.
 

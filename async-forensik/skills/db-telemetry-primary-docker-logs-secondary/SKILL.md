@@ -5,7 +5,7 @@ description: Use when investigating missing or unexplained behavior in a contain
 
 # db-telemetry-primary-docker-logs-secondary
 
-> ✅ **PROMOTED**: RED-Subagent arrived at the same log-rotation hypothesis (H1) but started with Docker-diagnosis attempts. GREEN-Subagent: DB telemetry (`tick_log`) first, found the log-rotation confirmation + two bonus findings (quarantine logic, missing TOUCH pattern) that Docker logs would never have shown.
+> ✅ **PROMOTED**: RED subagent arrived at the same log-rotation hypothesis (H1) but started with Docker-diagnosis attempts. GREEN subagent: DB telemetry (`tick_log`) first, found the log-rotation confirmation + two bonus findings (quarantine logic, missing TOUCH pattern) that Docker logs would never have shown.
 
 ## Core Problem
 
@@ -80,8 +80,8 @@ Pattern from your-app `_tick_log_start()` / `_tick_log_finish()`.
 
 ### Cycle 1 — PASS
 
-- **RED-Subagent** (without skill): arrived at the log-rotation hypothesis, but after several alternative hypotheses (code silence, container restart, timezone). Proposed DB query `last_zone_check_at` as the "decisive test" — but only after 3 docker-diagnosis attempts. The ORDER was wrong (Docker-first, DB-second).
-- **GREEN-Subagent** (with skill): Step 1 (DB telemetry) executed immediately. Found log-rotation confirmation (609k lines, 10MB buffer). Bonus: discovered quarantine logic (CL=F no longer checked) + missing TOUCH pattern (BAS.DE never updated despite successful scans). Both findings would have been undiscoverable with Docker-logs only.
+- **RED subagent** (without skill): arrived at the log-rotation hypothesis, but after several alternative hypotheses (code silence, container restart, timezone). Proposed DB query `last_zone_check_at` as the "decisive test" — but only after 3 docker-diagnosis attempts. The ORDER was wrong (Docker-first, DB-second).
+- **GREEN subagent** (with skill): Step 1 (DB telemetry) executed immediately. Found log-rotation confirmation (609k lines, 10MB buffer). Bonus: discovered quarantine logic (CL=F no longer checked) + missing TOUCH pattern (BAS.DE never updated despite successful scans). Both findings would have been undiscoverable with Docker-logs only.
 - **Refactor**: schema-verify hint for `tick_log` added (columns vary by project), log-config-inspect command added.
 
 ### Cycle-2 Backlog (non-blocking)

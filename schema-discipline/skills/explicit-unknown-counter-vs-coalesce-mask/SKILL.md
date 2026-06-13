@@ -103,9 +103,9 @@ if pnl_unknown:
 
 ### Cycle 1 — PASS
 
-- **RED-Subagent** (without skill, scenario: monthly balance for `v3_trades` with nullable `realized_pnl_eur`): Wrote naive query with `COUNT(*) AS closed_trades, SUM(realized_pnl_eur) AS total, AVG(realized_pnl_eur) AS avg`. Recognized the drift trap itself: **AVG denominator mismatch** (`AVG` uses divisor 2, `closed_trades=4` suggests divisor 4) + **win rate wrongly classifying NULL as loss** (`FILTER (WHERE realized_pnl_eur > 0)` with `COUNT(*)` denominator → 25% instead of 50%). Self-assessment: "No, the approach is NOT robust" — listed 4 concrete defects.
+- **RED subagent** (without skill, scenario: monthly balance for `v3_trades` with nullable `realized_pnl_eur`): Wrote naive query with `COUNT(*) AS closed_trades, SUM(realized_pnl_eur) AS total, AVG(realized_pnl_eur) AS avg`. Recognized the drift trap itself: **AVG denominator mismatch** (`AVG` uses divisor 2, `closed_trades=4` suggests divisor 4) + **win rate wrongly classifying NULL as loss** (`FILTER (WHERE realized_pnl_eur > 0)` with `COUNT(*)` denominator → 25% instead of 50%). Self-assessment: "No, the approach is NOT robust" — listed 4 concrete defects.
 
-- **GREEN-Subagent** (with skill via Read tool, same task): Explicitly applied `closed_pnl_unknown` as counter, disambiguated `closed_trades_total` vs `closed_trades_with_pnl` in the response shape, and used `COUNT(realized_pnl_eur)` as win-rate denominator. Concrete example with 4 trades (2 NULL) showed correct reading "+75 EUR at 50% win rate over 2 trades, ⚠ 2 trades unknown PnL". Additionally developed a 5-point drift-detection strategy.
+- **GREEN subagent** (with skill via Read tool, same task): Explicitly applied `closed_pnl_unknown` as counter, disambiguated `closed_trades_total` vs `closed_trades_with_pnl` in the response shape, and used `COUNT(realized_pnl_eur)` as win-rate denominator. Concrete example with 4 trades (2 NULL) showed correct reading "+75 EUR at 50% win rate over 2 trades, ⚠ 2 trades unknown PnL". Additionally developed a 5-point drift-detection strategy.
 
 ### Cycle-2 Backlog (Polish, non-blocking)
 
