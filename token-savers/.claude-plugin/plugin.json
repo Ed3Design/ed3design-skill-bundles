@@ -1,0 +1,22 @@
+{
+  "name": "token-savers",
+  "version": "0.1.0",
+  "description": "Token-Optimierung für Claude-Code: 4 Skills + 5 Python-Tools die 70-98% Token-Saving in typischen Workflows liefern (PDF-Reads, Image-Vision, Web-Reads, Vault-Searches, DB-Schema-Checks, Git-Diff-Summaries). Empirisch belegte Spar-Raten aus 4 Wochen Wolf-Vault-Praxis.",
+  "author": {
+    "name": "Wolf / ed3Dworks",
+    "email": "oestreichwolf@gmail.com"
+  },
+  "homepage": "https://github.com/Ed3Design/ed3design-skill-bundles",
+  "repository": "https://github.com/Ed3Design/ed3design-skill-bundles",
+  "license": "MIT",
+  "keywords": [
+    "token-optimization",
+    "claude-code",
+    "vision-api",
+    "pdf-extraction",
+    "vault-search",
+    "git-diff",
+    "html2md",
+    "ed3design"
+  ]
+}
