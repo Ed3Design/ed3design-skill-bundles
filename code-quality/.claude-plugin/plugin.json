@@ -1,0 +1,22 @@
+{
+  "name": "code-quality",
+  "version": "0.1.0",
+  "description": "Code-Quality + Git-Disziplinen für Python/SQL/Git-Projekte. 16 Skills für Code-Review (Chunk-Dispatch, Findings-als-RED-Tests), Git-Hygiene (Commit-Honesty, Cross-Repo-State-Inspection, Bypass-Audit), Code-Patterns (Lazy-Module-Getattr, Subprocess-SSH-Arg-Quoting). Sprach-agnostisch, framework-agnostisch.",
+  "author": {
+    "name": "Wolf / ed3Dworks",
+    "email": "oestreichwolf@gmail.com"
+  },
+  "homepage": "https://github.com/Ed3Design/ed3design-skill-bundles",
+  "repository": "https://github.com/Ed3Design/ed3design-skill-bundles",
+  "license": "MIT",
+  "keywords": [
+    "code-review",
+    "git",
+    "python",
+    "tdd",
+    "code-quality",
+    "commit-discipline",
+    "claude-code",
+    "ed3design"
+  ]
+}

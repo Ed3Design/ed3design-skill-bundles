@@ -1,0 +1,22 @@
+{
+  "name": "async-forensik",
+  "version": "0.1.0",
+  "description": "Forensik-Disziplinen für asyncio-Python + Container-Stacks. 7 Skills die hard-won Debugging-Lehren aus echten Production-Issues kodifizieren: DB-Telemetry > Docker-Logs, Hypothesen-widerlegt → Code-Read weiter, Fire-and-Forget-Tracing, Reporting-Artefakt-Detection vor Anomalie-Claim.",
+  "author": {
+    "name": "Wolf / ed3Dworks",
+    "email": "oestreichwolf@gmail.com"
+  },
+  "homepage": "https://github.com/Ed3Design/ed3design-skill-bundles",
+  "repository": "https://github.com/Ed3Design/ed3design-skill-bundles",
+  "license": "MIT",
+  "keywords": [
+    "asyncio",
+    "debugging",
+    "forensik",
+    "docker",
+    "container-debugging",
+    "fire-and-forget",
+    "claude-code",
+    "ed3design"
+  ]
+}

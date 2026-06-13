@@ -1,0 +1,22 @@
+{
+  "name": "skill-system-meta",
+  "version": "0.1.0",
+  "description": "Skill-System-Disziplinen für Claude-Code-Power-User die eigene Skills bauen. 5 Skills für Skill-Lifecycle (TDD-Promotion, Post-Session-Review, Subagent-Patterns, Design-First-Iteration). Werkzeuge für das eigene Werkzeug-Ökosystem.",
+  "author": {
+    "name": "Wolf / ed3Dworks",
+    "email": "oestreichwolf@gmail.com"
+  },
+  "homepage": "https://github.com/Ed3Design/ed3design-skill-bundles",
+  "repository": "https://github.com/Ed3Design/ed3design-skill-bundles",
+  "license": "MIT",
+  "keywords": [
+    "skill-system",
+    "tdd",
+    "subagents",
+    "claude-code",
+    "meta",
+    "skill-promotion",
+    "post-session-review",
+    "ed3design"
+  ]
+}
