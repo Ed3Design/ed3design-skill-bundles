@@ -14,6 +14,12 @@
 | `asyncio-fire-and-forget-loop-exit-await` | Loop-Exit nicht awaitet → Tasks dangling |
 | `ephemeral-container-file-detection` | File im Container existiert, aber `docker exec` sieht es nicht (tmpfs/overlay) |
 
+## 🤖 Sub-Agent (1)
+
+| Agent | Beschreibung |
+|---|---|
+| `forensik-detective` | Hypothesen-Test-Pipeline (H1/H2/H3) + DB-Telemetry-Primary > Docker-Logs-Secondary + Bonus-Finding-Detection nach Widerlegung. Verhindert "kein Bug = false alarm"-Falsch-Closures. Sonnet-Modell |
+
 ## Installation
 
 ```bash

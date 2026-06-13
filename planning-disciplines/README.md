@@ -27,6 +27,12 @@ Diese 10 Skills verhindern systematisch:
 
 Empirisch belegt: ~30-40% Implementations-Aufwand gespart bei Vision-Spec-Execution (Wolf 12.06. Phase B+C+D).
 
+## 🤖 Sub-Agent (1)
+
+| Agent | Beschreibung |
+|---|---|
+| `planning-assistant` | Reality-Inventur + Strategic-Questions Pipeline vor Multi-Phase-Features. 4 Phasen (Drift-Tabelle → Wolf-Decision-ID → Frage-Block → Implementation-Gate). Sonnet-Modell |
+
 ## Installation
 
 ```bash

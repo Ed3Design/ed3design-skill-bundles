@@ -40,6 +40,30 @@
 | `ga-skill-edit-tdd-workflow` | GA-Skill editieren mit TDD-Cycle |
 | `pytest-venv-first-triage` | venv-Aktivierung vor pytest-Triage |
 
+## 🪝 Hooks (4) — Automatische Enforcement
+
+Aktiv nach Plugin-Install via `hooks/hooks.json`. PreToolUse auf Bash-Commands:
+
+| Hook | Trigger | Verhalten |
+|---|---|---|
+| `cross-repo-state-inspect.sh` | `git add .` / `git add -A` / `git commit -a` | Warnt vor blind-add in Mono-Repos |
+| `commit-message-honesty.sh` | `git commit -m "<generic>"` | Warnt bei WIP/update/misc/various Subjects |
+| `pre-push-bypass-audit.sh` | `git push --no-verify` etc. | Audit-Log + Warnung |
+| `pytest-venv-first.sh` | direkter `pytest`-Aufruf | Warnt wenn venv nicht aktiv aber `.venv/` vorhanden |
+
+Alle Hooks: **warn-only (exit 0)**, kein Block. Stderr-Messages landen im Claude-Context → künftige Tool-Calls sehen die Warnung.
+
+## 🤖 Sub-Agent (1)
+
+| Agent | Beschreibung |
+|---|---|
+| `code-reviewer` | Read-only Subagent. 5 Pflicht-Linsen (Convention, Silent-Failure, Hardcoded-Defaults, Cross-File-Consistency, Commit-Honesty). Sonnet-Modell, Tools: Read+Grep+Glob+Bash |
+
+Dispatch via:
+```python
+Agent(subagent_type="general-purpose", description="Code-Review Range X", prompt="Lies via Skill-Tool den Agent 'code-quality:code-reviewer' und folge dessen Anweisungen für git diff HEAD~5..HEAD")
+```
+
 ## Installation
 
 ```bash

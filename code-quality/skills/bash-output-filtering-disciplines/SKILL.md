@@ -79,13 +79,13 @@ git log --pretty=format:"%h %ad %s" --date=short -n 20
 
 ```bash
 # ❌ schlimm: kann tausende Files dumpen
-find /Users/w/Projects -name "*.py"
+find <your-project-dir> -name "*.py"
 
 # ✅ gut: max 20 Files
-find /Users/w/Projects -name "*.py" | head -20
+find <your-project-dir> -name "*.py" | head -20
 
 # ✅ besser: nur Count
-find /Users/w/Projects -name "*.py" | wc -l
+find <your-project-dir> -name "*.py" | wc -l
 
 # ✅ am besten: Use Glob-Tool für Vault/Repo-Searches (Token-cheaper als find+pipe)
 ```

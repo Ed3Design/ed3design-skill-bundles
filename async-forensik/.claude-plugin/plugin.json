@@ -18,5 +18,6 @@
     "fire-and-forget",
     "claude-code",
     "ed3design"
-  ]
+  ],
+  "agents": ["./agents/forensik-detective.md"]
 }

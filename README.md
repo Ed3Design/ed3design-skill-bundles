@@ -4,16 +4,16 @@
 
 ## 📦 Bundles
 
-| Bundle | Skills | Domain | Status |
-|---|---|---|---|
-| [`token-savers`](./token-savers/) | 4 + 5 Tools | Token-Optimierung (PDF/Image/Web/Vault/Schema/Diff) | ✅ PoC v0.1.0 + Path-Refactor done |
-| [`code-quality`](./code-quality/) | 16 | Code-Review + Git-Hygiene + Code-Patterns | ✅ v0.1.0 |
-| [`planning-disciplines`](./planning-disciplines/) | 10 | Roadmap + Decision + Reality-Inventur | ✅ v0.1.0 |
-| [`async-forensik`](./async-forensik/) | 7 | asyncio + Container-Debugging | ✅ v0.1.0 |
-| [`schema-discipline`](./schema-discipline/) | 6 | SQL/Schema-Bug-Class-Prevention | ✅ v0.1.0 |
-| [`skill-system-meta`](./skill-system-meta/) | 5 | Skill-Lifecycle + Subagent-Patterns | ✅ v0.1.0 |
+| Bundle | Skills | Hooks | Agents | Tools | Status |
+|---|---|---|---|---|---|
+| [`token-savers`](./token-savers/) | 4 | — | — | 5 | ✅ v0.1.0 |
+| [`code-quality`](./code-quality/) | 16 | **4** | **1** (`code-reviewer`) | — | ✅ v0.2.0 |
+| [`planning-disciplines`](./planning-disciplines/) | 10 | — | **1** (`planning-assistant`) | — | ✅ v0.2.0 |
+| [`async-forensik`](./async-forensik/) | 7 | — | **1** (`forensik-detective`) | — | ✅ v0.2.0 |
+| [`schema-discipline`](./schema-discipline/) | 6 | — | — | — | ✅ v0.1.0 |
+| [`skill-system-meta`](./skill-system-meta/) | 5 | — | — | — | ✅ v0.1.0 |
 
-**Total**: 48 Skills + 5 Tools, ~67% des Wolf-Personal-Skill-Catalogs als generalisierte Bundles verfügbar.
+**Total**: 48 Skills + 4 Hooks + 3 Sub-Agents + 5 Tools, ~67% des Wolf-Personal-Skill-Catalogs als generalisierte Bundles verfügbar.
 
 ## 🚀 Quickstart
 

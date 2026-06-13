@@ -18,5 +18,7 @@
     "commit-discipline",
     "claude-code",
     "ed3design"
-  ]
+  ],
+  "hooks": "./hooks/hooks.json",
+  "agents": ["./agents/code-reviewer.md"]
 }

@@ -17,5 +17,6 @@
     "reality-inventur",
     "strategic-questions",
     "ed3design"
-  ]
+  ],
+  "agents": ["./agents/planning-assistant.md"]
 }
