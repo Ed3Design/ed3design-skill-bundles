@@ -1,17 +1,18 @@
 # Bundle-Backlog (token-savers)
 
-## ⚠ Cycle-2 (Path-Refactor, blocking für externe Nutzer)
+## ✅ Cycle-2 erledigt 13.06.2026
 
-**Issue**: Skills referenzieren absolute Pfade `~/.claude/tools/X.py`. Bei Plugin-Install auf anderem System schlägt das fehl.
+**Path-Refactor**: alle Skill-Pfade von `~/.claude/tools/X.py` auf `${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/X.py` umgestellt. **Fallback-Pattern** (`:-$HOME/.claude`) bedeutet:
+- Plugin-Install: `$CLAUDE_PLUGIN_ROOT` gesetzt → `<plugin-dir>/tools/`
+- Lokale Skills (Wolf-Setup): `$CLAUDE_PLUGIN_ROOT` nicht gesetzt → `$HOME/.claude/tools/`
 
-**Fix**: alle Skill-Pfade auf `${CLAUDE_PLUGIN_ROOT}/tools/X.py` umstellen. Betroffen:
+→ funktioniert beides, kein Konflikt mit Wolfs lokalem Skill-Catalog.
 
-- `image-preprocessing-helper/SKILL.md` — referenziert `~/.claude/tools/img-preprocess.py`
-- `vault-search-helper/SKILL.md` — referenziert `~/.claude/tools/vault-search.py`
-- `bash-output-filtering-disciplines/SKILL.md` — keine Tool-Refs (rein Pattern)
-- `pdf-text-extract-without-vision/SKILL.md` — nutzt System-Binaries (`pdftotext`, `ocrmypdf`), keine Plugin-Pfade
-
-Aufwand: ~15min sed-Replace + Verify.
+Verifizierung:
+- image-preprocessing-helper: 7 Replaces
+- vault-search-helper: 4 Replaces
+- bash-output-filtering-disciplines: keine Tool-Refs (rein Pattern)
+- pdf-text-extract-without-vision: nutzt System-Binaries, keine Refs
 
 ## 📋 Andere Cycle-2-Items
 

@@ -1,6 +1,6 @@
 ---
 name: vault-search-helper
-description: Use when Wolf nennt ein Thema/Projekt/Objekt und du musst Vault-First nach existing Notes suchen (Pflicht-Pattern aus CLAUDE.md 08.06.2026 „Vault-First — PFLICHT bei jedem genannten Thema"). Ein einziger Call zu `~/.claude/tools/vault-search.py` ersetzt 2-3 Glob+Grep-Calls und liefert ranked Top-N Notes mit Wikilink + Score-Breakdown + Excerpts. Trigger on phrases like "Vault-First", "wo in vault", "finde Notiz", "existing dazu", "Bestand prüfen", "gibt es schon was", "search vault". Do NOT load for known-path-File-Reads (use `Read` direkt), für reine Filename-Searches (use `Glob`), für External-System-Searches (LaunchAgents, swatserver — use `ls` und `ssh`), oder wenn der User explizit Multi-Pass-Search verlangt.
+description: Use when Wolf nennt ein Thema/Projekt/Objekt und du musst Vault-First nach existing Notes suchen (Pflicht-Pattern aus CLAUDE.md 08.06.2026 „Vault-First — PFLICHT bei jedem genannten Thema"). Ein einziger Call zu `${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py` ersetzt 2-3 Glob+Grep-Calls und liefert ranked Top-N Notes mit Wikilink + Score-Breakdown + Excerpts. Trigger on phrases like "Vault-First", "wo in vault", "finde Notiz", "existing dazu", "Bestand prüfen", "gibt es schon was", "search vault". Do NOT load for known-path-File-Reads (use `Read` direkt), für reine Filename-Searches (use `Glob`), für External-System-Searches (LaunchAgents, swatserver — use `ls` und `ssh`), oder wenn der User explizit Multi-Pass-Search verlangt.
 ---
 
 # Vault-Search-Helper
@@ -44,9 +44,9 @@ Trigger-Signale (implizit, ohne dass Wolf das Wort „Vault-First" sagt):
 Multi-Word-Query ist OK. Tool stopword-filtert (in, im, an, auf, und, oder, the, and, or) + macht case-insensitive Lowercase-Tokenize.
 
 ```bash
-~/.claude/tools/vault-search.py "stop zu eng" --max 5
-~/.claude/tools/vault-search.py "ko schein hebel" --scope projekte
-~/.claude/tools/vault-search.py "verhandlung renten" --include-archiv
+${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py "stop zu eng" --max 5
+${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py "ko schein hebel" --scope projekte
+${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py "verhandlung renten" --include-archiv
 ```
 
 ### Step 2 — Scope wählen
