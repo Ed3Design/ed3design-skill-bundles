@@ -52,6 +52,22 @@ HOW_DO_REPAIR = re.compile(r"\b(how do) (" + HOW_DO_VERBS + r"\b)", re.IGNORECAS
 # the bare-I deletion produced `a " want to do all of these"`
 A_QUOTED_REPAIR = re.compile(r'\b(a) (["“]) (' + QUOTED_VERBS + r'\b)', re.IGNORECASE)
 
+# Restore `I` before contractions inside quotes:
+#   "'m working on..."   →  "I'm working on..."
+#   "'ve been..."        →  "I've been..."
+CONTRACTION_REPAIR = re.compile(r'(["“])(\'(m|ve|d|ll)\b)')
+
+# Restore `I` for `" know"` / `" knew"` at quoted-string starts
+KNOW_REPAIR = re.compile(r'(["“]) (know|knew|knows)\b')
+
+# Revert overly-aggressive "me → Claude" substitution in user-trigger-phrases:
+#   "show Claude the complete output"  →  "show me the complete output"
+#   "make Claude a plan"               →  "make me a plan"
+#   "help Claude think"                →  "help me think"
+#   "tell Claude X"                    →  "tell me X"
+#   "give Claude X"                    →  "give me X"
+ME_REVERT = re.compile(r'\b(show|make|help|tell|give|teach|explain to|walk) Claude\b')
+
 
 def repair(text: str) -> tuple[str, int]:
     """Return (repaired_text, n_replacements)."""
@@ -72,10 +88,29 @@ def repair(text: str) -> tuple[str, int]:
         n += 1
         return f"{m.group(1)} {m.group(2)}I {m.group(3)}"
 
+    def contraction_replacer(m):
+        nonlocal n
+        n += 1
+        # "'m  →  "I'm
+        return f"{m.group(1)}I{m.group(2)}"
+
+    def know_replacer(m):
+        nonlocal n
+        n += 1
+        return f"{m.group(1)}I {m.group(2)}"
+
+    def me_revert_replacer(m):
+        nonlocal n
+        n += 1
+        return f"{m.group(1)} me"
+
     # Apply A-quoted FIRST so it doesn't conflict with bare quoted
     result = A_QUOTED_REPAIR.sub(a_quoted_replacer, text)
     result = QUOTED_REPAIR.sub(quoted_replacer, result)
     result = HOW_DO_REPAIR.sub(how_do_replacer, result)
+    result = CONTRACTION_REPAIR.sub(contraction_replacer, result)
+    result = KNOW_REPAIR.sub(know_replacer, result)
+    result = ME_REVERT.sub(me_revert_replacer, result)
     return result, n
 
 

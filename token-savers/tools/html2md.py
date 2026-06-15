@@ -285,10 +285,16 @@ def html_to_markdown(html: str, raw: bool = False) -> str:
 
     # Pure-bs4 path
     if not HAS_BS4:
-        # Last-resort regex strip (very basic)
+        # Last-resort regex strip (degraded quality — emit one-line warning)
+        print(
+            "WARN: beautifulsoup4 not installed — using regex-fallback. "
+            "Output quality will be poor (no heading/link structure preserved). "
+            "Install with: pip install beautifulsoup4",
+            file=sys.stderr,
+        )
         text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
         text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
-        text = re.sub(r"<[^>]+>", "", text)
+        text = re.sub(r"<[^>]+>", " ", text)  # insert space so words don't merge
         return normalize_whitespace(text)
 
     soup = BeautifulSoup(html, "html.parser")
@@ -358,7 +364,12 @@ def main() -> int:
             f"{result_chars} chars MD ({saving:.1f}% saving)",
             file=sys.stderr,
         )
-        engine = "html2text+bs4" if HAS_HTML2TEXT else "bs4-only"
+        if HAS_HTML2TEXT and HAS_BS4:
+            engine = "html2text+bs4"
+        elif HAS_BS4:
+            engine = "bs4-only"
+        else:
+            engine = "regex-fallback (no bs4 — output quality degraded; install beautifulsoup4 for proper extraction)"
         print(f"Engine: {engine}", file=sys.stderr)
 
     return 0
