@@ -1,6 +1,8 @@
 ---
 name: subagent-self-reflection-prompt-pattern
-description: Use when dispatching a subagent to test a skill, evaluate a tool, or perform any non-trivial task where YOU (the caller) want meta-feedback about the experience — what worked, what was unclear, what was missing. Include a mandatory "## Skill-Self-Reflection" section in the prompt asking 3-4 introspective questions. Without this, you only get task output, not improvement signal. Trigger on phrases like "dispatch subagent for skill test", "skill TDD pressure-test", "evaluate this tool via subagent", "subagent meta-feedback", "how do I use subagents for skill improvement". Do NOT load for production-task dispatch (only output matters, not reflection), for performance-critical dispatches (reflection adds tokens), or when the caller already has a strong skill-content hypothesis to test against (then use direct A/B comparison instead).
+description: |-
+  Use when dispatching a subagent to test a skill, evaluate a tool, or perform any non-trivial task where YOU (the caller) want meta-feedback about the experience — what worked, what was unclear, what was missing. Include a mandatory "## Skill-Self-Reflection" section in the prompt asking 3-4 introspective questions. Without this, you only get task output, not improvement signal. Trigger on phrases like "dispatch subagent for skill test", "skill TDD pressure-test", "evaluate this tool via subagent", "subagent meta-feedback", "how do use subagents for skill improvement". Do NOT load for production-task dispatch (only output matters, not reflection), for performance-critical dispatches (reflection adds tokens), or when the caller already has a strong skill-content hypothesis to test against (then use direct A/B comparison instead).
+
 ---
 
 # Subagent Self-Reflection Prompt Pattern
@@ -102,13 +104,6 @@ Subagent self-reflection delivered:
 | Forcing self-reflection on every subagent dispatch (also production) | Only for evaluation/test, not for pure execution |
 | Ignoring subagent self-reflection ("interesting but not actionable") | Transfer polish-backlog items directly into the skill's TDD log |
 | Self-reflection section at the start of the prompt instead of the end | The end ensures the subagent does the task first, then reflects |
-
-## TDD task for next skill-building session
-
-1. **RED**: Dispatch subagent for skill test WITHOUT self-reflection section. Observe: does it deliver polish items proactively? Probably no (only task output).
-2. **GREEN**: With skill: caller gets an explicit self-reflection template suggestion, builds it in. Subagent then delivers 3-5 structured polish items.
-3. **REFACTOR**: Loophole "but for LARGE subagent tasks self-reflection is 30% token overhead" → skill must explicitly state when to skip (production tasks).
-4. **Trigger phrases**: "subagent for skill test", "TDD pressure-test", "evaluate this skill via subagent" → does the skill auto-trigger?
 
 ## Cross-references
 

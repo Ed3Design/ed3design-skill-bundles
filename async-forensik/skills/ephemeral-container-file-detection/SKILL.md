@@ -1,7 +1,8 @@
 ---
 name: ephemeral-container-file-detection
 description: |-
-  Use when designing or auditing Docker-based deployments BEFORE writing implementation plans that rely on files persisting across container rebuilds. Trigger on phrases like "volume mount for X", "why are the files gone", "container rebuild deleted my models", "model_path points to a file that's not there", "phantom registry in DB", "inference fails with FileNotFoundError", "before we build — are the prerequisites in place", "pre-flight deployment audit", "writing-plans for a Docker feature with persistent data". Detection-Pattern in 4 steps: docker inspect Mounts → ls container dir → stat birth-time → grep dump/save calls in code → if code writes but the mount list does NOT include the path → ephemeral, pre-flight STOP for the feature phase. Do NOT load for non-Docker deployments (systemd services, Kubernetes StatefulSets — different model), for read-only containers without write paths, for single-file apps without a storage layer. The maxim "read logs/code/DB first" applied to deployment prerequisites.
+  Use when designing or auditing Docker-based deployments BEFORE writing implementation plans that rely on files persisting across container rebuilds. Trigger on phrases like "volume mount for X", "why are the files gone", "container rebuild deleted the models", "model_path points to a file that's not there", "phantom registry in DB", "inference fails with FileNotFoundError", "before Claude build — are the prerequisites in place", "pre-flight deployment audit", "writing-plans for a Docker feature with persistent data". Detection-Pattern in 4 steps: docker inspect Mounts → ls container dir → stat birth-time → grep dump/save calls in code → if code writes but the mount list does NOT include the path → ephemeral, pre-flight STOP for the feature phase. Do NOT load for non-Docker deployments (systemd services, Kubernetes StatefulSets — different model), for read-only containers without write paths, for single-file apps without a storage layer. The maxim "read logs/code/DB first" applied to deployment prerequisites.
+
 ---
 
 # ephemeral-container-file-detection
@@ -117,8 +118,8 @@ When this skill is activated for plan writing, the 4-step check belongs **as the
 - `superpowers:writing-plans` — the skill preaches "assume engineer has zero context", but pre-flight for storage prerequisites was not previously explicit
 - `superpowers:brainstorming` — says "explore project context first" generally; this skill is the Docker-storage specialization
 - maxim "read logs/code/DB first, then hypothesize" — extended to deployment prerequisites
-- `timescaledb-compression-workflow` skill — related pattern: discovery-before-hypothesis in the storage area
-- `pre-migration-data-verification` — related: verify data before adding a constraint; here verify storage before a feature plan
+- `schema-discipline:pre-migration-data-verification` — related: verify data before adding a constraint; here verify storage before a feature plan
+- General principle "discovery-before-hypothesis in the storage area" — applies analogously to other storage-layer features (compression, retention, partitioning)
 
 ## Real-world impact
 

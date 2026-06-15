@@ -1,7 +1,8 @@
 ---
 name: forensik-hypothese-widerlegt-code-read-weiter
 description: |-
-  Use when conducting a forensic investigation with explicit hypotheses (H1/H2/H3) on a system bug or anomaly, and 2+ hypotheses have been disproved by code-read or DB-query. Default-behavior is "Hypothesis disproved → investigation done, no real bug". This skill says: continue code-read with no specific hypothesis — bonus-findings often surface during the disproving process and are real bugs that would be missed otherwise. Trigger on phrases like "hypothesis H1 disproved", "all theories wrong", "forensics inconclusive", "no bug found but weird behavior", "abort forensics", "nothing there after all". Do NOT load for hypothesis-testing in research code where "disproved" is success, for time-boxed forensics with a hard stop after X minutes, when user explicitly says "if the hypotheses are disproved we are done", or for non-investigative tasks.
+  Use when conducting a forensic investigation with explicit hypotheses (H1/H2/H3) on a system bug or anomaly, and 2+ hypotheses have been disproved by code-read or DB-query. Default-behavior is "Hypothesis disproved → investigation done, no real bug". This skill says: continue code-read with no specific hypothesis — bonus-findings often surface during the disproving process and are real bugs that would be missed otherwise. Trigger on phrases like "hypothesis H1 disproved", "all theories wrong", "forensics inconclusive", "no bug found but weird behavior", "abort forensics", "nothing there after all". Do NOT load for hypothesis-testing in research code where "disproved" is success, for time-boxed forensics with a hard stop after X minutes, when user explicitly says "if the hypotheses are disproved Claude are done", or for non-investigative tasks.
+
 ---
 
 # Forensics: Hypothesis disproved → continue code-read

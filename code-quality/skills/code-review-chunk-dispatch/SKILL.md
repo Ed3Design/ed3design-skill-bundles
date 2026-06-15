@@ -1,6 +1,8 @@
 ---
 name: code-review-chunk-dispatch
-description: Use when the code-review-backlog is large (>30 commits OR >5,000 LoC changed since last review) AND the caller has Agent/Task-tool dispatch capability (i.e., top-level orchestrator or main Claude session). Trigger on phrases like "code-review backlog is big", "no review for weeks", "many commits without review", "review of 100+ commits", "how do I review these 200 commits", "chunk review", "parallel code-reviewer subagents". Do NOT load for single-PR review (use superpowers:requesting-code-review directly), for <30-commit backlog (single subagent suffices), for non-Git codebases (chunking-by-SHA-range presumes git workflow), or when running as a subagent yourself without Agent-tool access (the chunk-dispatch pattern is then unexecutable — use risk-based-triage instead, documented in the skill's Fallback section). Complements (sub-of) `superpowers:requesting-code-review` and `superpowers:dispatching-parallel-agents`.
+description: |-
+  Use when the code-review-backlog is large (>30 commits OR >5,000 LoC changed since last review) AND the caller has Agent/Task-tool dispatch capability (.e., top-level orchestrator or main Claude session). Trigger on phrases like "code-review backlog is big", "no review for weeks", "many commits without review", "review of 100+ commits", "how do review these 200 commits", "chunk review", "parallel code-reviewer subagents". Do NOT load for single-PR review (use superpowers:requesting-code-review directly), for <30-commit backlog (single subagent suffices), for non-Git codebases (chunking-by-SHA-range presumes git workflow), or when running as a subagent yourself without Agent-tool access (the chunk-dispatch pattern is then unexecutable — use risk-based-triage instead, documented in the skill's Fallback section). Complements (sub-of) `superpowers:requesting-code-review` and `superpowers:dispatching-parallel-agents`.
+
 ---
 
 # code-review-chunk-dispatch

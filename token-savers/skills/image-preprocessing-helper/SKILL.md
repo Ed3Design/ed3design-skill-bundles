@@ -123,17 +123,6 @@ Smoke test with a sample dashboard chart PNG (2884×1808):
 - `superpowers:writing-skills` — Iron-Law protocol (why DRAFT marker here)
 - `bash-output-filtering-disciplines` — same token-optimization family
 
-## Promotion Checklist (for later TDD cycle)
-
-1. RED subagent without skill: receives a 4000×3000 image question, sends it directly to Vision → token waste documented
-2. GREEN subagent with skill: performs Step 0 question classification + corresponding pre-processing
-3. Pressure tests:
-   - Multi-image batch (skill correctly skips → backlog workflow)
-   - Tiny image (<500×500) → skill skips resize (no saving)
-   - Text-only screenshot (skill prioritizes OCR over Vision)
-4. REFACTOR phase: handle edge cases (HEIC conversion, animated GIFs, transparent PNGs)
-5. Remove `-DRAFT` suffix → GA.
-
 ## TDD Trail (Bulletproofing Log)
 
 ### Cycle 1 — PASS
