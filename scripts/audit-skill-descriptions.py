@@ -27,6 +27,18 @@ REPO = Path(__file__).resolve().parent.parent
 FIRST_PERSON = re.compile(r"\b(I|we|my|our|us|me)\b")
 LENGTH_LIMIT = 1024
 
+# Quoted strings inside a description are verbatim user-trigger-phrases
+# and may legitimately contain first-person speech (e.g. "I want X",
+# "how do I review 200 commits"). The audit must check first-person
+# voice in the SURROUNDING NARRATIVE only, not inside trigger-quotes.
+QUOTED_STRING = re.compile(r'"[^"]*"|"[^"]*"|"[^"]*"')
+
+
+def strip_quoted(text: str) -> str:
+    """Replace all `"..."` and curly-quoted segments with empty space —
+    they're verbatim user phrases, not narrative voice."""
+    return QUOTED_STRING.sub(" ", text)
+
 
 def audit():
     overlong = []
@@ -41,14 +53,24 @@ def audit():
         desc = fm.get("description", "")
         if len(desc) > LENGTH_LIMIT:
             overlong.append((s, len(desc), desc))
-        fp = FIRST_PERSON.findall(desc)
+        # Scan only the narrative portion (quoted user-phrases excluded)
+        narrative = strip_quoted(desc)
+        fp = FIRST_PERSON.findall(narrative)
         if fp:
             first_person.append((s, fp, desc))
     return overlong, first_person
 
 
 def main():
-    check_only = "--check" in sys.argv
+    # CLI flags:
+    #   --check-first-person   hard-fail if any first-person marker (default for CI)
+    #   --check-length         hard-fail if any description over 1024 chars
+    #   --check                hard-fail on BOTH (legacy combined flag — note: length
+    #                          is currently soft-warn in CI; using --check locally
+    #                          may fail until the over-length backlog is cleared)
+    check_first = "--check-first-person" in sys.argv or "--check" in sys.argv
+    check_length = "--check-length" in sys.argv or "--check" in sys.argv
+
     overlong, first_person = audit()
     print(f"== Description-length audit ==")
     print(f"Over {LENGTH_LIMIT} chars: {len(overlong)} skills")
@@ -58,20 +80,26 @@ def main():
         print(f"  ... and {len(overlong) - 20} more")
 
     print()
-    print(f"== First-person audit (description must be third-person) ==")
-    print(f"Skills with first-person markers: {len(first_person)}")
+    print(f"== First-person audit (description must be third-person, excluding quoted user-trigger-phrases) ==")
+    print(f"Skills with first-person markers in narrative: {len(first_person)}")
     for s, fp, d in first_person[:20]:
         unique_fp = sorted(set(fp))
         print(f"  {unique_fp}  {s.parent.parent.parent.name}/{s.parent.name}")
     if len(first_person) > 20:
         print(f"  ... and {len(first_person) - 20} more")
 
-    if check_only and (overlong or first_person):
-        print()
-        print("❌ Description audit failed.")
+    fail = False
+    if check_first and first_person:
+        print(f"\n❌ first-person violations: {len(first_person)} (HARD fail)")
+        fail = True
+    if check_length and overlong:
+        print(f"\n❌ length violations: {len(overlong)} (HARD fail with --check-length)")
+        fail = True
+
+    if fail:
         sys.exit(1)
-    elif check_only:
-        print("\n✅ All descriptions within spec.")
+    if check_first or check_length:
+        print("\n✅ Description audit passed.")
 
 
 if __name__ == "__main__":

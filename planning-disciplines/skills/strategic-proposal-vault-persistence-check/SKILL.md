@@ -77,7 +77,7 @@ For tables:
 |---|---|---|---|---|
 | 1 | health-aggregator | 3h | 90% | ✅ Phase A-G live |
 | 2 | logs-prefilter | 1h | 70% | ✅ integrated as /health/logs |
-| 3 | vault-search-helper | 1h | 20% | ❌ Sprint 2 |
+| 3 | vault-search-helper | 1h | 20% | ❌ a planned later phase |
 ```
 
 For step sequences:

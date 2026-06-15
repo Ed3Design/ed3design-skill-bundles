@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "token-savers",
-      "description": "Token optimization for Claude Code: 4 skills + 5 Python tools delivering 70-98% token savings in typical workflows (PDF reads, image vision, web reads, vault searches, DB schema checks, Git diff summaries).",
+      "description": "Token optimization for Claude Code: 3 skills + 5 Python tools delivering 70-98% token savings in typical workflows (PDF reads, image vision, web reads, vault searches, DB schema checks, Git diff summaries).",
       "version": "0.2.0",
       "source": "./token-savers",
       "author": {

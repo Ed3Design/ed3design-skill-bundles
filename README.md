@@ -59,8 +59,10 @@ cp token-savers/tools/*.py ~/.claude/tools/
 chmod +x ~/.claude/tools/*.py
 
 # Optional dependencies (token-savers):
-pip install certifi              # html2md SSL
-brew install tesseract tesseract-lang poppler  # OCR + PDF
+pip install '.[token-savers]'    # Pillow + beautifulsoup4 + certifi (from pyproject.toml)
+# or individually:
+pip install Pillow beautifulsoup4 certifi
+brew install tesseract tesseract-lang poppler  # OCR + PDF (system binaries)
 ```
 
 ## 💡 Design Philosophy

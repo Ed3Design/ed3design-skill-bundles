@@ -111,7 +111,7 @@ When this skill is activated for plan writing, the 4-step check belongs **as the
 
 1. **DB-reconciliation step needs to be explicit** in Phase W template (GREEN had to invent the `SELECT id, path FROM ml_models; for each row check os.path.exists(path)` reconcile pattern — not currently spelled out in the skill)
 2. **Variant A/B decision-rule sharper**: if a phantom registry already exists in the DB → always Variant A (Pre-flight BEFORE plan writing), no judgment call
-3. **Handling of stale rows** (retrain vs archive vs delete) is Wolf-decision-territory but should be flagged by the plan-writer, not solved silently
+3. **Handling of stale rows** (retrain vs archive vs delete) is user-decision-territory but should be flagged by the plan-writer, not solved silently
 
 ## Cross-references
 
