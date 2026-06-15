@@ -17,10 +17,10 @@ Usage:
     img-preprocess.py describe <file>       # info + ocr-summary in einem Schritt
     img-preprocess.py colors <file> [--n 5] # Dominant colors
 
-Dependencies (lokal vorhanden, 12.06. verifiziert):
-- Pillow (PIL) 12.1.1+
-- ImageMagick `convert` (optional, für extreme HEIC-Conversions)
-- Tesseract (optional, fallback wenn nicht installiert)
+Dependencies:
+- Pillow (PIL) >= 10.0 — required for resize/info/describe/colors subcommands
+- Tesseract (optional, system binary) — for `ocr` subcommand
+- ImageMagick `convert` (optional) — for extreme HEIC-conversions outside Pillow's scope
 """
 
 from __future__ import annotations
