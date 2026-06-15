@@ -19,7 +19,7 @@ Klassifikations-Heuristik (per File-Pfad-Pattern, dann LoC-Ratio):
 Usage:
     diff-summary.py                          # HEAD~1..HEAD (default)
     diff-summary.py HEAD~5..HEAD              # Custom range
-    diff-summary.py --repo ~/Documents/Claude-Code/ultimative-platform
+    diff-summary.py --repo ~/projects/my-app
     diff-summary.py HEAD~10..HEAD --top 5     # Nur Top-5 grösste Files
 
 Output (JSON):

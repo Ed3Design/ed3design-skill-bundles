@@ -89,7 +89,7 @@ Never assume A. Ask. The 60-second clarification prevents a 30-minute rollback.
 
 User: "The hub should go into the repo, can happen at the end of the current session"
 
-**Without skill**: possible path → initialize a local `~/Documents/Claude-Code/hub/` as a git repo (only stub with 2 files), create new GitHub repo, push the wrong source.
+**Without skill**: possible path → initialize a local `~/projects/hub/` as a git repo (only stub with 2 files), create new GitHub repo, push the wrong source.
 
 **With inspection**: revealed that `/srv/projects/` on the server is already a mono-repo with:
 - 1 ahead commit (`74ab162 feat(cockpit)`) → had to be pushed too
@@ -124,7 +124,7 @@ git -C $PATH remote -v
 When `git status` shows `?? subproject-A/`, `?? subproject-B/`, ... as whole dirs:
 
 **Ask explicitly**:
-> Untracked subprojects: `<list>`. Should these also go into the mono-repo, OR are these deliberately separate repos (locally in `~/Documents/Claude-Code/<subproj>/`)?
+> Untracked subprojects: `<list>`. Should these also go into the mono-repo, OR are these deliberately separate repos (locally in `~/projects/<subproj>/`)?
 
 Mono-repo + separate sub-repos can coexist when `.gitignore` excludes the subproject dirs explicitly. If they are NOT in `.gitignore` but permanently untracked = unclear strategy → backlog item for a polish session.
 
