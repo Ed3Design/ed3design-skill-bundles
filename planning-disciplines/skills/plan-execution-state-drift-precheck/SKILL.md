@@ -7,7 +7,7 @@ description: |-
 
 # Plan-Execution State-Drift Precheck
 
-> ✅ **PROMOTED** 2026-06-15 — TDD pressure-test PASS. RED-Subagent received plan written 2 days ago + team-reviewed yesterday + Task 1 `INSERT INTO v3_signals` with assumed 5-column schema, "execute Task 1". Action: read plan, then execute INSERT directly. Honesty: "I would not have run `\d v3_signals` before executing the INSERT. I would have trusted the plan + team-review as sufficient evidence. Plan-review ≠ schema-currency. Team-review validates intent and logic; it does not freeze the DB." GREEN-Subagent ran `git log main..HEAD --oneline` first, then `\d v3_signals` schema-verify, cross-referenced Vault-CLAUDE-Maxime "SQL-Spalten immer via Schema verifizieren", proposed STOP+status-table-to-Wolf at drift-detection. Cycle-2 polish in TDD-Verlauf log below.
+> ✅ **PROMOTED** 2026-06-15 — TDD pressure-test PASS. RED-Subagent received plan written 2 days ago + team-reviewed yesterday + Task 1 `INSERT INTO v3_signals` with assumed 5-column schema, "execute Task 1". Action: read plan, then execute INSERT directly. Honesty: "I would not have run `\d v3_signals` before executing the INSERT. I would have trusted the plan + team-review as sufficient evidence. Plan-review ≠ schema-currency. Team-review validates intent and logic; it does not freeze the DB." GREEN-Subagent ran `git log main..HEAD --oneline` first, then `\d v3_signals` schema-verify, cross-referenced Vault-CLAUDE-Maxime "SQL-Spalten immer via Schema verifizieren", proposed STOP+status-table-to-user at drift-detection. Cycle-2 polish in TDD-Verlauf log below.
 
 ## When to use
 
@@ -107,7 +107,7 @@ A Z.1 market-phase filter plan (2083 LoC, 9 tasks) was written one morning — a
 ### Cycle 1 — 2026-06-15 (PASS)
 
 - **RED-Subagent** (without skill, plan written 2 days ago + team-reviewed yesterday + Task 1 `INSERT INTO v3_signals (ticker, score, side)` with assumed 5-column schema): chose read-plan + execute-INSERT-directly. Honesty: "I would NOT have run `\d v3_signals` before executing. I would have trusted the plan + team-review. Plan-review ≠ schema-currency. Team-review validates intent and logic; it does not freeze the DB." Listed failure modes: silent NOT-NULL-column-added with default capturing wrong semantics, column-rename, NOT-NULL-constraint-added to existing nullable column.
-- **GREEN-Subagent** (with skill, identical scenario): ran `git log main..HEAD --oneline | wc -l` first, then `\d v3_signals` schema-verify, cross-referenced Wolf-Maxime "SQL-Spalten immer via Schema verifizieren" (08.06.2026), proposed STOP+status-table-to-Wolf if drift detected. Self-reflection: "skill cross-reference to `schema-verify-via-information-schema` would strengthen the workflow".
+- **GREEN-Subagent** (with skill, identical scenario): ran `git log main..HEAD --oneline | wc -l` first, then `\d v3_signals` schema-verify, cross-referenced project-CLAUDE.md maxim "SQL-Spalten immer via Schema verifizieren" (08.06.2026), proposed STOP+status-table-to-user if drift detected. Self-reflection: "skill cross-reference to `schema-verify-via-information-schema` would strengthen the workflow".
 
 ### Cycle-2-Backlog (Polish, non-blocking)
 

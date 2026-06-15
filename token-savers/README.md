@@ -1,6 +1,6 @@
 # token-savers
 
-> Token optimization bundle for Claude Code. 4 skills + 5 Python tools with empirically measured 70-98% savings.
+> Token optimization bundle for Claude Code. 3 skills + 5 Python tools with empirically measured 70-98% savings.
 
 ## 📊 Empirical Token Savings
 
@@ -46,8 +46,14 @@ cp ed3design-skill-bundles/token-savers/tools/*.py ~/.claude/tools/
 chmod +x ~/.claude/tools/*.py
 
 # Optional dependencies for full functionality:
-pip install certifi             # html2md SSL
-brew install tesseract tesseract-lang  # img-preprocess OCR
+pip install Pillow              # img-preprocess (required for resize/info/describe)
+pip install beautifulsoup4      # html2md (required for content extraction)
+pip install certifi             # html2md SSL (recommended for macOS/Python.org)
+# or in one shot from the bundle repo root:
+#   pip install '.[token-savers]'
+
+# System binaries (optional, for OCR + PDF):
+brew install tesseract tesseract-lang  # img-preprocess OCR mode
 brew install poppler            # pdf-text-extract
 ```
 

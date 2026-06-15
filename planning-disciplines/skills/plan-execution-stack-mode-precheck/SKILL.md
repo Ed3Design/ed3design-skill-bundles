@@ -5,7 +5,7 @@ description: Use as Pre-Step-0 of `executing-plans` / `subagent-driven-developme
 
 # plan-execution-stack-mode-precheck
 
-> ✅ **PROMOTED** 2026-06-15 — TDD pressure-test PASS. RED-Subagent received plan with `docker compose exec` Task 1 + `psql -h $DATABASE_HOST` Task 3 ("laptop just opened, start executing"). Action: read plan, then execute Task 1 directly. Honesty admitted ALL 5 specific check failures: no `docker compose ps`, no `secrets/.env.prod` check, no `$DATABASE_HOST` check, no compose-file/cwd verification, no container-code-version-vs-plan check. GREEN-Subagent applied Pre-Step-0 systematically (compose-file inspect + env-files existence + daemon + services + `$DATABASE_HOST`), classified stack-mode, annotated plan tasks LOCAL/REMOTE/HYBRID, deferred subagent dispatch to after Wolf mode-confirmation. Cycle-2 polish in TDD-Verlauf log below.
+> ✅ **PROMOTED** 2026-06-15 — TDD pressure-test PASS. RED-Subagent received plan with `docker compose exec` Task 1 + `psql -h $DATABASE_HOST` Task 3 ("laptop just opened, start executing"). Action: read plan, then execute Task 1 directly. Honesty admitted ALL 5 specific check failures: no `docker compose ps`, no `secrets/.env.prod` check, no `$DATABASE_HOST` check, no compose-file/cwd verification, no container-code-version-vs-plan check. GREEN-Subagent applied Pre-Step-0 systematically (compose-file inspect + env-files existence + daemon + services + `$DATABASE_HOST`), classified stack-mode, annotated plan tasks LOCAL/REMOTE/HYBRID, deferred subagent dispatch to after user mode-confirmation. Cycle-2 polish in TDD-Verlauf log below.
 
 ## Lifecycle position
 
@@ -139,9 +139,9 @@ Skeleton from a Phase-Z.1 execution session. Pattern ad-hoc applied AFTER the st
 ### Cycle 1 — TDD promotion 2026-06-15 (PASS)
 
 - **RED-Subagent** (without skill, "laptop just opened, plan has `docker compose exec` Task 1 + `psql -h $DATABASE_HOST` Task 3, start executing"): chose to read plan, then execute Task 1 directly. Honesty-section listed 5 explicit check failures: no `docker compose ps`, no `secrets/.env.prod` existence check, no `$DATABASE_HOST` env-resolution, no compose-file/cwd verification, no plan-vs-code-version drift check. Failure modes anticipated: "Error: No such service: trader" + migration mid-apply on dirty DB + psql against wrong host.
-- **GREEN-Subagent** (with skill, identical scenario): applied 4-step Pre-Step-0 sequentially (compose-file inspect → env-files existence → daemon + services → `$DATABASE_HOST` resolution), then classified stack-mode, then plan-annotated each task LOCAL/REMOTE/HYBRID, then deferred subagent dispatch to AFTER Wolf mode-confirmation via AskUserQuestion. Self-reflection identified avoidance of premature subagent-dispatch as key skill-value.
+- **GREEN-Subagent** (with skill, identical scenario): applied 4-step Pre-Step-0 sequentially (compose-file inspect → env-files existence → daemon + services → `$DATABASE_HOST` resolution), then classified stack-mode, then plan-annotated each task LOCAL/REMOTE/HYBRID, then deferred subagent dispatch to AFTER user mode-confirmation via AskUserQuestion. Self-reflection identified avoidance of premature subagent-dispatch as key skill-value.
 
 ### Cycle-2-Backlog (Polish, non-blocking)
 
-1. **Communication-mechanism explicit**: skill mentions "present mode-verdict to Wolf" but doesn't recommend AskUserQuestion vs inline-proposal. GREEN-Subagent had to derive this from the originating-session log. Action: add to Step 4 explicit "use `AskUserQuestion` for stack-mode confirmation".
+1. **Communication-mechanism explicit**: skill mentions "present mode-verdict to the user" but doesn't recommend AskUserQuestion vs inline-proposal. GREEN-Subagent had to derive this from the originating-session log. Action: add to Step 4 explicit "use `AskUserQuestion` for stack-mode confirmation".
 2. **Parallel-command pattern in main flow**: anti-patterns table mentions "Docker.app start parallel to compose inspect (10sec parallel save)" but the Step 1-3 flow doesn't show the parallel pattern. Action: add parallel-Bash example to Step 1.

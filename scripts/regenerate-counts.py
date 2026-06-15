@@ -119,6 +119,34 @@ def update_readme(rows, totals, check_only: bool) -> bool:
     return False
 
 
+def update_bundle_readmes(rows, check_only: bool) -> list[str]:
+    """Update lead-paragraph counts inside each bundle's own README.md.
+    Returns list of bundles where the README is/was stale."""
+    stale = []
+    for r in rows:
+        bundle = r["bundle"]
+        readme = REPO / bundle / "README.md"
+        if not readme.exists():
+            continue
+        text = readme.read_text()
+        new_text = text
+        # Pattern: "N skills + M Python tools" / "N skills"
+        # Replace the first occurrence in the lead paragraph (> blockquote OR top of file).
+        # We target only the leading "N skills" mention, not all occurrences.
+        lead_re = re.compile(
+            r"^(> .*?)(\d+)( skills(?:\s*\+\s*\d+\s+(?:Python\s+)?(?:tools|hooks|sub-agents|agents))?)",
+            re.MULTILINE,
+        )
+        def repl(m):
+            return f"{m.group(1)}{r['skills']}{m.group(3)}"
+        new_text = lead_re.sub(repl, new_text, count=1)
+        if new_text != text:
+            stale.append(bundle)
+            if not check_only:
+                readme.write_text(new_text)
+    return stale
+
+
 def update_marketplace(rows, totals, check_only: bool) -> bool:
     path = REPO / ".claude-plugin" / "marketplace.json"
     if not path.exists():
@@ -133,6 +161,20 @@ def update_marketplace(rows, totals, check_only: bool) -> bool:
         f"{totals['agents']} sub-agents, {totals['tools']} Python tools "
         f"across {len(rows)} thematic bundles. Empirically validated patterns."
     )
+
+    # Rewrite per-plugin description: replace leading "N skills" count where present
+    plugin_by_name = {r["bundle"]: r for r in rows}
+    for plugin in data.get("plugins", []):
+        row = plugin_by_name.get(plugin["name"])
+        if not row:
+            continue
+        # Match "N skills" (the first occurrence) and replace with reality
+        plugin["description"] = re.sub(
+            r"\b\d+ skills\b",
+            f"{row['skills']} skills",
+            plugin["description"],
+            count=1,
+        )
 
     # Cross-check: plugin-array names should equal BUNDLES
     listed = {p["name"] for p in data.get("plugins", [])}
@@ -168,17 +210,22 @@ def main():
 
     readme_ok = update_readme(rows, totals, check_only)
     market_ok = update_marketplace(rows, totals, check_only)
+    bundle_stale = update_bundle_readmes(rows, check_only)
 
     if check_only:
-        if readme_ok and market_ok:
-            print("\n✅ README + marketplace.json are in sync.")
+        if readme_ok and market_ok and not bundle_stale:
+            print("\n✅ README + marketplace.json + bundle READMEs are in sync.")
             sys.exit(0)
+        if bundle_stale:
+            print(f"\n❌ Bundle READMEs drifted: {', '.join(bundle_stale)}")
         print("\n❌ Counts drifted. Run `python3 scripts/regenerate-counts.py` to fix.")
         sys.exit(1)
 
     msg = []
     msg.append("README updated" if not readme_ok else "README already in sync")
     msg.append("marketplace.json updated" if not market_ok else "marketplace.json already in sync")
+    if bundle_stale:
+        msg.append(f"bundle READMEs updated: {', '.join(bundle_stale)}")
     print(f"\n✅ {'; '.join(msg)}.")
 
 

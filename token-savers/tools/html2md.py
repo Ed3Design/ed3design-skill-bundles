@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """html2md.py — HTML zu Markdown für Token-effiziente Web-Reads.
 
-Sprint 2 Item 5a aus token-optimierung-Roadmap (12.06.2026).
+Pattern derived from token-optimization work.
 
 Pattern: statt WebFetch (full-HTML in Context) URL fetchen → readability-style
 content extraction → kompakte Markdown-Konversion. ~60-80% Token-Saving für

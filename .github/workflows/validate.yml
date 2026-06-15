@@ -149,32 +149,9 @@ jobs:
       - name: Skill description audit (first-person blocks, length warns)
         run: |
           set -e
-          # First-person markers in descriptions are a HARD violation
-          # (descriptions are injected into the system prompt as third-person).
-          # Length over the 1024-char spec recommendation is a soft warning
-          # — we surface it but don't fail CI yet (known tech-debt, tracked).
-          python3 -c "
-          import sys
-          sys.path.insert(0, 'scripts')
-          # Reuse the audit logic from the standalone script
-          import importlib.util
-          spec = importlib.util.spec_from_file_location('a', 'scripts/audit-skill-descriptions.py')
-          m = importlib.util.module_from_spec(spec)
-          spec.loader.exec_module(m)
-          overlong, first_person = m.audit()
-          if first_person:
-              print(f'FAIL: {len(first_person)} skill description(s) contain first-person markers (must be third-person):')
-              for s, fp, d in first_person:
-                  print(f'  {sorted(set(fp))}  {s.parent.parent.parent.name}/{s.parent.name}')
-              sys.exit(1)
-          print(f'✅ All {47} descriptions third-person')
-          if overlong:
-              print(f'⚠  {len(overlong)} skill description(s) over the {1024}-char spec recommendation (soft-warning, tracked in TECHNICAL-DEBT.md)')
-              for s, n, d in overlong[:5]:
-                  print(f'    {n:4d}  {s.parent.parent.parent.name}/{s.parent.name}')
-              if len(overlong) > 5:
-                  print(f'    ... and {len(overlong) - 5} more')
-          "
+          # First-person markers in narrative are HARD-blocked. Length
+          # >1024 is a soft-warning (tracked in TECHNICAL-DEBT.md).
+          python3 scripts/audit-skill-descriptions.py --check-first-person
 
       - name: Security smoke-tests (SQL-injection guard)
         run: |

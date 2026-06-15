@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """diff-summary.py — Strukturierte Code-Diff-Summary für Code-Review-Vorbereitung.
 
-Sprint 2 Item 5c aus token-optimierung-Roadmap (12.06.2026).
+Pattern derived from token-optimization work.
 
 Pattern: statt `git diff --stat HEAD~5..HEAD` Raw-Output mit hunderten Zeilen
 ein kompaktes JSON mit per-File LoC + Change-Type-Klassifikation (refactor/feat/fix/test/docs).
@@ -243,8 +243,29 @@ def main() -> int:
         print(json.dumps({"error": f"{repo} is not a git repo"}), file=sys.stderr)
         return 2
 
+    # Shallow-clone guard: the default `HEAD~1..HEAD` fails when the
+    # working copy was produced by `git clone --depth 1` (no HEAD~1).
+    # Detect early and print an actionable message instead of a cryptic
+    # git stderr.
+    range_arg = args.range
+    if range_arg == "HEAD~1..HEAD":
+        verify = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "--verify", "HEAD~1"],
+            capture_output=True, text=True,
+        )
+        if verify.returncode != 0:
+            print(
+                json.dumps({
+                    "error": "shallow-clone (no HEAD~1): pass an explicit range or unshallow the repo",
+                    "hint": "Try: `git -C <repo> fetch --unshallow` OR pass `HEAD` to summarize the working tree only.",
+                    "default_range_failed": "HEAD~1..HEAD",
+                }, indent=2),
+                file=sys.stderr,
+            )
+            return 3
+
     try:
-        result = summarize(repo, args.range, args.top)
+        result = summarize(repo, range_arg, args.top)
     except RuntimeError as e:
         print(json.dumps({"error": str(e)}), file=sys.stderr)
         return 1

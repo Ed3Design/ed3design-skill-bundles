@@ -3,7 +3,7 @@
 
 Token-saving wrapper for trading / maker engineering sessions.
 
-Pattern (Sprint 2 Item 5 aus token-optimierung-Roadmap, 12.06.2026):
+Pattern:
 - Resize zu Vision-API-Schwellen (~1024×1024) statt Originals (~3000×4000)
   → ~6-9× weniger Pixel = ~75-85% weniger Vision-Tokens
 - EXIF extrahieren als Markdown statt full-image für Metadata-Queries
@@ -33,11 +33,26 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-try:
+# Pillow is imported lazily INSIDE the subcommands that need it, so that
+# `img-preprocess.py --help` works even on a system without Pillow.
+# Each subcommand calls `_require_pillow()` at entry.
+
+
+def _require_pillow():
+    """Import PIL lazily; print a clear hint if missing."""
+    try:
+        from PIL import Image, ExifTags  # noqa: F401
+    except ImportError:
+        print(
+            "ERROR: Pillow (PIL) is required for this subcommand.\n"
+            "Install via:\n"
+            "  pip install Pillow\n"
+            "  # or: pip install '.[token-savers]' from the bundle repo root",
+            file=sys.stderr,
+        )
+        sys.exit(2)
     from PIL import Image, ExifTags
-except ImportError:
-    print("ERROR: Pillow (PIL) nicht installiert. pip install Pillow", file=sys.stderr)
-    sys.exit(2)
+    return Image, ExifTags
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -46,6 +61,7 @@ except ImportError:
 
 
 def cmd_resize(args: argparse.Namespace) -> int:
+    Image, _ExifTags = _require_pillow()
     src = Path(args.file)
     if not src.exists():
         print(f"ERROR: file not found: {src}", file=sys.stderr)
@@ -101,6 +117,7 @@ _INTERESTING_EXIF_KEYS = {
 
 
 def cmd_info(args: argparse.Namespace) -> int:
+    Image, ExifTags = _require_pillow()
     src = Path(args.file)
     if not src.exists():
         print(f"ERROR: file not found: {src}", file=sys.stderr)
@@ -184,6 +201,7 @@ def cmd_ocr(args: argparse.Namespace) -> int:
 
 
 def cmd_describe(args: argparse.Namespace) -> int:
+    Image, ExifTags = _require_pillow()
     src = Path(args.file)
     if not src.exists():
         print(f"ERROR: file not found: {src}", file=sys.stderr)
