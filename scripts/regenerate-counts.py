@@ -247,6 +247,8 @@ def main():
         sys.exit(1)
 
     msg = []
+    if plugin_json_stale:
+        msg.append(f"bundle plugin.json updated: {', '.join(plugin_json_stale)}")
     msg.append("README updated" if not readme_ok else "README already in sync")
     msg.append("marketplace.json updated" if not market_ok else "marketplace.json already in sync")
     if bundle_stale:

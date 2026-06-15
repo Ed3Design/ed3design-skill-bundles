@@ -6,22 +6,19 @@ All notable changes to this repository are tracked here. The format follows [Kee
 
 ### Added
 
-- Behavioral smoke-tests for all token-savers tools (real subcommand invocations against fixtures, not just `--help`)
-- `scripts/audit-stale-draft-crosslinks.py` — CI gate that fails if any skill body references `<name>-DRAFT` while a GA `<name>` exists
-- `regenerate-counts.py` now also validates and rewrites per-bundle `.claude-plugin/plugin.json` descriptions
-- `CHANGELOG.md`, `.github/dependabot.yml`, `.github/CODEOWNERS`
-- CI Actions pinned to commit-SHAs; Claude Code CLI pinned to a specific version
+- `package.json` + `package-lock.json` so Dependabot can update the Claude Code CLI via PR (CI now uses `npm ci`)
 
 ### Fixed
 
-- `token-savers/tools/img-preprocess.py` `colors` subcommand crashed with `NameError: name 'Image' is not defined` because the lazy Pillow import was missing for this entry point
-- Stale `-DRAFT` cross-references removed from 7 skill bodies (8 references) that were left over after the GA promotion
-- `token-savers/.claude-plugin/plugin.json` description claimed "4 skills" — corrected to 3
-- `SECURITY.md` wording: "Email" bullet label was inconsistent with its GitHub Security Advisory content
+- `scripts/test-tools-smoke.sh` behavioral block previously exited 0 even on FAIL — fixed with `[ "$FAIL" -gt 0 ] && exit 1` at the end. Verified via negative test: artificially-broken tool now produces exit 1
+- `scripts/test-tools-smoke.sh` invoked tools via shebang while installing deps into `$TEST_PY` — fixed to call `"$TEST_PY" "$TOOLS_DIR/tool.py"` everywhere; dep installs use `"$TEST_PY" -m pip` not bare `pip`
+- CI workflow now installs Pillow + beautifulsoup4 + certifi at job-setup (not just pyyaml). `STRICT_BEHAVIORAL=1` env-var makes missing-dep skips into HARD-fail in CI mode
+- 2 dangling `-DRAFT` crosslinks to non-shipped sibling skills + 1 STUB-promotion-text leftover in a GA skill (`briefing-source-triangulation`) scrubbed
+- `regenerate-counts.py` success message now reports `bundle plugin.json updated: <bundles>` when it rewrites them
 
 ## [0.2.0] — 2026-06-15
 
-Initial public marketplace release after a four-PR audit-and-fix cycle:
+First stable marketplace release. Tagged at `487ec35` (post-PR #5 merge). Cumulative changes from PR #1 through PR #5:
 
 - 35 broken YAML frontmatters fixed (block-scalar conversion)
 - 6 DRAFT skills TDD-promoted to GA via real RED+GREEN subagent pressure-tests

@@ -48,9 +48,10 @@ Before writing any briefing:
 
 **The miss:** the briefing should have asked the user "did the send happen?" instead of inferring "ready to send = still pending". The fix is operational: any Carry-Over claim about an external act gets a user-cross-check before it appears in the briefing.
 
-## When to promote out of STUB
+## Future refinements
 
-- Codify a question template for external acts ("Did you send/meet/deploy X? When?")
-- Add a callable triangulation helper that emits a diff between Daily Note claims and `.remember/today-*.md` summaries
-- Add a briefing self-audit checklist (every claim has a source rank annotation)
-- Then rename to drop `-DRAFT` and add to GA registry
+These are deliberately non-blocking. The pattern works as documented; these would tighten it further:
+
+- A question template for external acts ("Did you send/meet/deploy X? When?")
+- A callable triangulation helper that emits a diff between Daily Note claims and `.remember/today-*.md` summaries
+- A briefing self-audit checklist (every claim has a source-rank annotation)

@@ -22,6 +22,13 @@ DRAFT_REF_RE = re.compile(r"`([a-z][a-z0-9-]+)-DRAFT`")
 
 
 def find_stale_crosslinks():
+    """Two kinds of stale -DRAFT crosslinks:
+    1. The GA-named sibling exists in the repo → the reference is left-over from
+       a pre-promotion state and should drop the suffix.
+    2. Neither the DRAFT nor the GA form exists in this repo → the reference
+       points at a non-shipped skill and reads as an unfinished catalog item.
+       Mark these explicitly so they can be reworded or removed.
+    """
     ga_skills = {
         s.parent.name
         for s in REPO.glob("*/skills/*/SKILL.md")
@@ -34,7 +41,9 @@ def find_stale_crosslinks():
         for m in DRAFT_REF_RE.finditer(text):
             candidate = m.group(1)
             if candidate in ga_skills:
-                stale.append((s, candidate))
+                stale.append((s, candidate, "GA-exists"))
+            else:
+                stale.append((s, candidate, "non-shipped"))
     return stale
 
 
@@ -42,10 +51,16 @@ def main():
     check_only = "--check" in sys.argv
     stale = find_stale_crosslinks()
     if stale:
-        print(f"Stale -DRAFT crosslinks (GA skill exists, ref still uses -DRAFT suffix): {len(stale)}")
-        for s, c in stale:
-            rel = s.relative_to(REPO)
-            print(f"  {rel}  →  `{c}-DRAFT`")
+        ga_exists = [(s, c) for s, c, kind in stale if kind == "GA-exists"]
+        non_shipped = [(s, c) for s, c, kind in stale if kind == "non-shipped"]
+        if ga_exists:
+            print(f"❌ Stale -DRAFT crosslinks (GA sibling exists — drop the suffix): {len(ga_exists)}")
+            for s, c in ga_exists:
+                print(f"  {s.relative_to(REPO)}  →  `{c}-DRAFT`")
+        if non_shipped:
+            print(f"❌ -DRAFT crosslinks to non-shipped skills (reword or remove): {len(non_shipped)}")
+            for s, c in non_shipped:
+                print(f"  {s.relative_to(REPO)}  →  `{c}-DRAFT`  (not in repo)")
         if check_only:
             sys.exit(1)
     else:

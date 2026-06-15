@@ -1,0 +1,13 @@
+{
+  "name": "ed3design-skill-bundles-ci",
+  "version": "0.0.0-ci",
+  "private": true,
+  "description": "Internal CI-only manifest. Declares the Claude Code CLI as a devDependency so Dependabot can keep it pinned via PRs. Not published to npm; the bundle artefacts that users install live under */.claude-plugin/.",
+  "license": "MIT",
+  "scripts": {
+    "validate": "claude plugin validate --strict"
+  },
+  "devDependencies": {
+    "@anthropic-ai/claude-code": "2.1.152"
+  }
+}

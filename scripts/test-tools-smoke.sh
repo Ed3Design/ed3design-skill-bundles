@@ -130,12 +130,33 @@ assert_behavioral() {
     fi
 }
 
-# Behavioral tests need Pillow + bs4 in the test venv. Install them once
-# in the same Python that will execute the tool. Skip the test if install
-# fails (the CI workflow installs them at job setup).
+# Behavioral tests REQUIRE the same Python interpreter to (a) generate
+# fixtures, (b) check for dependency availability, AND (c) execute the
+# tools — otherwise a venv-only Pillow/bs4 install silently leaks into a
+# shebang-resolved system Python invocation. Tools are therefore called
+# as `"$TEST_PY" "$TOOLS_DIR/tool.py" ...`, not via shebang.
+#
+# Dependency policy:
+#   STRICT_BEHAVIORAL=1   missing Pillow/bs4 → FAIL (CI default)
+#   otherwise             missing dep → SKIP with warning (local dev)
 TEST_PY="${PYTHON:-python3}"
-"$TEST_PY" -c "import PIL" 2>/dev/null || pip install --quiet Pillow 2>/dev/null
-"$TEST_PY" -c "import bs4" 2>/dev/null || pip install --quiet beautifulsoup4 2>/dev/null
+STRICT_BEHAVIORAL="${STRICT_BEHAVIORAL:-0}"
+
+# Install missing deps into the test interpreter (not bare `pip`).
+"$TEST_PY" -c "import PIL" 2>/dev/null || \
+    "$TEST_PY" -m pip install --quiet Pillow 2>/dev/null || true
+"$TEST_PY" -c "import bs4" 2>/dev/null || \
+    "$TEST_PY" -m pip install --quiet beautifulsoup4 2>/dev/null || true
+
+dep_missing() {
+    local label="$1"
+    if [ "$STRICT_BEHAVIORAL" = "1" ]; then
+        FAIL=$((FAIL + 1))
+        echo "  ❌ $label (STRICT_BEHAVIORAL=1 → fail)"
+    else
+        echo "  ⏭  $label SKIPPED"
+    fi
+}
 
 FIXTURES=$(mktemp -d)
 trap 'rm -rf "$FIXTURES"' EXIT
@@ -148,24 +169,24 @@ try:
     img.save('$FIXTURES/tiny.png')
     print('OK')
 except ImportError:
-    print('SKIP — Pillow unavailable')
+    print('SKIP')
 " > "$FIXTURES/pil_check.log"
 
 if grep -q "OK" "$FIXTURES/pil_check.log"; then
     assert_behavioral "img-preprocess info <tiny.png> outputs JSON with 'dimensions'" \
-        "$TOOLS_DIR/img-preprocess.py info $FIXTURES/tiny.png" \
+        "$TEST_PY $TOOLS_DIR/img-preprocess.py info $FIXTURES/tiny.png" \
         '"dimensions"'
     assert_behavioral "img-preprocess colors <tiny.png> --n 3 outputs 'dominant_colors'" \
-        "$TOOLS_DIR/img-preprocess.py colors $FIXTURES/tiny.png --n 3" \
+        "$TEST_PY $TOOLS_DIR/img-preprocess.py colors $FIXTURES/tiny.png --n 3" \
         '"dominant_colors"'
     assert_behavioral "img-preprocess resize <tiny.png> --max 2 outputs 'new_dims'" \
-        "$TOOLS_DIR/img-preprocess.py resize $FIXTURES/tiny.png --max 2 --out $FIXTURES/tiny_resized.png" \
+        "$TEST_PY $TOOLS_DIR/img-preprocess.py resize $FIXTURES/tiny.png --max 2 --out $FIXTURES/tiny_resized.png" \
         '"new_dims"'
 else
-    echo "  ⏭  img-preprocess behavioral tests SKIPPED (Pillow not available)"
+    dep_missing "img-preprocess behavioral tests (Pillow unavailable)"
 fi
 
-# html2md: feed a minimal HTML document, expect Markdown-like output (#, *, links)
+# html2md: feed a minimal HTML document, expect heading text extracted
 cat > "$FIXTURES/sample.html" << 'HTML'
 <!DOCTYPE html>
 <html><head><title>Hi</title></head><body>
@@ -176,13 +197,13 @@ HTML
 "$TEST_PY" -c "import bs4" 2>/dev/null && BS4_OK=1 || BS4_OK=0
 if [ "$BS4_OK" = "1" ]; then
     assert_behavioral "html2md <sample.html> extracts 'Heading' from <h1>" \
-        "cat $FIXTURES/sample.html | $TOOLS_DIR/html2md.py -" \
+        "cat $FIXTURES/sample.html | $TEST_PY $TOOLS_DIR/html2md.py -" \
         "Heading"
 else
-    echo "  ⏭  html2md behavioral test SKIPPED (bs4 not available)"
+    dep_missing "html2md behavioral test (bs4 unavailable)"
 fi
 
-# diff-summary: create a tiny git repo with 1 commit and assert it succeeds
+# diff-summary: create a tiny git repo with 2 commits and assert it succeeds
 mkdir -p "$FIXTURES/mini-repo" && (
     cd "$FIXTURES/mini-repo"
     git init --quiet
@@ -195,7 +216,7 @@ mkdir -p "$FIXTURES/mini-repo" && (
     git commit --quiet -am "extend a.txt"
 )
 assert_behavioral "diff-summary --repo <mini-repo> outputs 'files_changed'" \
-    "$TOOLS_DIR/diff-summary.py --repo $FIXTURES/mini-repo" \
+    "$TEST_PY $TOOLS_DIR/diff-summary.py --repo $FIXTURES/mini-repo" \
     '"files_changed"'
 
 # vault-search: create a minimal vault structure and assert search finds it
@@ -206,11 +227,16 @@ cat > "$FIXTURES/mini-vault/notes/needle.md" << 'NOTE'
 This file contains the special token UNIQUE-NEEDLE-TOKEN-12345.
 NOTE
 assert_behavioral "vault-search 'UNIQUE-NEEDLE-TOKEN-12345' finds 'needle.md'" \
-    "$TOOLS_DIR/vault-search.py --vault $FIXTURES/mini-vault UNIQUE-NEEDLE-TOKEN-12345" \
+    "$TEST_PY $TOOLS_DIR/vault-search.py --vault $FIXTURES/mini-vault UNIQUE-NEEDLE-TOKEN-12345" \
     "needle"
 
 # db-schema-inspector: cannot exercise live without DB; behavioral test
 # is the SQL-injection guard (already covered by test-sql-injection-guard.py).
 
 echo ""
-echo "Behavioral test totals: see Totals row above"
+echo "Combined totals (--help + clean-venv + missing-dep + behavioral): $PASS pass, $FAIL fail"
+if [ "$FAIL" -gt 0 ]; then
+    echo "❌ At least one check failed — exit 1"
+    exit 1
+fi
+echo "✅ All checks passed"
