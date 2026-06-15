@@ -136,6 +136,11 @@ jobs:
           "
           done
 
+      - name: Security smoke-tests (SQL-injection guard)
+        run: |
+          set -e
+          python3 scripts/test-sql-injection-guard.py
+
       - name: Validate Python tools syntax
         run: |
           set -e
