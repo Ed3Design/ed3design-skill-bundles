@@ -1,6 +1,8 @@
 ---
 name: pytest-venv-first-triage
-description: Use when pytest shows multiple failures or errors (especially ModuleNotFoundError clusters) and you're about to dig into individual test fixes. ALWAYS check the Python environment FIRST — `which python3` vs `venv/bin/python3` — before debugging individual tests. System-Python frequently lacks project deps (cachetools, asyncpg, etc.) while project venv has them. Trigger on phrases like "pytest shows many failures", "test errors after pull", "these tests were green yesterday", "ModuleNotFoundError multiple files", "pre-existing failures", "tests broken without code change", "ImportError test sweep". Do NOT load for single-test-fail debugging (use systematic-debugging directly), for Python projects without venv (no env mismatch possible), or for failures with clear test-logic bugs (e.g. assertion errors with concrete values).
+description: |-
+  Use when pytest shows multiple failures or errors (especially ModuleNotFoundError clusters) and you're about to dig into individual test fixes. ALWAYS check the Python environment FIRST — `which python3` vs `venv/bin/python3` — before debugging individual tests. System-Python frequently lacks project deps (cachetools, asyncpg, etc.) while project venv has them. Trigger on phrases like "pytest shows many failures", "test errors after pull", "these tests were green yesterday", "ModuleNotFoundError multiple files", "pre-existing failures", "tests broken without code change", "ImportError test sweep". Do NOT load for single-test-fail debugging (use systematic-debugging directly), for Python projects without venv (no env mismatch possible), or for failures with clear test-logic bugs (e. g. assertion errors with concrete values).
+
 ---
 
 # pytest venv-first Triage
@@ -106,17 +108,10 @@ echo "=== requirements check ==="
 venv/bin/python3 -m pytest <previous args> -q 2>&1 | tail -5
 ```
 
-## TDD task for next skill-building session
-
-1. **RED**: subagent without skill gets pytest output with 32 ModuleNotFoundError errors. Observe: does it dive directly into code-debug or first ask env? Likely: code-debug.
-2. **GREEN**: with skill: same task. Should FIRST run env-check + Quick-Check Procedure.
-3. **REFACTOR**: loophole "but requirements.txt contains cachetools, so pytest is certainly green in venv" → skill must make explicit that requirements ≠ activated venv.
-4. **Trigger phrases**: "pytest many failures", "tests broken without code change", "ModuleNotFoundError multiple" → does the skill get auto-triggered?
-
 ## Cross-references
 
-- `superpowers:systematic-debugging` — overarching debug framework, this skill is special case "first check env"
-- `your-server-fastapi-iteration` — repo-specific Python setup conventions
+- `superpowers:systematic-debugging` — overarching debug framework, this skill is the special case "first check env"
+- Repo-specific Python-setup convention notes belong in the repo's own `CLAUDE.md`, not in a bundled skill
 
 ## Real-world impact
 

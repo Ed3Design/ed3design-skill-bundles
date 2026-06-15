@@ -1,6 +1,7 @@
 ---
 name: vault-search-helper
-description: Use when the user names a topic/project/object and you must do a Vault-First search for existing notes (mandatory pattern: "Vault-First — required for every named topic"). A single call to `${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py` replaces 2-3 Glob+Grep calls and returns ranked top-N notes with wikilink + score breakdown + excerpts. Trigger on phrases like "Vault-First", "where in vault", "find note", "existing on this", "check inventory", "is there already something", "search vault". Do NOT load for known-path file reads (use `Read` directly), for pure filename searches (use `Glob`), for external-system searches (LaunchAgents, remote server — use `ls` and `ssh`), or when the user explicitly requests a multi-pass search.
+description: |-
+  Use when the user names a topic/project/object and you must do a Vault-First search for existing notes (mandatory pattern: "Vault-First — required for every named topic"). A single call to `${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/vault-search.py` replaces 2-3 Glob+Grep calls and returns ranked top-N notes with wikilink + score breakdown + excerpts. Trigger on phrases like "Vault-First", "where in vault", "find note", "existing on this", "check inventory", "is there already something", "search vault". Do NOT load for known-path file reads (use `Read` directly), for pure filename searches (use `Glob`), for external-system searches (LaunchAgents, remote server — use `ls` and `ssh`), or when the user explicitly requests a multi-pass search.
 ---
 
 # Vault-Search-Helper

@@ -24,6 +24,21 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install Python deps used by CI scripts
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pyyaml
+
+      - name: Set up Node + install Claude Code CLI
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install @anthropic-ai/claude-code
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude --version
+          claude plugin validate --help | head -5
+
       - name: Validate plugin.json schemas
         run: |
           set -e
@@ -46,24 +61,40 @@ jobs:
           "
           done
 
-      - name: Validate skill frontmatter
+      - name: Validate skills via official Claude plugin validator (strict)
         run: |
           set -e
+          for bundle_dir in */; do
+            [ ! -f "${bundle_dir}.claude-plugin/plugin.json" ] && continue
+            echo "── Validating ${bundle_dir%/} ──"
+            claude plugin validate --strict "${bundle_dir%/}"
+          done
+          echo "  ✅ All bundles pass --strict validation"
+
+      - name: Enforce no DRAFT-banner in production skills
+        run: |
+          set -e
+          # CI-Block 1: name suffix check (was already covered, kept for safety)
           for skill_md in */skills/*/SKILL.md; do
             python3 -c "
-          import sys, re
+          import re, sys
           content = open('$skill_md').read()
-          assert content.startswith('---\n'), f'No frontmatter: $skill_md'
           fm_end = content.index('\n---\n', 4)
           fm = content[4:fm_end]
-          assert re.search(r'^name:\s*\S+', fm, re.M), f'No name in: $skill_md'
-          assert re.search(r'^description:\s*\S+', fm, re.M), f'No description in: $skill_md'
-          name_match = re.search(r'^name:\s*(\S+)', fm, re.M)
-          assert not name_match.group(1).endswith('-DRAFT'), f'DRAFT skill leaked: $skill_md'
-          assert not name_match.group(1).endswith('-STUB'), f'STUB skill leaked: $skill_md'
+          m = re.search(r'^name:\s*(\S+)', fm, re.M)
+          assert m, 'no name in $skill_md'
+          n = m.group(1)
+          assert not (n.endswith('-DRAFT') or n.endswith('-STUB')), f'DRAFT/STUB name suffix in: $skill_md ({n})'
           "
           done
-          echo "  ✅ All skill frontmatters valid"
+          # CI-Block 2: body banner check — fails if any '⚠️ DRAFT' or '> ⚠️ **DRAFT' marker present
+          banner_hits=$(grep -lE '^>?\s*⚠️\s*\*?\*?DRAFT' */skills/*/SKILL.md 2>/dev/null || true)
+          if [ -n "$banner_hits" ]; then
+            echo "FAIL: production skills still carry DRAFT banner:"
+            echo "$banner_hits"
+            exit 1
+          fi
+          echo "  ✅ No DRAFT-banner leakage"
 
       - name: Validate hook scripts
         run: |
@@ -109,6 +140,51 @@ jobs:
           print(f'  ✅ $agent_md')
           "
           done
+
+      - name: Counts-drift check (README + marketplace.json vs filesystem)
+        run: |
+          set -e
+          python3 scripts/regenerate-counts.py --check
+
+      - name: Skill description audit (first-person blocks, length warns)
+        run: |
+          set -e
+          # First-person markers in descriptions are a HARD violation
+          # (descriptions are injected into the system prompt as third-person).
+          # Length over the 1024-char spec recommendation is a soft warning
+          # — we surface it but don't fail CI yet (known tech-debt, tracked).
+          python3 -c "
+          import sys
+          sys.path.insert(0, 'scripts')
+          # Reuse the audit logic from the standalone script
+          import importlib.util
+          spec = importlib.util.spec_from_file_location('a', 'scripts/audit-skill-descriptions.py')
+          m = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+          overlong, first_person = m.audit()
+          if first_person:
+              print(f'FAIL: {len(first_person)} skill description(s) contain first-person markers (must be third-person):')
+              for s, fp, d in first_person:
+                  print(f'  {sorted(set(fp))}  {s.parent.parent.parent.name}/{s.parent.name}')
+              sys.exit(1)
+          print(f'✅ All {47} descriptions third-person')
+          if overlong:
+              print(f'⚠  {len(overlong)} skill description(s) over the {1024}-char spec recommendation (soft-warning, tracked in TECHNICAL-DEBT.md)')
+              for s, n, d in overlong[:5]:
+                  print(f'    {n:4d}  {s.parent.parent.parent.name}/{s.parent.name}')
+              if len(overlong) > 5:
+                  print(f'    ... and {len(overlong) - 5} more')
+          "
+
+      - name: Security smoke-tests (SQL-injection guard)
+        run: |
+          set -e
+          python3 scripts/test-sql-injection-guard.py
+
+      - name: Hook trigger-matrix tests
+        run: |
+          set -e
+          bash scripts/test-hooks.sh
 
       - name: Validate Python tools syntax
         run: |

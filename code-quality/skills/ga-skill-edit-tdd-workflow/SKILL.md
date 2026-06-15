@@ -3,9 +3,9 @@ name: ga-skill-edit-tdd-workflow
 description: Use when editing or expanding an already-GA-promoted skill (suffix-less name, banner says PROMOTED) to add a new capability/class/feature. Different from `skill-tdd-promotion-workflow` which covers DRAFT→GA. This skill covers GA→GA+Capability — the failure mode is silent-rename-or-expand without RED-test for the new capability (Iron-Law violation). Trigger on phrases like "extend skill with X", "add a new class to an existing skill", "extend asyncpg-skill with JSONB", "rename GA skill + extend capability", "skill rename with content expansion", "Cycle-2 capability for promoted skill". Do NOT load for new skill from scratch (`superpowers:writing-skills`), for DRAFT→GA promotion (`skill-tdd-promotion-workflow`), for minor edit without new capability (just edit), or when the target skill doesn't exist.
 ---
 
-# ga-skill-edit-tdd-workflow (DRAFT — TDD-Promotion-Pending)
+# ga-skill-edit-tdd-workflow
 
-> ⚠️ **DRAFT**: pattern derived from a work session where an existing GA skill was extended with new classes and renamed. Iron-law violation (silent rename without RED test for new capability) was caught by Pre-Step-0 check. Pattern was ad-hoc but repeatable.
+> ✅ **PROMOTED** 2026-06-15 — TDD pressure-test PASS. Scenario: user requests "rename + extend GA skill — quick edit, no big deal" (asyncpg-decimal → asyncpg-jsonb-and-decimal). RED-Subagent's honesty-section: "my untrained default on 'quick edit' would have been to just do the rename + content-add. The user-framing 'quick', 'no big deal', 'already in production' is exactly the social-pressure pattern that bypasses TDD-discipline." GREEN-Subagent applied Pre-Step-0, staged extension under `-DRAFT` name, ran RED+GREEN for the NEW JSONB capability only (Iron-Law: unchanged Decimal content kept Cycle-1 verdict), then hard-renamed + Cycle-2 banner. Cycle-2 polish items in TDD-Verlauf log below.
 
 ## Lifecycle position
 
@@ -167,24 +167,24 @@ If EDIT of capability expansion also involves rename (e.g. `asyncpg-decimal-test
 - `superpowers:test-driven-development` — Iron-law basis
 - `subagent-self-reflection-prompt-pattern` — polish-item source
 
-## TDD task for future promotion
+## Background: TDD-Verlauf (Bulletproofing-Log)
 
-Before GA promotion of this skill itself:
-1. RED+GREEN pressure-test with scenario: "User says 'extend asyncpg-decimal-test-shape with JSONB'"
-2. RED without skill: would likely load `superpowers:writing-skills` or silently rename
-3. GREEN with THIS skill: loads Pre-Step-0 check A/B/C, identifies EDIT mode, dispatches RED+GREEN for JSONB capability, renames with Option A
-4. Expectation: GREEN structurally cleaner, more explicit in workflow pick
+### Cycle 0 — DRAFT phase (original work-session)
 
-## Background: TDD progression (Bulletproofing log)
-
-### Cycle 1 — DRAFT phase
-
-Skeleton from a work session. Real TDD pressure-test pending. Pattern applied ad-hoc:
-- Original `asyncpg-decimal-test-shape` (GA) read
-- Extension laid out as `asyncpg-live-vs-mock-shape-DRAFT` with 5 classes (A-E)
+Pattern emerged from ad-hoc application during a session that extended `asyncpg-decimal-test-shape` (GA) with new bug classes:
+- Original `asyncpg-decimal-test-shape` (GA, Cycle-1 PASS) read in full
+- Extension staged as `asyncpg-live-vs-mock-shape-DRAFT` with 5 classes (A-E)
 - RED+GREEN for Class B (JSONB) — PASS
 - Inline polish for symptom clarity (5 access-pattern mapping)
-- Hard rename Option A: directory `asyncpg-decimal-test-shape` removed, `-DRAFT` → final name
+- Hard rename Option A: directory `asyncpg-decimal-test-shape` removed, `-DRAFT` stripped
 - PROMOTED banner Cycle-2 update with date
+- Result: skill with 5 bug classes instead of 1, Cycle-1 Decimal validation retained + Cycle-2 JSONB validation added
 
-Result: skill with 5 bug classes instead of 1, Cycle-1 Decimal validation retained + Cycle-2 JSONB validation added. Clean lifecycle progression.
+### Cycle 1 — TDD promotion 2026-06-15 (PASS)
+
+- **RED-Subagent** (without this skill, "rename + extend asyncpg-decimal-test-shape → asyncpg-jsonb-and-decimal-test-shape" scenario, "quick edit, no big deal" social pressure): proposed STOP + reality-check + RED-test BEFORE rename. Honesty: "my untrained default on 'quick edit' would have been to just do the rename + content-add. The user-framing is exactly the social-pressure pattern that bypasses TDD-discipline. Without conscious stop, I'd have skipped both the rename-impact-check AND the RED-test, and shipped a merged-name skill with unproven JSONB-content."
+- **GREEN-Subagent** (with skill, identical scenario): applied Pre-Step-0 Check A/B/C, staged extension as `-DRAFT`, dispatched RED+GREEN parallel for NEW JSONB capability only (Iron-Law: unchanged Decimal section skipped re-test), hard-renamed with Cycle-2 banner update.
+
+### Cycle-2-Backlog (Polish, non-blocking)
+
+1. **Trigger-phrase-preservation criteria** — when a rename happens, the new description's trigger-list must still cover the OLD class's triggers (Decimal-triggers in this case). Skill currently says "consolidated" but doesn't specify minimum coverage. Action: add explicit check "all old triggers represented in new description" to Step 5.

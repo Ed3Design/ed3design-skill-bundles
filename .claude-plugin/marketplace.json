@@ -1,6 +1,6 @@
 {
   "name": "ed3design-skill-bundles",
-  "description": "Engineering-discipline library for Claude Code: 54 skills, 6 hooks, 4 sub-agents, 5 Python tools across 8 thematic bundles. Software engineering (token savings, code quality, planning, async forensics, schema discipline, skill-system meta) and hardware/maker engineering (CAD design, FDM/maker workflows). Empirically validated patterns.",
+  "description": "Engineering-discipline library for Claude Code: 47 skills, 6 hooks, 4 sub-agents, 5 Python tools across 6 thematic bundles. Empirically validated patterns.",
   "owner": {
     "name": "ed3Dworks"
   },

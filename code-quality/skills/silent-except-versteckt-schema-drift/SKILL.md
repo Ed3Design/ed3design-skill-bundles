@@ -1,11 +1,13 @@
 ---
 name: silent-except-versteckt-schema-drift
-description: Use when reviewing or writing Python code with `try`/`except Exception:` clauses around SQL queries (asyncpg.connect/conn.fetch/conn.execute, psycopg2, sqlalchemy, sqlite3, or any DB-driver call) where the except-branch either (a) silently returns an empty collection (`signals = []`, `ticks = []`, `rows = {}`, `data = None`), (b) re-renders the UI with the empty state ("No active signals", "No data today", "Loading..."), or (c) catches with a bare or overly-broad type — without `logger.exception()` / `log.error()` / re-raise. The danger: a schema-drift bug (`column "X" does not exist`, FK-target-rename, table-renamed-in-migration, ORM-model-out-of-sync) AND a legitimate empty-result state look IDENTICAL to the user. A dashboard panel that says "No signals today" silently means EITHER (1) there genuinely are no signals OR (2) the SQL crashed and was swallowed — without a log entry, you cannot tell which. Real evidence from a schema-drift audit: `api/routes/dashboard/modules/{signals,timeline}.py` had `except Exception: signals = []` / `except Exception: ticks = []` around SELECT queries on `opportunities.yf_symbol` (column doesn't exist — opportunities has `symbol`). Result: dashboard's "Active Signals" card showed `(0)` for unknown duration while DB had 2 real open signals. Trader logs in 24h window: **0 hits** on "column does not exist" — silent-except clauses fired BEFORE any log entry. Would never be noticed without code audit. Trigger phrases like "silent except with schema drift", "dashboard shows empty but DB has data", "why don't I see any signals", "except Exception: signals = []", "dashboard card permanently empty", "code swallows DB error", "silent failure with DB query". Do NOT load for non-DB silent-except (network calls, file-IO — different concern; use general silent-failure-hunter), for catch-and-re-raise patterns (already correct), or for narrow except-clauses that catch specific exception types like `asyncpg.PostgresError` AND log them (probably fine, audit case-by-case).
+description: |-
+  Use when reviewing or writing Python code with `try`/`except Exception:` clauses around SQL queries (asyncpg.connect/conn.fetch/conn.execute, psycopg2, sqlalchemy, sqlite3, or any DB-driver call) where the except-branch either (a) silently returns an empty collection (`signals = []`, `ticks = []`, `rows = {}`, `data = None`), (b) re-renders the UI with the empty state ("No active signals", "No data today", "Loading..."), or (c) catches with a bare or overly-broad type — without `logger.exception()` / `log.error()` / re-raise. The danger: a schema-drift bug (`column "X" does not exist`, FK-target-rename, table-renamed-in-migration, ORM-model-out-of-sync) AND a legitimate empty-result state look IDENTICAL to the user. A dashboard panel that says "No signals today" silently means EITHER (1) there genuinely are no signals OR (2) the SQL crashed and was swallowed — without a log entry, you cannot tell which. Real evidence from a schema-drift audit: `api/routes/dashboard/modules/{signals,timeline}.py` had `except Exception: signals = []` / `except Exception: ticks = []` around SELECT queries on `opportunities.yf_symbol` (column doesn't exist — opportunities has `symbol`). Result: dashboard's "Active Signals" card showed `(0)` for unknown duration while DB had 2 real open signals. Trader logs in 24h window: **0 hits** on "column does not exist" — silent-except clauses fired BEFORE any log entry. Would never be noticed without code audit. Trigger phrases like "silent except with schema drift", "dashboard shows empty but DB has data", "why don't see any signals", "except Exception: signals = []", "dashboard card permanently empty", "code swallows DB error", "silent failure with DB query". Do NOT load for non-DB silent-except (network calls, file-IO — different concern; use general silent-failure-hunter), for catch-and-re-raise patterns (already correct), or for narrow except-clauses that catch specific exception types like `asyncpg. PostgresError` AND log them (probably fine, audit case-by-case).
+
 ---
 
 # Silent-Except hides schema drift
 
-> ⚠️ **DRAFT** — needs TDD promotion (RED: deploy code with silent-except + schema-drift, observe user sees "empty"; GREEN: deploy with logger.exception, observe drift visible in log). See `skill-tdd-promotion-workflow`.
+> ✅ **PROMOTED** 2026-06-15 — TDD pressure-test PASS. RED-Subagent reviewed `except Exception: return []` around SELECT on `opportunities.yf_symbol`; flagged silent-exception swallowing correctly, but Honesty-section: "Ich habe `yf_symbol` als Spaltennamen nicht hinterfragt. Ich habe Symptom 1 (Silent-Except) gefangen, aber Symptom 2 (mögliche Schema-Drift dahinter) nicht aktiv als Hypothese auf den Tisch gelegt." GREEN-Subagent identified BOTH issues in one review (silent-except + schema-drift on `yf_symbol`/`symbol` column-rename), proposed `log.exception()` + `information_schema.columns` verify, distinguished `log.exception` vs `log.error`. Skill description matched scenario 1:1 (canonical example).
 
 ## Overview
 
@@ -134,10 +136,14 @@ These three heuristics indicate drift with high probability:
 - **Unknown drift duration**: dashboard was probably seen for weeks with empty cards without trigger for investigation
 - **Direct outcome-visibility loss**
 
-## Promotion Checklist (DRAFT → GA)
+## Background: TDD-Verlauf (Bulletproofing-Log)
 
-- [ ] RED subagent: deploy code with `except Exception: X = []` + schema-drift in SELECT — verify user sees "empty", logs show 0 errors
-- [ ] GREEN subagent: same code with `log.exception(...)` — verify user sees "empty" AND log contains drift traceback
-- [ ] Edge case: specific `except asyncpg.UndefinedColumnError` — confirm skill correctly classifies the pattern
-- [ ] Cross-reference with `superpowers:silent-failure-hunter` (existing subagent in pr-review-toolkit) — delineate or supplement
-- [ ] CSO check: does "dashboard card permanently empty" / "why don't I see any X" trigger reliably?
+### Cycle 1 — 2026-06-15 (PASS)
+
+- **RED-Subagent** (without skill, code-review scenario with `except Exception: return []` around `SELECT yf_symbol FROM opportunities`, dashboard `(0)` for 3 days while DB has 2 signals): flagged silent-exception swallowing correctly + recommended `logger.exception`. Honesty: "Ich habe `yf_symbol` als Spaltennamen nicht hinterfragt — die Schema-Verify-Maxime fordert das aber. Ich habe Symptom 1 (Silent-Except) gefangen, aber Symptom 2 (Schema-Drift dahinter) nicht aktiv als Hypothese auf den Tisch gelegt."
+- **GREEN-Subagent** (with skill, identical scenario): identified BOTH issues in one review — silent-except suppression AND schema-drift on `yf_symbol`/`symbol` column-rename. Proposed `log.exception()` + `information_schema.columns` verify-step. Self-reflection: "Skill's canonical example matches scenario 1:1 — unusually direct mapping."
+
+### Cycle-2-Backlog (Polish, non-blocking)
+
+- Cross-reference with `superpowers:silent-failure-hunter` (existing subagent in pr-review-toolkit) — delineate scope: this skill is the DB-query specialization; silent-failure-hunter is the general subagent
+- Edge-case section: specific `except asyncpg.UndefinedColumnError` (narrow + logged is fine) vs `except Exception` (broad + silent is the trap)

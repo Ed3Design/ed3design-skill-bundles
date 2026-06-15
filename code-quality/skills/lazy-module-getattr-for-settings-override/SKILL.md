@@ -1,12 +1,13 @@
 ---
 name: lazy-module-getattr-for-settings-override
-description: Use when a Python app needs user-editable runtime configuration that should OVERRIDE existing code constants without refactoring downstream callers. Triggers on phrases like "build settings form", "user should be able to change values", "without refactoring calc.py", "DB override above defaults", "inputs.py stays, but DB should take precedence", "how do we make the hardcoded values editable". Do NOT load for greenfield apps without existing code constants (then settings class from the start), for performance-critical hot paths where module-`__getattr__` would be a bottleneck, or when the values already go through dependency-injection (then refactor is minimal). Pattern: `inputs.py` remains as defaults, new `cfg.py` with module-level `__getattr__` (PEP 562) does lazy lookup to settings DB with 60s TTL cache, fallback to inputs.py. Callers import `from data import cfg as inputs` (1-line change) — calc.py + other consumers stay unchanged. Pattern derived from practice: applied successfully 2x in one day on two different apps.
+description: |-
+  Use when a Python app needs user-editable runtime configuration that should OVERRIDE existing code constants without refactoring downstream callers. Triggers on phrases like "build settings form", "user should be able to change values", "without refactoring calc.py", "DB override above defaults", "inputs.py stays, but DB should take precedence", "how to make the hardcoded values editable". Do NOT load for greenfield apps without existing code constants (then settings class from the start), for performance-critical hot paths where module-`__getattr__` would be a bottleneck, or when the values already go through dependency-injection (then refactor is minimal). Pattern: `inputs.py` remains as defaults, new `cfg.py` with module-level `__getattr__` (PEP 562) does lazy lookup to settings DB with 60s TTL cache, fallback to inputs.py. Callers import `from data import cfg as inputs` (1-line change) — calc.py + other consumers stay unchanged
 
 ---
 
 # Lazy Module-`__getattr__` for Settings Override
 
-> ⚠️ **DRAFT**. Pattern emerged from 2 sessions on the same day. TDD promotion cycle pending.
+> ✅ **PROMOTED** 2026-06-15 — TDD pressure-test PASS. RED-Subagent proposed Settings-class with `settings.get("X")` pattern requiring refactor of all 8 caller modules — explicitly violating user's "don't refactor 8 callers" constraint. Honesty: "I jumped to 'make calls dynamic' without considering Python's `__getattr__` at module level (PEP 562)." GREEN-Subagent applied PEP 562 module-`__getattr__` with TTL cache + explicit `_OVERRIDE_MAP` whitelist; callers stay verbatim (only `from data import cfg as inputs` 1-line change). Cycle-2 polish items in TDD-Verlauf log below.
 
 ## The problem
 
@@ -161,9 +162,14 @@ def test_cfg_returns_db_override_when_set(monkeypatch):
 - CLAUDE.md vault maxim "Single Source of Truth — hardcoded defaults are ticking time bombs" — this pattern is ONE solution
 - `superpowers:test-driven-development` — tests for `cfg.py` are essential because module `__getattr__` is subtle to debug
 
-## TDD promotion backlog (Cycle 1, pending)
+## Background: TDD-Verlauf (Bulletproofing-Log)
 
-- RED subagent without skill: would likely suggest settings class + DI → 30+ caller refactor
-- GREEN subagent with skill: would lay out `cfg.py` with `__getattr__` + 1-line change in main.py
-- Refactor expectation: Step 5 (tests) could be more detailed; edge cases (`hasattr()` with __getattr__ modules)
-- Cycle 1 to be scheduled when next settings migration arises
+### Cycle 1 — 2026-06-15 (PASS)
+
+- **RED-Subagent** (without skill, 20+ constants in `inputs.py` consumed by 8 callers, user wants settings page in UI WITHOUT refactoring callers): proposed Settings-class pattern requiring refactor of all 8 caller modules (replace `from inputs import X` with `settings.get("X")`). Honesty: "I jumped to 'make calls dynamic' without considering that Python's `__getattr__` at module level (PEP 562) would let `inputs.py` itself become the override-aware surface. I proposed the refactor the user explicitly rejected."
+- **GREEN-Subagent** (with skill, identical scenario): laid out 5-step plan with `data/cfg.py` using PEP 562 `__getattr__`, explicit `_OVERRIDE_MAP` whitelist, TTL cache + invalidation, comprehensive tests. Callers' 1-line change: `from data import cfg as inputs` — bodies untouched.
+
+### Cycle-2-Backlog (Polish, non-blocking)
+
+1. **`__dir__` override** — is it needed beyond IDE-autocomplete? E.g., for `hasattr()` semantics, for `importlib.reload()`. Worth documenting use-cases explicitly.
+2. **`_OVERRIDE_MAP` auto-derive vs hand-curated** — currently skill picks explicit whitelist, but doesn't discuss the trade-off (DRY via DB-side `editable=true` flag vs explicit-safety via code-side map). Action: add brief trade-off table.

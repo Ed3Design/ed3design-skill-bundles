@@ -48,6 +48,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -106,6 +107,29 @@ DEFAULT_CONNECTION = CONFIG.get("default_connection")
 # Core SQL
 # ──────────────────────────────────────────────────────────────────────────
 
+# PostgreSQL identifiers: letter or underscore, then letters/digits/underscores.
+# Length-bounded to prevent absurd inputs. We intentionally DO NOT accept
+# quoted/dotted identifiers — this tool's contract is "simple unqualified
+# table + schema names only". Anything else is rejected up-front.
+_IDENT_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]{0,62}$")
+
+
+def _validate_identifier(kind: str, value: str) -> str:
+    """Raise ValueError if `value` is not a safe Postgres identifier.
+
+    Returns the validated value unchanged so callers can use the result
+    inline. We must validate (not parameterize) because Postgres does not
+    bind-parameterize identifiers in `information_schema` queries.
+    """
+    if not isinstance(value, str) or not _IDENT_RE.match(value):
+        raise ValueError(
+            f"Invalid {kind} {value!r}: only [A-Za-z_][A-Za-z0-9_]{{0,62}} accepted "
+            "(no quotes, no dots, no whitespace). This tool refuses arbitrary "
+            "identifiers to prevent SQL injection."
+        )
+    return value
+
+
 SCHEMA_QUERY = """
 SELECT
     column_name,
@@ -137,6 +161,9 @@ def query_schema(connection_name: str, table: str, schema: str = "public") -> di
             f"Unknown connection '{connection_name}'. "
             f"Available: {list(CONNECTIONS.keys())}"
         )
+
+    table = _validate_identifier("table", table)
+    schema = _validate_identifier("schema", schema)
 
     conn = CONNECTIONS[connection_name]
     sql = SCHEMA_QUERY.format(table=table, schema=schema).strip()
@@ -182,6 +209,8 @@ def query_schema(connection_name: str, table: str, schema: str = "public") -> di
 
 def query_via_url(db_url: str, table: str, schema: str = "public") -> dict:
     """Override-Pfad: lokales psql via DB-URL statt ssh+docker."""
+    table = _validate_identifier("table", table)
+    schema = _validate_identifier("schema", schema)
     sql = SCHEMA_QUERY.format(table=table, schema=schema).strip()
     cmd = ["psql", db_url, "-A", "-t", "-F", "|", "-c", sql]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)

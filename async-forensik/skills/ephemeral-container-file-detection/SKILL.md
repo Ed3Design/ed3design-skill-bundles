@@ -1,11 +1,13 @@
 ---
 name: ephemeral-container-file-detection
-description: NOT YET TDD-TESTED. Do not auto-trigger. Use when designing or auditing Docker-based deployments BEFORE writing implementation plans that rely on files persisting across container rebuilds. Trigger on phrases like "volume mount for X", "why are the files gone", "container rebuild deleted my models", "model_path points to a file that's not there", "phantom registry in DB", "inference fails with FileNotFoundError", "before we build — are the prerequisites in place", "pre-flight deployment audit", "writing-plans for a Docker feature with persistent data". Detection-Pattern in 4 steps: docker inspect Mounts → ls container dir → stat birth-time → grep dump/save calls in code → if code writes but the mount list does NOT include the path → ephemeral, pre-flight STOP for the feature phase. Do NOT load for non-Docker deployments (systemd services, Kubernetes StatefulSets — different model), for read-only containers without write paths, for single-file apps without a storage layer. The maxim "read logs/code/DB first" applied to deployment prerequisites.
+description: |-
+  Use when designing or auditing Docker-based deployments BEFORE writing implementation plans that rely on files persisting across container rebuilds. Trigger on phrases like "volume mount for X", "why are the files gone", "container rebuild deleted the models", "model_path points to a file that's not there", "phantom registry in DB", "inference fails with FileNotFoundError", "before Claude build — are the prerequisites in place", "pre-flight deployment audit", "writing-plans for a Docker feature with persistent data". Detection-Pattern in 4 steps: docker inspect Mounts → ls container dir → stat birth-time → grep dump/save calls in code → if code writes but the mount list does NOT include the path → ephemeral, pre-flight STOP for the feature phase. Do NOT load for non-Docker deployments (systemd services, Kubernetes StatefulSets — different model), for read-only containers without write paths, for single-file apps without a storage layer. The maxim "read logs/code/DB first" applied to deployment prerequisites.
+
 ---
 
 # ephemeral-container-file-detection
 
-> ⚠️ **DRAFT STATUS**: skill emerged from a pre-flight forensic session (before a Phase-X.0 plan for your-app). The pattern prevented ~6h of wasted plan-work. Promotion via `skill-tdd-promotion-workflow` with RED+GREEN subagent-Test in the next skill-building session.
+> ✅ **PROMOTED** 2026-06-15 — TDD pressure-test PASS. RED-Subagent wrote naive 2-task plan with `joblib.dump` to an unmounted path and `Path.exists()` verify-step that would pass once then silently break on next `up --build`. Honesty-section: "I treated the filesystem as persistent because the scenario described `joblib.dump` + `joblib.load` as if it worked". GREEN-Subagent applied 4-step check, identified 🚨 EPHEMERAL row, proposed Phase W (volume mount + DB reconciliation) BEFORE writing the original plan. Cycle-2 polish items in TDD-Verlauf log below.
 
 ## Pattern (short form)
 
@@ -53,7 +55,7 @@ The 🚨 pattern is the **pre-flight stop trigger** for the feature phase.
 **Task**: write an implementation plan for your-app Phase X.0 (ML evaluator).
 
 **Pre-flight discovery**:
-- Step 1: `docker inspect your-trader-app | grep Mounts` → only `/srv/data/your-app/logs:/app/logs`, NO `/app/ml/models` mount
+- Step 1: `docker inspect your-trader-app | grep Mounts` → only `<host-data-dir>/your-app/logs:/app/logs`, NO `/app/ml/models` mount
 - Step 2: `docker exec your-trader-app ls /app/ml/models/` → only `model_TEST_DE.pkl` + `.gitkeep` (1 file out of 40 expected)
 - Step 3: `stat /app/ml/models/` → Birth: 14:13:35 UTC (yesterday's container rebuild for the Phase-2e deploy)
 - Step 4: `grep -rn "joblib.dump" --include="*.py" ml/` → `ml/ranking_model.py:153: joblib.dump(self, path)`
@@ -98,24 +100,26 @@ When this skill is activated for plan writing, the 4-step check belongs **as the
 - If task 0 fails → plan stop, redesign required
 - Suitable for routine deployments with standard patterns
 
-## TDD task for the next skill-building session
+## Background: TDD-Verlauf (Bulletproofing-Log)
 
-**RED test**: subagent without skill receives task: "write an implementation plan for Phase X.0 (ML evaluator) for your-app. Repo under `~/Documents/Claude-Code/your-app/`, spec under `docs/superpowers/specs/...ml-evaluator-shadow-roadmap-design.md`." Expectation: subagent writes plan with Task 0 = "file existence check" naively (only `Path.exists()`), does NOT recognize that `/app/ml/models/` is an ephemeral container layer. Would want to execute the Phase-X.0 plan → stop at pre-flight.
+### Cycle 1 — 2026-06-15 (PASS)
 
-**GREEN test**: subagent with skill receives identical prompt. Expectation: subagent runs 4-step check, discovers the ephemeral-storage pattern, proposes pre-flight pause or Phase-W insertion.
+- **RED-Subagent** (without skill, ML-feature-plan-with-unmounted-models scenario): wrote routine 2-task plan with `joblib.dump` + `Path.exists()` verify-step. Honesty-section: "I defaulted to 'training pipeline + DB-insert + smoke-test'. I treated the filesystem as persistent because the scenario described `joblib.dump` + `joblib.load` as if it worked. I did NOT cross-reference the explicit mount-list against the write-path until the honesty-section forced me to."
+- **GREEN-Subagent** (with skill, identical scenario): applied 4-step check, identified 🚨 EPHEMERAL diagnosis-row, proposed Phase W (verify ephemeral on live container + add bind-mount + reconcile DB-registry-vs-filesystem) as blocker BEFORE original plan. Self-reflection: "the canonical case the skill was extracted from" — exact trigger match.
 
-**Refactor hint**: if the GREEN subagent applies the pattern correctly but makes the 4-step check too cumbersome (e.g., 4 SSH calls instead of 1 chained), the skill can be extended with a "compact 1-command variant":
-```bash
-ssh <host> "docker inspect <container> | grep -A 3 Mounts && docker exec <container> ls -la <path>/ && docker exec <container> stat <path>/"
-```
+### Cycle-2-Backlog (Polish, non-blocking)
+
+1. **DB-reconciliation step needs to be explicit** in Phase W template (GREEN had to invent the `SELECT id, path FROM ml_models; for each row check os.path.exists(path)` reconcile pattern — not currently spelled out in the skill)
+2. **Variant A/B decision-rule sharper**: if a phantom registry already exists in the DB → always Variant A (Pre-flight BEFORE plan writing), no judgment call
+3. **Handling of stale rows** (retrain vs archive vs delete) is Wolf-decision-territory but should be flagged by the plan-writer, not solved silently
 
 ## Cross-references
 
 - `superpowers:writing-plans` — the skill preaches "assume engineer has zero context", but pre-flight for storage prerequisites was not previously explicit
 - `superpowers:brainstorming` — says "explore project context first" generally; this skill is the Docker-storage specialization
 - maxim "read logs/code/DB first, then hypothesize" — extended to deployment prerequisites
-- `timescaledb-compression-workflow` skill — related pattern: discovery-before-hypothesis in the storage area
-- `pre-migration-data-verification` — related: verify data before adding a constraint; here verify storage before a feature plan
+- `schema-discipline:pre-migration-data-verification` — related: verify data before adding a constraint; here verify storage before a feature plan
+- General principle "discovery-before-hypothesis in the storage area" — applies analogously to other storage-layer features (compression, retention, partitioning)
 
 ## Real-world impact
 

@@ -1,6 +1,7 @@
 ---
 name: cross-repo-state-inspection-before-commit
-description: Use when the user issues a vague git instruction like "commit hub", "push that to the repo", "hub should go in git", "put that under version control", "stage the changes", "deploy that to GitHub" — without specifying scope (which files, which repo, which branch, push-or-just-commit, new-repo-or-existing). The risk: jumping to action without verifying repo state means picking the wrong scope (committing everything when user meant only one subdir, creating a new repo when one already exists, pushing modifications that user wanted to defer). Encodes the 4-step inspection pattern: when the user says "hub should go into the repo" — initial interpretation could have been "create new repo" but `git status` + `git log origin/main..HEAD` + `git remote -v` revealed: (a) the parent dir `/srv/projects/` IS already a git repo, (b) 1 commit was already ahead of origin, (c) 8 hub-files were untracked, (d) 5 OTHER untracked subproject-dirs were NOT to be committed. Trigger phrases like "commit X", "push that", "into the repo", "into git", "version it", "stage that", "bring to GitHub", "create a commit for", "new commit needed", "git workflow for X". Do NOT load when the user has given fully-specified instructions ("git add hub/ && git commit -m 'X' && git push"), for repos that are clearly single-project (no mono-repo, no untracked siblings), or when the working tree is clean (no inspection ambiguity). Also do NOT load for fresh repos that have never been initialized (different concern — that's `git init` workflow).
+description: |-
+  Use when the user issues a vague git instruction like "commit hub", "push that to the repo", "hub should go in git", "put that under version control", "stage the changes", "deploy that to GitHub" — without specifying scope (which files, which repo, which branch, push-or-just-commit, new-repo-or-existing). The risk: jumping to action without verifying repo state means picking the wrong scope (committing everything when user meant only one subdir, creating a new repo when one already exists, pushing modifications that user wanted to defer). Encodes the 4-step inspection pattern: when the user says "hub should go into the repo" — initial interpretation could have been "create new repo" but `git status` + `git log origin/main..HEAD` + `git remote -v` revealed: (a) the parent dir `<server-projects-root>/` IS already a git repo, (b) 1 commit was already ahead of origin, (c) 8 hub-files were untracked, (d) 5 OTHER untracked subproject-dirs were NOT to be committed. Trigger phrases like "commit X", "push that", "into the repo", "into git", "version it", "stage that", "bring to GitHub", "create a commit for", "new commit needed", "git workflow for X". Do NOT load when the user has given fully-specified instructions ("git add hub/ && git commit -m 'X' && git push"), for repos that are clearly single-project (no mono-repo, no untracked siblings), or when the working tree is clean (no inspection ambiguity). Also do NOT load for fresh repos that have never been initialized (different concern — that's `git init` workflow).
 ---
 
 # Cross-Repo State Inspection Before Commit
@@ -88,9 +89,9 @@ Never assume A. Ask. The 60-second clarification prevents a 30-minute rollback.
 
 User: "The hub should go into the repo, can happen at the end of the current session"
 
-**Without skill**: possible path → initialize a local `~/Documents/Claude-Code/hub/` as a git repo (only stub with 2 files), create new GitHub repo, push the wrong source.
+**Without skill**: possible path → initialize a local `~/projects/hub/` as a git repo (only stub with 2 files), create new GitHub repo, push the wrong source.
 
-**With inspection**: revealed that `/srv/projects/` on the server is already a mono-repo with:
+**With inspection**: revealed that `<server-projects-root>/` on the server is already a mono-repo with:
 - 1 ahead commit (`74ab162 feat(cockpit)`) → had to be pushed too
 - 8 untracked hub files (Dockerfile, compose, requirements, app/__init__.py, app/collectors.py, app/static/, app/templates/index.html, app/main.py — wait, main.py was tracked-modified)
 - 2 OTHER modifications (`_shared/traefik`, `ops/postgres-dumpall.sh`) → NOT committed (scope clarification)
@@ -123,7 +124,7 @@ git -C $PATH remote -v
 When `git status` shows `?? subproject-A/`, `?? subproject-B/`, ... as whole dirs:
 
 **Ask explicitly**:
-> Untracked subprojects: `<list>`. Should these also go into the mono-repo, OR are these deliberately separate repos (locally in `~/Documents/Claude-Code/<subproj>/`)?
+> Untracked subprojects: `<list>`. Should these also go into the mono-repo, OR are these deliberately separate repos (locally in `~/projects/<subproj>/`)?
 
 Mono-repo + separate sub-repos can coexist when `.gitignore` excludes the subproject dirs explicitly. If they are NOT in `.gitignore` but permanently untracked = unclear strategy → backlog item for a polish session.
 
