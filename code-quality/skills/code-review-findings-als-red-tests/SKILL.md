@@ -1,6 +1,7 @@
 ---
 name: code-review-findings-als-red-tests
-description: Use when a code-review subagent (e.g. feature-dev:code-reviewer) has returned Critical/Important findings on a feature commit and you're about to write fixes. Standard default is "direct-fix, no new test". This skill says: each finding is itself a test case — write a RED test that shows the bug behavior, then GREEN fix. Prevents regressions + documents the bug pattern for future reviews. Trigger on phrases like "fix code-review findings", "implement Critical fix", "review subagent found C1/I1/I2", "convert reviewer output to fix", "close review cycle". Do NOT load for trivial style findings (typo, unused-import), for findings without a reproducible code path (perf hints, future-proofing), for code where TDD was consciously skipped (user-confirmed), or when the subagent had NO findings.
+description: |-
+  Use when a code-review subagent (e.g. feature-dev:code-reviewer) has returned Critical/Important findings on a feature commit and you're about to write fixes. Standard default is "direct-fix, no new test". This skill says: each finding is itself a test case — write a RED test that shows the bug behavior, then GREEN fix. Prevents regressions + documents the bug pattern for future reviews. Trigger on phrases like "fix code-review findings", "implement Critical fix", "review subagent found C1/I1/I2", "convert reviewer output to fix", "close review cycle". Do NOT load for trivial style findings (typo, unused-import), for findings without a reproducible code path (perf hints, future-proofing), for code where TDD was consciously skipped (user-confirmed), or when the subagent had NO findings.
 ---
 
 # Code-Review Findings as RED-Tests
