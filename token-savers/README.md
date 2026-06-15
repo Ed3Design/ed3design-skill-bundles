@@ -35,8 +35,9 @@ For bash-output filtering disciplines (head, tail, grep, jq, awk patterns), see 
 ## 🚀 Installation
 
 ```bash
-# Via marketplace (when registered):
-/plugin install ed3design-skill-bundles/token-savers
+# Via marketplace:
+/plugin marketplace add Ed3Design/ed3design-skill-bundles
+/plugin install token-savers@ed3design-skill-bundles
 
 # Or manually:
 git clone https://github.com/Ed3Design/ed3design-skill-bundles

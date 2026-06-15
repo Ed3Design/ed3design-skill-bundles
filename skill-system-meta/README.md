@@ -15,8 +15,9 @@
 ## Installation
 
 ```bash
-# Via marketplace (when registered):
-/plugin install ed3design-skill-bundles/skill-system-meta
+# Via marketplace:
+/plugin marketplace add Ed3Design/ed3design-skill-bundles
+/plugin install skill-system-meta@ed3design-skill-bundles
 
 # Manually:
 git clone https://github.com/Ed3Design/ed3design-skill-bundles

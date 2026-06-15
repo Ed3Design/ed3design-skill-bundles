@@ -1,0 +1,54 @@
+# pyproject.toml — declared dependencies for ed3design-skill-bundles Python tools.
+#
+# This file makes the tool runtime requirements machine-readable. The bundle
+# repository itself is NOT a published Python package — it's a collection of
+# stand-alone scripts under `*/tools/`. Users typically `cp tools/*.py` into
+# `~/.claude/tools/` (or symlink), then install the dependencies below.
+#
+# Quick install:
+#     pip install -r <(python -c "import tomllib; d=tomllib.load(open('pyproject.toml','rb')); print('\n'.join(d['project']['dependencies']))")
+# Or with optional groups:
+#     pip install '.[token-savers]'        # all token-savers Python tools
+#     pip install '.[token-savers-full]'   # incl. optional OCR + PDF stack
+
+[project]
+name = "ed3design-skill-bundles-tools"
+version = "0.2.0"
+description = "Python tool runtime dependencies for ed3design-skill-bundles"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "ed3Dworks" }]
+# Hard runtime dependencies of the tools (no third-party — all stdlib-only)
+dependencies = []
+
+[project.optional-dependencies]
+# Required for html2md.py
+html2md = [
+    "beautifulsoup4>=4.12",
+    "certifi>=2024.2",
+]
+# Required for img-preprocess.py (Vision-token reduction via Pillow)
+img-preprocess = [
+    "Pillow>=10.0",
+]
+# Aggregate: all token-savers Python-dependent tools (vault-search, diff-summary,
+# db-schema-inspector are stdlib-only and need NO pip install)
+token-savers = [
+    "beautifulsoup4>=4.12",
+    "certifi>=2024.2",
+    "Pillow>=10.0",
+]
+# Optional: OCR + PDF — used by `pdf-text-extract-without-vision` skill workflows.
+# Skill prefers system binaries (`tesseract`, `pdftotext`) over Python wrappers,
+# but pdfplumber is a useful fallback for tabular PDFs.
+token-savers-full = [
+    "beautifulsoup4>=4.12",
+    "certifi>=2024.2",
+    "Pillow>=10.0",
+    "pdfplumber>=0.10",       # fallback for table-heavy PDFs
+    "pytesseract>=0.3.10",    # Python OCR wrapper (system tesseract still required)
+]
+
+[project.urls]
+Repository = "https://github.com/Ed3Design/ed3design-skill-bundles"
+Issues = "https://github.com/Ed3Design/ed3design-skill-bundles/issues"
