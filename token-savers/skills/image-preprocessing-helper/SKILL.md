@@ -120,7 +120,7 @@ Smoke test with a sample dashboard chart PNG (2884×1808):
 ## Cross-References
 
 - `pdf-text-extract-without-vision` (GA) — sister skill for PDFs
-- `superpowers:writing-skills` — Iron-Law protocol (why DRAFT marker here)
+- `superpowers:writing-skills` — Iron-Law protocol (the source of the TDD-pressure-test discipline this skill went through)
 - `bash-output-filtering-disciplines` — same token-optimization family
 
 ## TDD Trail (Bulletproofing Log)

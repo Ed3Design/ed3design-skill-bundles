@@ -166,6 +166,11 @@ jobs:
           set -e
           python3 scripts/audit-stale-draft-crosslinks.py --check
 
+      - name: Pre-promotion residue in GA skills (sections + narrative)
+        run: |
+          set -e
+          python3 scripts/audit-promotion-residue.py --check
+
       - name: Security smoke-tests (SQL-injection guard)
         run: |
           set -e

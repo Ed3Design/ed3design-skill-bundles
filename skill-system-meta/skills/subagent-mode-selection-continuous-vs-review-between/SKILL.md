@@ -104,13 +104,15 @@ This skill is a **pre-workflow classification sub-routine** for SDD. It does not
 
 The SDD skill states: "Continuous execution: Do not pause to check in with your human partner between tasks." That is the standard. **This skill provides the classification of when that standard is NOT the right choice.**
 
-## Promotion checklist (DRAFT → GA)
+## Future refinements
 
-- [ ] Integrate 3-factor classification as a callable AskUserQuestion template
-- [ ] Add concrete examples from at least 1 non-trading domain (e.g., a frontend design feature, a deploy-pipeline refactor)
-- [ ] Coordinate with `superpowers:subagent-driven-development` skill — propose upstream PR that integrates this as a section
-- [ ] Document the re-classification trigger ("STOP and re-classify when") as a hard rule
-- [ ] Test in a session where the choice is ambiguous and verify the AskUserQuestion template surfaces it clearly
+Non-blocking polish items that would tighten the workflow further:
+
+- Integrate the 3-factor classification as a callable AskUserQuestion template
+- Add concrete examples from at least 1 non-trading domain (e.g. a frontend-design feature, a deploy-pipeline refactor)
+- Coordinate with `superpowers:subagent-driven-development` — propose an upstream PR that integrates this as a section
+- Document the re-classification trigger ("STOP and re-classify when") as a hard rule
+- Test in a session where the choice is ambiguous and verify the AskUserQuestion template surfaces it clearly
 
 ## Genesis-session metadata
 

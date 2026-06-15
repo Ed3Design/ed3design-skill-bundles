@@ -96,13 +96,15 @@ These two issues were **invisible to per-task reviews by construction**.
 - ❌ **Running aggregate-review on a 1-2-commit branch** — there's no cross-commit accumulation possible. Use `superpowers:requesting-code-review` directly.
 - ❌ **Skipping aggregate-review because "all tests pass"** — tests verify runtime-behavior-on-fixtures, not architectural integrity or commit-message-honesty.
 
-## Promotion checklist (DRAFT → GA)
+## Future refinements
 
-- [ ] Codify the dispatch-call as a reusable helper (e.g. `superpowers/aggregate-review.md` template that takes BASE_SHA / HEAD_SHA / Spec-Path / Plan-Path)
-- [ ] Document a concrete sequencing pattern: aggregate-review goes BEFORE `superpowers:finishing-a-development-branch`, AFTER the last per-task review
-- [ ] Add at least 1 more genesis-case from a different feature-domain to validate transferability
-- [ ] Test the workflow in a session where the aggregate-review finds nothing — verify the false-negative-rate is acceptable
-- [ ] Document interaction with `subagent-driven-development` skill: should the SDD-skill itself trigger this at "all tasks complete"?
+Non-blocking polish items that would tighten the workflow further:
+
+- Codify the dispatch-call as a reusable helper (e.g. an `aggregate-review.md` template that takes BASE_SHA / HEAD_SHA / Spec-Path / Plan-Path)
+- Document a concrete sequencing pattern: aggregate-review goes BEFORE `superpowers:finishing-a-development-branch`, AFTER the last per-task review
+- Add at least 1 more genesis-case from a different feature-domain to validate transferability
+- Test the workflow in a session where the aggregate-review finds nothing — verify the false-negative-rate is acceptable
+- Document interaction with `subagent-driven-development` skill: should the SDD-skill itself trigger this at "all tasks complete"?
 
 ## Related skills
 
