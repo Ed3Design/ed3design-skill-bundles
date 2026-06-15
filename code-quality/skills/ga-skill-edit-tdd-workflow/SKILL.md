@@ -173,7 +173,7 @@ If EDIT of capability expansion also involves rename (e.g. `asyncpg-decimal-test
 
 Pattern emerged from ad-hoc application during a session that extended `asyncpg-decimal-test-shape` (GA) with new bug classes:
 - Original `asyncpg-decimal-test-shape` (GA, Cycle-1 PASS) read in full
-- Extension staged as `asyncpg-live-vs-mock-shape-DRAFT` with 5 classes (A-E)
+- Extension staged as a `-DRAFT`-suffixed working copy of the skill with 5 classes (A-E)
 - RED+GREEN for Class B (JSONB) — PASS
 - Inline polish for symptom clarity (5 access-pattern mapping)
 - Hard rename Option A: directory `asyncpg-decimal-test-shape` removed, `-DRAFT` stripped

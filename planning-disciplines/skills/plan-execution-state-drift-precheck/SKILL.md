@@ -96,7 +96,7 @@ After scope-confirmation, proceed with the adjusted task-set, marking already-do
 - Skill: `superpowers:writing-plans` — produces the plans this verifies
 - Skill: `superpowers:subagent-driven-development` — same precheck applies before dispatching subagents
 - **Complementary** to `plan-execution-stack-mode-precheck` — that skill checks **stack-mode** (local-runnable vs remote-only vs hybrid); this skill checks **state-drift** (tasks already done vs not). Run both as Pre-Step-0 before executing.
-- **Complementary** to `pre-deploy-code-drift-detection-DRAFT` — that skill detects 3-way local↔origin↔server drift before rsync; this skill detects plan↔codebase drift before execution. Different drift dimensions, both worth checking.
+- Related concept — **pre-deploy 3-way drift detection** (local↔origin↔server before rsync). This skill addresses the orthogonal plan↔codebase drift before execution. Different drift dimensions; both worth running. (The 3-way deploy-drift skill is not shipped in this bundle.)
 
 ## Genesis
 

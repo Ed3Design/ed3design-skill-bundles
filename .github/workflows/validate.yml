@@ -27,22 +27,25 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Python deps used by CI scripts
+      - name: Install Python deps used by CI scripts (incl. behavioral smoke-test deps)
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install pyyaml
+          # pyyaml: CI scripts. Pillow + beautifulsoup4 + certifi: behavioral
+          # smoke-tests (test-tools-smoke.sh) for img-preprocess + html2md.
+          python3 -m pip install pyyaml Pillow beautifulsoup4 certifi
 
       - name: Set up Node + install Claude Code CLI
         uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af  # v4.1.0
         with:
           node-version: '20'
-      - name: Install @anthropic-ai/claude-code (pinned)
-        # CLAUDE_CODE_VERSION is the only knob Dependabot needs to touch
-        # when a new CLI release should be tested in CI.
-        env:
-          CLAUDE_CODE_VERSION: "2.1.152"
+      - name: Install @anthropic-ai/claude-code (pinned via package.json + lockfile)
+        # The CLI version lives in package.json (devDependency) + package-lock.json.
+        # `npm ci` installs the lockfile-pinned version, byte-for-byte reproducible.
+        # Dependabot updates package.json + lockfile via PR; never edit the version
+        # by hand.
         run: |
-          npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
+          npm ci
+          ln -s "$(pwd)/node_modules/.bin/claude" /usr/local/bin/claude
           claude --version
           claude plugin validate --help | head -5
 
@@ -173,7 +176,11 @@ jobs:
           set -e
           bash scripts/test-hooks.sh
 
-      - name: Tool smoke-tests (--help + missing-dep guards)
+      - name: Tool smoke-tests (--help + missing-dep + behavioral fixtures)
+        env:
+          # STRICT mode: missing third-party deps treated as FAIL, not SKIP.
+          # CI deps are installed above, so any missing-dep here = real issue.
+          STRICT_BEHAVIORAL: "1"
         run: |
           set -e
           bash scripts/test-tools-smoke.sh
