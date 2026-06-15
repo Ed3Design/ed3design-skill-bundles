@@ -51,7 +51,7 @@ Before any file is touched, invest a few minutes in verification queries:
 | Database has N rows / trades / records | `docker exec <db> psql -U <user> -d <db> -c "SELECT count(*)..."` |
 | Hardware inventory (CPU, RAM, disk, cores) | `ssh user@host "nproc && free -m && df -BG /"` |
 | Another machine is warm-standby/disabled | `ssh user@other-host "systemctl list-units --state=enabled \| grep ..."` |
-| Backup coverage exists | `cat /etc/restic/.../*.sh` + `ls /srv/backups-staging/` + snapshot list |
+| Backup coverage exists | `cat /etc/<backup-tool>/conf.d/*.sh` + `ls <backup-staging-dir>/` + snapshot list |
 | Prior status file is current | Compare file content vs. above reality sources |
 
 **Output of this phase**: a small "drift table" — roadmap claim vs. reality, in bullet form. This table is the decision basis for everything that follows.
@@ -87,7 +87,7 @@ Per item:
 | Extend prior service map without reality check | Reality comparison + complete rewrite if drift > 30% |
 | "The prior session was 'done' with the item, I don't have to do anything" | Prior `done` markings are not verification; measure yourself |
 | Bury discovery issues in one file | Multi-file anchor (analogous to `vault-decision-cross-file-sync`) — hardware inventory + service map + repo-CLAUDE.md |
-| Backup confirmation as mandatory check without test | Concrete test snippet: `ls /srv/backups-staging/` + `restic snapshots --json` + container filter logic check |
+| Backup confirmation as mandatory check without test | Concrete test snippet: `ls <backup-staging-dir>/` + `<backup-tool> snapshots --json` + container filter logic check |
 
 ## Quick-Reference Reality-Check Commands (typical stack)
 
@@ -105,8 +105,8 @@ ssh user@your-server "systemctl list-timers --all | grep -v restic-system"
 # Pi sanity (decommission check)
 ssh user@botserver "crontab -l | grep -v '^#' ; systemctl --user list-unit-files --state=enabled"
 
-# Backup coverage (Restic + pre-hooks)
-ssh user@your-server "cat /srv/projects/ops/restic-backup.sh ; ls -la /srv/backups-staging/"
+# Backup coverage (e.g. Restic + pre-hooks)
+ssh user@your-server "cat <backup-config-path>/backup.sh ; ls -la <backup-staging-dir>/"
 ```
 
 ## Real-world impact
@@ -117,7 +117,7 @@ Phase-A consolidation session of `your-app` (6 items A1-A6):
 
 - **A4 v3-trades-open**: Prior file said "3 open trades #1, #3, #4" with entry prices that differed from DB by 30%. Reality: 15 open trades (IDs 1, 3-16). User scope question clarified → all 15 documented with correct entry/stop/leverage values.
 
-- **A5 Pi-Decommission**: Roadmap said "disable services, confirm backup". Reality: services were already disabled — but backup was NOT confirmed. `pre-backup-hooks/postgres-dumpall.sh` doesn't match the container name, restic excludes `/srv/docker/**`, `/srv/backups-staging/` is empty. Without verify-first discipline, "backup confirmed ✓" would have been the most dangerous false-positive of the session.
+- **A5 Decommission of old host**: Roadmap said "disable services, confirm backup". Reality: services were already disabled — but backup was NOT confirmed. `pre-backup-hooks/postgres-dumpall.sh` did not match the container name, the backup tool excluded `<docker-data-dir>/**`, and `<backup-staging-dir>/` was empty. Without verify-first discipline, "backup confirmed ✓" would have been the most dangerous false-positive of the session.
 
 - **A6 Repo-CLAUDE.md**: Updating the Pi-centric file without reality comparison would have left the Pi stack inventory in the "production environment" table. Reality-first: table completely switched to the new server, old Pi commands marked as "HISTORICAL for backup recovery".
 

@@ -54,7 +54,7 @@ The 🚨 pattern is the **pre-flight stop trigger** for the feature phase.
 **Task**: write an implementation plan for your-app Phase X.0 (ML evaluator).
 
 **Pre-flight discovery**:
-- Step 1: `docker inspect your-trader-app | grep Mounts` → only `/srv/data/your-app/logs:/app/logs`, NO `/app/ml/models` mount
+- Step 1: `docker inspect your-trader-app | grep Mounts` → only `<host-data-dir>/your-app/logs:/app/logs`, NO `/app/ml/models` mount
 - Step 2: `docker exec your-trader-app ls /app/ml/models/` → only `model_TEST_DE.pkl` + `.gitkeep` (1 file out of 40 expected)
 - Step 3: `stat /app/ml/models/` → Birth: 14:13:35 UTC (yesterday's container rebuild for the Phase-2e deploy)
 - Step 4: `grep -rn "joblib.dump" --include="*.py" ml/` → `ml/ranking_model.py:153: joblib.dump(self, path)`
