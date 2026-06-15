@@ -14,13 +14,16 @@ jobs:
   validate-bundles:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # GitHub Actions pinned to commit-SHAs for reproducible CI.
+      # Dependabot is configured (.github/dependabot.yml) to bump these
+      # via PR when upstream releases — never auto-update silently.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           # Don't fetch PR head from forks with elevated perms. Default is safe but explicit.
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
         with:
           python-version: '3.11'
 
@@ -30,12 +33,16 @@ jobs:
           python3 -m pip install pyyaml
 
       - name: Set up Node + install Claude Code CLI
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af  # v4.1.0
         with:
           node-version: '20'
-      - name: Install @anthropic-ai/claude-code
+      - name: Install @anthropic-ai/claude-code (pinned)
+        # CLAUDE_CODE_VERSION is the only knob Dependabot needs to touch
+        # when a new CLI release should be tested in CI.
+        env:
+          CLAUDE_CODE_VERSION: "2.1.152"
         run: |
-          npm install -g @anthropic-ai/claude-code
+          npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
           claude --version
           claude plugin validate --help | head -5
 
@@ -149,9 +156,12 @@ jobs:
       - name: Skill description audit (first-person blocks, length warns)
         run: |
           set -e
-          # First-person markers in narrative are HARD-blocked. Length
-          # >1024 is a soft-warning (tracked in TECHNICAL-DEBT.md).
           python3 scripts/audit-skill-descriptions.py --check-first-person
+
+      - name: Stale -DRAFT crosslink check
+        run: |
+          set -e
+          python3 scripts/audit-stale-draft-crosslinks.py --check
 
       - name: Security smoke-tests (SQL-injection guard)
         run: |

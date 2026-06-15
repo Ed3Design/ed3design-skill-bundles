@@ -254,6 +254,7 @@ def cmd_describe(args: argparse.Namespace) -> int:
 
 
 def cmd_colors(args: argparse.Namespace) -> int:
+    Image, _ExifTags = _require_pillow()
     src = Path(args.file)
     if not src.exists():
         print(f"ERROR: file not found: {src}", file=sys.stderr)

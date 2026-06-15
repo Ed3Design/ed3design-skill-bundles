@@ -1,0 +1,45 @@
+version: 2
+
+# Dependabot configuration for ed3design-skill-bundles.
+# Updates are batched weekly; major-version bumps need manual review.
+
+updates:
+  # GitHub Actions used in .github/workflows/*.yml
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      actions-minor:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Python tool dependencies declared in pyproject.toml
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      python-minor:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # npm — Claude Code CLI is the only npm dep we install in CI
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"

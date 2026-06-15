@@ -137,7 +137,7 @@ That way, every future send discrepancy is readable from the DB in <1s, log-inde
 ## Skill-Composition
 
 - `superpowers:test-driven-development` — for the send tests
-- `library-subclass-explicit-type-classification-DRAFT` — when send errors need to be classified as retry/fail-fast (see the twin skill)
+- `library-subclass-explicit-type-classification` — when send errors need to be classified as retry/fail-fast (see the twin skill)
 - The project CLAUDE.md your-app section — document the pattern there as a backlog hint
 
 ## Why this is overlooked (common cause of regret)

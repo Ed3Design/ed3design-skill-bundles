@@ -166,8 +166,8 @@ Plus: existing "send-fails-but-aenter-ok" tests must remain green (regression).
 ## Skill-Composition
 
 - `superpowers:test-driven-development` — runs AROUND this skill (RED-Test with __aenter__-failure → GREEN-Refactor)
-- `library-subclass-explicit-type-classification-DRAFT` — complementary aspect: WHICH exceptions are retryable? This skill: WHERE does retry take effect?
-- `forensic-trail-for-fire-and-forget-sends-DRAFT` — orthogonal: DB-trail on Send-Fail so silent failure does not stay silent
+- `library-subclass-explicit-type-classification` — complementary aspect: WHICH exceptions are retryable? This skill: WHERE does retry take effect?
+- `forensic-trail-for-fire-and-forget-sends` — orthogonal: DB-trail on Send-Fail so silent failure does not stay silent
 - `asyncpg-live-vs-mock-shape` — different aspect of mock-vs-live divergence (Type-Coercion, not Context-Manager-Setup)
 
 ## When-Built / Why-Built

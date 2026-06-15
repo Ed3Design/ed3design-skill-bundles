@@ -147,6 +147,28 @@ def update_bundle_readmes(rows, check_only: bool) -> list[str]:
     return stale
 
 
+def update_bundle_plugin_json(rows, check_only: bool) -> list[str]:
+    """Update the per-bundle .claude-plugin/plugin.json description's
+    'N skills' phrase to match filesystem reality. Returns list of
+    bundles where the manifest was/is stale."""
+    stale = []
+    for r in rows:
+        bundle = r["bundle"]
+        manifest = REPO / bundle / ".claude-plugin" / "plugin.json"
+        if not manifest.exists():
+            continue
+        data = json.loads(manifest.read_text())
+        desc = data.get("description", "")
+        # Replace the first "N skills" occurrence with reality.
+        new_desc = re.sub(r"\b\d+ skills\b", f"{r['skills']} skills", desc, count=1)
+        if new_desc != desc:
+            stale.append(bundle)
+            if not check_only:
+                data["description"] = new_desc
+                manifest.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    return stale
+
+
 def update_marketplace(rows, totals, check_only: bool) -> bool:
     path = REPO / ".claude-plugin" / "marketplace.json"
     if not path.exists():
@@ -211,13 +233,16 @@ def main():
     readme_ok = update_readme(rows, totals, check_only)
     market_ok = update_marketplace(rows, totals, check_only)
     bundle_stale = update_bundle_readmes(rows, check_only)
+    plugin_json_stale = update_bundle_plugin_json(rows, check_only)
 
     if check_only:
-        if readme_ok and market_ok and not bundle_stale:
-            print("\n✅ README + marketplace.json + bundle READMEs are in sync.")
+        if readme_ok and market_ok and not bundle_stale and not plugin_json_stale:
+            print("\n✅ README + marketplace.json + bundle READMEs + bundle plugin.json are in sync.")
             sys.exit(0)
         if bundle_stale:
             print(f"\n❌ Bundle READMEs drifted: {', '.join(bundle_stale)}")
+        if plugin_json_stale:
+            print(f"\n❌ Bundle plugin.json descriptions drifted: {', '.join(plugin_json_stale)}")
         print("\n❌ Counts drifted. Run `python3 scripts/regenerate-counts.py` to fix.")
         sys.exit(1)
 
