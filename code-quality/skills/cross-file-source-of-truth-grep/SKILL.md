@@ -1,7 +1,7 @@
 ---
 name: cross-file-source-of-truth-grep
 description: |-
-  Use when you are about to refactor a value, constant, helper-function, lookup, or config-pattern from old-form to new-form across the codebase — schema-drift fixes ("`yf_symbol` → `symbol`"), display-name SoT migration ("inline-dict → `core/utils/display.instrument_label`"), config-pattern updates ("hardcoded VRM-ID → env-var"), helper-function rename, deprecated-import cleanup. STOP and run `grep -r "<old-pattern>"` on the WHOLE repo (not just the files you have open) BEFORE writing the new pattern anywhere. Specifically trigger when (a) you write phrases like "I'm refactoring X to Y", "fix schema drift in Y", "migrate from old to new form", "rename helper", "extract config default", "display-name single-source-of-truth", (b) you have a mental model "the 3 files that use this" or "only in /core/ relevant" — especially dispatcher / scheduler / jobs / notifications / tests often hide 1-2 additional places, (c) the new pattern is in production code but you haven't checked notification-dispatcher, scheduler-jobs, batch-scripts, integration-tests, mock-fixtures. Experience from practice: `notifications/signal_dispatcher.py:_get_display_name` still called the old `config_loader` path although the main path had been migrated — would have stayed undetected for weeks in the signal Telegram dispatch. Method: `grep -rn "<old-pattern>" --include="*.py"` excluding `node_modules`, `.git`, `*.pyc`, `__pycache__`, then read each hit line + categorize (production / notification / scheduler / test / mock / deprecated). Do NOT load for greenfield code (no old pattern to migrate from), for renames that are pure cosmetics with no semantic shift (e. g. variable in same file), for refactors that are guaranteed file-local (private helper in a single module). Complements `pre-deploy-code-drift-detection` (this skill catches drift BEFORE the refactor, that one catches drift AFTER the refactor); complement to `silent-except-versteckt-schema-drift` (which finds the same kind of dormant bug from the symptom side).
+  Use when about to refactor a value, constant, helper-function, lookup, or config-pattern from old-form to new-form across the codebase — schema-drift fixes, display-name SoT migration, config-pattern updates (hardcoded ID → env-var), helper rename, deprecated-import cleanup. STOP and run `grep -r "<old-pattern>"` on the WHOLE repo BEFORE writing the new pattern anywhere. Trigger when phrases like "I'm refactoring X to Y", "fix schema drift", "migrate from old to new form", "rename helper", "single-source-of-truth" appear, OR a mental model of "only 3 files use this" exists — dispatcher, scheduler, jobs, notifications, tests often hide additional places. Method: `grep -rn "<old-pattern>" --include="*.py"` excluding cache dirs, then categorize each hit. Do NOT load for greenfield code, pure-cosmetic renames in same file, or refactors guaranteed file-local.
 
 ---
 
@@ -141,7 +141,7 @@ grep -rn "<old-pattern>" --include="*.py" | wc -l
 ## Cross-References
 
 - **REQUIRED COMPLEMENT**: `pre-deploy-code-drift-detection` (drift check AFTER the refactor)
-- **COMPLEMENT**: `silent-except-versteckt-schema-drift` (same bug class from the symptom side)
+- **COMPLEMENT**: `silent-except-hides-schema-drift` (same bug class from the symptom side)
 - Maxim: "Single Source of Truth — hardcoded defaults are ticking time bombs"
 
 ## Background: TDD progression (Bulletproofing log)

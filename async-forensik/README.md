@@ -7,8 +7,8 @@
 | Skill | Pain Point |
 |---|---|
 | `db-telemetry-primary-docker-logs-secondary` | Docker logs rotate on high volume → DB telemetry as primary source |
-| `forensik-hypothese-widerlegt-code-read-weiter` | 3 hypotheses disproved ≠ no bug — bonus findings emerge during disproof |
-| `forensik-spur-fuer-fire-and-forget-sends` | asyncio fire-and-forget double-sends are perception loops |
+| `forensic-hypothesis-disproved-then-read-code` | 3 hypotheses disproved ≠ no bug — bonus findings emerge during disproof |
+| `forensic-trail-for-fire-and-forget-sends` | asyncio fire-and-forget double-sends are perception loops |
 | `reporting-artefact-detection-before-claiming-anomaly` | 3-filter triage (NULL/cross-window/methodology) before forensic dispatch |
 | `async-context-manager-retry-pattern` | Retry pattern for async with blocks |
 | `asyncio-fire-and-forget-loop-exit-await` | Loop exit not awaited → tasks dangling |

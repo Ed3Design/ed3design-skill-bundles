@@ -26,7 +26,7 @@
 | Skill | Pattern |
 |---|---|
 | `cross-file-source-of-truth-grep` | DB columns + code refs cross-grep instead of from memory |
-| `silent-except-versteckt-schema-drift` | `except: pass` hides schema-drift errors |
+| `silent-except-hides-schema-drift` | `except: pass` hides schema-drift errors |
 | `static-source-bug-class-coverage-test` | Bug class coverage via static grep |
 | `library-subclass-explicit-type-classification` | Name subclass type explicitly, not implicitly |
 | `lazy-module-getattr-for-settings-override` | Module-level freeze → lazy read in functions (env override works) |

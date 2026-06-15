@@ -79,7 +79,7 @@ The default workflow is wrong ("all disproved = no bug"). Instead:
 ## Cross-References
 
 Skills from `async-forensik` bundle:
-- `forensik-hypothese-widerlegt-code-read-weiter` — Phase 3 methodology
+- `forensic-hypothesis-disproved-then-read-code` — Phase 3 methodology
 - `db-telemetry-primary-docker-logs-secondary` — Phase 2 order
 - `reporting-artefact-detection-before-claiming-anomaly` — 3-filter triage before Phase 1
-- `forensik-spur-fuer-fire-and-forget-sends` — specific to double-send patterns
+- `forensic-trail-for-fire-and-forget-sends` — specific to double-send patterns

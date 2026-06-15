@@ -163,6 +163,11 @@ jobs:
           set -e
           bash scripts/test-hooks.sh
 
+      - name: Tool smoke-tests (--help + missing-dep guards)
+        run: |
+          set -e
+          bash scripts/test-tools-smoke.sh
+
       - name: Validate Python tools syntax
         run: |
           set -e
