@@ -1,0 +1,19 @@
+# CODEOWNERS for ed3design-skill-bundles
+# Format: <path-pattern> <@owner>
+# See https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default: any change requires review by repo maintainers
+*                           @Ed3Design
+
+# Per-bundle owners — change as the contributor base grows
+/async-forensik/            @Ed3Design
+/code-quality/              @Ed3Design
+/planning-disciplines/      @Ed3Design
+/schema-discipline/         @Ed3Design
+/skill-system-meta/         @Ed3Design
+/token-savers/              @Ed3Design
+
+# CI + security-sensitive scripts: maintainer review required
+/.github/workflows/         @Ed3Design
+/scripts/                   @Ed3Design
+SECURITY.md                 @Ed3Design

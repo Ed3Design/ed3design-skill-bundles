@@ -132,7 +132,7 @@ async def forensic_query(conn, table, **filters):
 - `superpowers:systematic-debugging` — runs BEFORE this skill for the wider "what is the bug" framing
 - `asyncpg-live-vs-mock-shape` — runs AFTER this skill for the Mock-vs-Live-Type-Layer (separate concern: asyncpg-type-coercion)
 - `schema-use-case-mismatch-detection` — runs IF schema is correct but NULL-pattern persists (different problem: semantic mismatch, not schema drift)
-- `decision-plan-hypothesis-matrix-DRAFT` — runs AROUND this skill: schema-verify is one of the "distinguishing metrics" before hypothesis formulation
+- `decision-plan-hypothesis-matrix` — runs AROUND this skill: schema-verify is one of the "distinguishing metrics" before hypothesis formulation
 
 ## Anti-skill — when this is NOT the right tool
 

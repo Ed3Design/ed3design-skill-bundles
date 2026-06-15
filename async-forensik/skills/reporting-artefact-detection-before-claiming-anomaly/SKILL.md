@@ -133,7 +133,7 @@ The 3-step triage was informally run that day — but only AFTER 3 subagent fore
 ## When to load vs related skills
 
 - **This skill:** before drawing strategic conclusions from reporting-layer findings
-- **`commit-message-honesty-precheck-DRAFT`:** sibling, prevents non-finished items from being declared "done" — both address "reporting vs reality" drift
+- **`commit-message-honesty-precheck`:** sibling, prevents non-finished items from being declared "done" — both address "reporting vs reality" drift
 - **`filter-activity-verification-DRAFT`:** related — verifies that every filter in a multi-layer stack actually fires; this skill subsequently checks that the reported numbers over that filter activity are correctly aggregated
 - **CLAUDE.md maxim "read logs/code/DB first before hypothesis":** this skill is the operationalized sub-routine of that maxim
 

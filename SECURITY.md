@@ -11,7 +11,7 @@ If you discover a security vulnerability in this skill-bundle repository — whe
 
 please **do not open a public GitHub issue**. Instead, report it privately:
 
-- Email: open a [GitHub Security Advisory](https://github.com/Ed3Design/ed3design-skill-bundles/security/advisories/new) — this opens a private channel between you and the maintainers.
+- GitHub Security Advisory: open a [new advisory here](https://github.com/Ed3Design/ed3design-skill-bundles/security/advisories/new) — this creates a private channel between you and the maintainers, audit-logged on the repo's security tab.
 
 We will:
 

@@ -185,7 +185,7 @@ At 3-4 SSH-bridge projects per year × 30 min = 1.5-2h annual savings + frustrat
 
 1. **Encoding hint** — `text=True` uses locale default. For mixed-locale setups more robust: `encoding="utf-8", errors="replace"`
 2. **psql `-t` (tuples only) for machine parsing** — out-of-scope from the skill but practically relevant for MCP tools
-3. **Cross-skill with `read-only-sql-via-regex-validator-DRAFT`** — skill solves only shell quoting, not SQL-injection safety. For MCP server: validator layer separately
+3. **Cross-skill with `read-only-sql-via-regex-validator`** — skill solves only shell quoting, not SQL-injection safety. For MCP server: validator layer separately
 4. **SSH stderr loss with `check=True` + `capture_output=True`** — psql notices get lost, possibly return them
 
 ---

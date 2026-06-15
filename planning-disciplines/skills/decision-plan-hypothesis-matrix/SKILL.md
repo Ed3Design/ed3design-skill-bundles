@@ -164,7 +164,7 @@ GO ⇔ H1 confirmed AND H3 confirmed AND Delta-Expectancy ≥ +0.05R
 - `superpowers:brainstorming` — runs BEFORE this skill if requirements are unclear
 - `superpowers:writing-plans` — alternative for procedural plans WITHOUT decision character
 - `superpowers:test-driven-development` — runs AFTER for the implementation step
-- `compound-gate-over-single-metric-DRAFT` — related but smaller scope (no hypothesis matrix part)
+- `compound-gate-over-single-metric` — related but smaller scope (no hypothesis matrix part)
 
 ## Background: TDD log (Bulletproofing log)
 
