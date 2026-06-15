@@ -24,6 +24,16 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Set up Node + install Claude Code CLI
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install @anthropic-ai/claude-code
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude --version
+          claude plugin validate --help | head -5
+
       - name: Validate plugin.json schemas
         run: |
           set -e
@@ -46,24 +56,40 @@ jobs:
           "
           done
 
-      - name: Validate skill frontmatter
+      - name: Validate skills via official Claude plugin validator (strict)
         run: |
           set -e
+          for bundle_dir in */; do
+            [ ! -f "${bundle_dir}.claude-plugin/plugin.json" ] && continue
+            echo "── Validating ${bundle_dir%/} ──"
+            claude plugin validate --strict "${bundle_dir%/}"
+          done
+          echo "  ✅ All bundles pass --strict validation"
+
+      - name: Enforce no DRAFT-banner in production skills
+        run: |
+          set -e
+          # CI-Block 1: name suffix check (was already covered, kept for safety)
           for skill_md in */skills/*/SKILL.md; do
             python3 -c "
-          import sys, re
+          import re, sys
           content = open('$skill_md').read()
-          assert content.startswith('---\n'), f'No frontmatter: $skill_md'
           fm_end = content.index('\n---\n', 4)
           fm = content[4:fm_end]
-          assert re.search(r'^name:\s*\S+', fm, re.M), f'No name in: $skill_md'
-          assert re.search(r'^description:\s*\S+', fm, re.M), f'No description in: $skill_md'
-          name_match = re.search(r'^name:\s*(\S+)', fm, re.M)
-          assert not name_match.group(1).endswith('-DRAFT'), f'DRAFT skill leaked: $skill_md'
-          assert not name_match.group(1).endswith('-STUB'), f'STUB skill leaked: $skill_md'
+          m = re.search(r'^name:\s*(\S+)', fm, re.M)
+          assert m, 'no name in $skill_md'
+          n = m.group(1)
+          assert not (n.endswith('-DRAFT') or n.endswith('-STUB')), f'DRAFT/STUB name suffix in: $skill_md ({n})'
           "
           done
-          echo "  ✅ All skill frontmatters valid"
+          # CI-Block 2: body banner check — fails if any '⚠️ DRAFT' or '> ⚠️ **DRAFT' marker present
+          banner_hits=$(grep -lE '^>?\s*⚠️\s*\*?\*?DRAFT' */skills/*/SKILL.md 2>/dev/null || true)
+          if [ -n "$banner_hits" ]; then
+            echo "FAIL: production skills still carry DRAFT banner:"
+            echo "$banner_hits"
+            exit 1
+          fi
+          echo "  ✅ No DRAFT-banner leakage"
 
       - name: Validate hook scripts
         run: |
