@@ -5,7 +5,7 @@ description: Use before executing any superpowers/gsd-style implementation plan 
 
 # Plan-Execution State-Drift Precheck
 
-> **DRAFT — encodes the discovered pattern, not yet TDD-promoted.**
+> ✅ **PROMOTED** 2026-06-15 — TDD pressure-test PASS. RED-Subagent received plan written 2 days ago + team-reviewed yesterday + Task 1 `INSERT INTO v3_signals` with assumed 5-column schema, "execute Task 1". Action: read plan, then execute INSERT directly. Honesty: "I would not have run `\d v3_signals` before executing the INSERT. I would have trusted the plan + team-review as sufficient evidence. Plan-review ≠ schema-currency. Team-review validates intent and logic; it does not freeze the DB." GREEN-Subagent ran `git log main..HEAD --oneline` first, then `\d v3_signals` schema-verify, cross-referenced Vault-CLAUDE-Maxime "SQL-Spalten immer via Schema verifizieren", proposed STOP+status-table-to-Wolf at drift-detection. Cycle-2 polish in TDD-Verlauf log below.
 
 ## When to use
 
@@ -100,10 +100,17 @@ After scope-confirmation, proceed with the adjusted task-set, marking already-do
 
 A Z.1 market-phase filter plan (2083 LoC, 9 tasks) was written one morning — and ALL 8 code tasks + 5 code-review fixes were committed the same day. The daily note mentioned only "Plan Z.1 written"; the implementation was in a parallel session that wasn't logged. The `executing-plans` skill was started, about to dispatch subagents for tasks 1+2 — `git log main..HEAD` showed 12 Z.1 commits already in. Scope was adjusted from "Pre-Flight + DB + Confluence-Cap" to "Pre-Flight + Backtest-RUN", saving 60+ min, AND a separate Critical-Bug (CR-D1) was caught during Pre-Flight that the already-implemented code had.
 
-## TODO (Promotion to GA)
+## Background: TDD-Verlauf (Bulletproofing-Log)
 
-- [ ] Verify pattern works for gsd-plans (different file-locations than superpowers/)
-- [ ] Add example for "task done but tests failing" — needs different scope-handling
-- [ ] Add anti-pattern: don't precheck for trivial single-file plans (overhead)
-- [ ] TDD-pair: RED (plan-execution-without-precheck-re-implements); GREEN (with-precheck-detects)
-- [ ] Test trigger-keywords surface this skill at execution-time
+### Cycle 1 — 2026-06-15 (PASS)
+
+- **RED-Subagent** (without skill, plan written 2 days ago + team-reviewed yesterday + Task 1 `INSERT INTO v3_signals (ticker, score, side)` with assumed 5-column schema): chose read-plan + execute-INSERT-directly. Honesty: "I would NOT have run `\d v3_signals` before executing. I would have trusted the plan + team-review. Plan-review ≠ schema-currency. Team-review validates intent and logic; it does not freeze the DB." Listed failure modes: silent NOT-NULL-column-added with default capturing wrong semantics, column-rename, NOT-NULL-constraint-added to existing nullable column.
+- **GREEN-Subagent** (with skill, identical scenario): ran `git log main..HEAD --oneline | wc -l` first, then `\d v3_signals` schema-verify, cross-referenced Wolf-Maxime "SQL-Spalten immer via Schema verifizieren" (08.06.2026), proposed STOP+status-table-to-Wolf if drift detected. Self-reflection: "skill cross-reference to `schema-verify-via-information-schema` would strengthen the workflow".
+
+### Cycle-2-Backlog (Polish, non-blocking)
+
+- Cross-reference `schema-verify-via-information-schema` skill explicitly as parallel precheck dimension (orthogonal to commit-drift)
+- Even when `git log main..HEAD` shows commits-ahead=0, schema-verify should remain mandatory (Vault-CLAUDE rule trumps skill's "proceed normally")
+- Verify pattern works for gsd-plans (different file-locations than `docs/superpowers/plans/`)
+- "Task done but tests failing" edge-case — needs different scope-handling
+- Anti-pattern: don't precheck for trivial single-file plans (overhead exceeds value)

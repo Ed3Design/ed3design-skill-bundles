@@ -3,9 +3,9 @@ name: plan-execution-stack-mode-precheck
 description: Use as Pre-Step-0 of `executing-plans` / `subagent-driven-development` / inline-plan-execution when the plan contains `docker compose exec`, SSH commands or other stack-interaction steps. The check distinguishes (a) local-runnable-stack vs (b) remote-only-stack vs (c) hybrid-mode (code-local + live-remote). Prevents mid-execution stop-gates when the plan implicitly assumes "docker compose works here" but secrets/.env.prod, env-files, or services are missing locally. Trigger on phrases like "execute the plan", "executing the plan", "subagent-driven execution start", "docker compose exec in plan steps", "deploy stack vs dev stack", "your-server vs local" mid-plan. Do NOT load for plans without stack interaction (pure-function-only-tasks), for plans where stack-mode is explicitly documented, or for the initial plan-writing phase (writing-plans has its own self-review).
 ---
 
-# plan-execution-stack-mode-precheck (DRAFT — TDD-Promotion-Pending)
+# plan-execution-stack-mode-precheck
 
-> ⚠️ **DRAFT**: Pattern from a Phase-Z.1 execution session. The Z.1 plan had `docker compose exec` steps that implicitly assumed "local stack running". Locally `secrets/.env.prod` was missing AND the Docker daemon was off → a 2-step stop-gate mid-execution cost ~20 min of session time + mode pivot to hybrid. Would have been prevented by a 5-minute pre-check before Z.1 start.
+> ✅ **PROMOTED** 2026-06-15 — TDD pressure-test PASS. RED-Subagent received plan with `docker compose exec` Task 1 + `psql -h $DATABASE_HOST` Task 3 ("laptop just opened, start executing"). Action: read plan, then execute Task 1 directly. Honesty admitted ALL 5 specific check failures: no `docker compose ps`, no `secrets/.env.prod` check, no `$DATABASE_HOST` check, no compose-file/cwd verification, no container-code-version-vs-plan check. GREEN-Subagent applied Pre-Step-0 systematically (compose-file inspect + env-files existence + daemon + services + `$DATABASE_HOST`), classified stack-mode, annotated plan tasks LOCAL/REMOTE/HYBRID, deferred subagent dispatch to after Wolf mode-confirmation. Cycle-2 polish in TDD-Verlauf log below.
 
 ## Lifecycle position
 
@@ -125,23 +125,23 @@ In roadmap: explicit separation "Code-Complete" vs "Live-Verified".
 - **Token cost**: ~30k mid-execution recovery due to mode pivot — saved by Pre-Step-0
 - **Structural lesson**: Plan Z.1 itself was not "wrong", but the `docker compose exec` steps needed explicit stack-mode annotation. → Memory item for `writing-plans` sub-step.
 
-## TDD task for future promotion
+## Background: TDD-Verlauf (Bulletproofing-Log)
 
-Before GA promotion of this skill:
+### Cycle 0 — DRAFT phase (originating session)
 
-1. **RED scenario**: User says "start execution of plan X" (plan contains `docker compose exec`, stack is remote-only) — RED without skill probably starts plan step 1, fails at docker command
-2. **GREEN scenario**: same prompt, with THIS skill — GREEN does Pre-Step-0 stack-mode check, identifies remote-only, proposes hybrid mode
-3. **Expected RED failure mode**: 5-10min mid-execution discovery vs GREEN's 30sec pre-check
-4. **Verdict criterion**: GREEN presents mode verdict + plan annotation BEFORE code action
-
-## Background: TDD log (Bulletproofing log)
-
-### Cycle 1 (DRAFT phase)
-
-Skeleton from a Phase-Z.1 execution session. Real TDD pressure test pending. Pattern ad-hoc applied (after the stop-gate appeared):
+Skeleton from a Phase-Z.1 execution session. Pattern ad-hoc applied AFTER the stop-gate appeared:
 - Docker.app start parallelized with working-tree cleanup
 - `secrets/.env.prod` existence check revealed remote-only stack reality
 - Hybrid-mode decision via AskUserQuestion (user chose "continue through" → hybrid)
 - Plan steps split into "local today" vs "server tomorrow" in daily-note block 5
+- Result: Phase Z.1 9-tasks code-complete despite stack-mode mismatch — through ad-hoc hybrid instead of plan mid-stop. Skill existence would have saved the pivot detour.
 
-Result: Phase Z.1 9-tasks code-complete despite stack-mode mismatch — through ad-hoc hybrid instead of plan mid-stop. Skill existence would have saved the pivot detour.
+### Cycle 1 — TDD promotion 2026-06-15 (PASS)
+
+- **RED-Subagent** (without skill, "laptop just opened, plan has `docker compose exec` Task 1 + `psql -h $DATABASE_HOST` Task 3, start executing"): chose to read plan, then execute Task 1 directly. Honesty-section listed 5 explicit check failures: no `docker compose ps`, no `secrets/.env.prod` existence check, no `$DATABASE_HOST` env-resolution, no compose-file/cwd verification, no plan-vs-code-version drift check. Failure modes anticipated: "Error: No such service: trader" + migration mid-apply on dirty DB + psql against wrong host.
+- **GREEN-Subagent** (with skill, identical scenario): applied 4-step Pre-Step-0 sequentially (compose-file inspect → env-files existence → daemon + services → `$DATABASE_HOST` resolution), then classified stack-mode, then plan-annotated each task LOCAL/REMOTE/HYBRID, then deferred subagent dispatch to AFTER Wolf mode-confirmation via AskUserQuestion. Self-reflection identified avoidance of premature subagent-dispatch as key skill-value.
+
+### Cycle-2-Backlog (Polish, non-blocking)
+
+1. **Communication-mechanism explicit**: skill mentions "present mode-verdict to Wolf" but doesn't recommend AskUserQuestion vs inline-proposal. GREEN-Subagent had to derive this from the originating-session log. Action: add to Step 4 explicit "use `AskUserQuestion` for stack-mode confirmation".
+2. **Parallel-command pattern in main flow**: anti-patterns table mentions "Docker.app start parallel to compose inspect (10sec parallel save)" but the Step 1-3 flow doesn't show the parallel pattern. Action: add parallel-Bash example to Step 1.

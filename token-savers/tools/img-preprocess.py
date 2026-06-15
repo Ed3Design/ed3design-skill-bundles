@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """img-preprocess.py — Pre-process images before Claude Vision API.
 
-Token-Saving-Wrapper für Wolfs Trading/Maker-Sessions.
+Token-saving wrapper for trading / maker engineering sessions.
 
 Pattern (Sprint 2 Item 5 aus token-optimierung-Roadmap, 12.06.2026):
 - Resize zu Vision-API-Schwellen (~1024×1024) statt Originals (~3000×4000)
