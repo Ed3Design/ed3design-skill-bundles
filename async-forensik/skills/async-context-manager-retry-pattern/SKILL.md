@@ -1,7 +1,7 @@
 ---
 name: async-context-manager-retry-pattern
 description: |-
-  Use when implementing retry-logic around an `async with X:` block where `X.__aenter__()` or `X.__aexit__()` itself performs network-IO that can fail transiently — for example python-telegram-bot's `async with Bot(token) as bot:` (calls `initialize()` with HTTPX-connection-setup that can TimedOut), asyncpg's `async with pool.acquire() as conn:` (TCP-handshake can fail), httpx `async with AsyncClient() as c:` (TLS-handshake), or websockets `async with connect(url) as ws:` (WS-upgrade-handshake). The Iron-Law: every `async with` whose enter/exit does network-IO must sit INSIDE the retry-loop, not around it — otherwise enter-failures fly past the inner `try/except` and get caught by an outer `except Exception` as "Unexpected", with zero retries actually attempted. Trigger on phrases like "retry around async with", "TimedOut from __aenter__", "connection-setup in retry-loop", "unexpected send-error despite retry-logic", "retry never fires", "I implemented retry but it doesn't trigger", "fresh connection per attempt", "async context manager retry pitfall", "context manager exception bypasses retry", "how to wrap async with in retries". Do NOT load for SYNC context-managers (different exception-propagation model, less common pitfall — sync `with X:` rarely does heavy IO), for async-with where __aenter__ does only-local-work like file-open or in-memory state (no network → no transient retries needed), for retry around a generator-based async-iterator (different pattern entirely — `async for` retry has its own consideration), or for first-time-design of an async-context-manager class itself (use "building async-context-managers" guidance instead — that's the producer side, this skill is consumer side).
+  Use when implementing retry-logic around an `async with X:` block where `X.__aenter__()` or `X.__aexit__()` performs network-IO that can fail transiently (python-telegram-bot, asyncpg pools, httpx, websockets). Iron-Law: every `async with` whose enter/exit does network-IO must sit INSIDE the retry-loop, not around it — otherwise enter-failures bypass the inner `try/except` and get caught as "Unexpected" with zero retries actually attempted. Trigger on phrases like "retry around async with", "TimedOut from __aenter__", "I implemented retry but it doesn't trigger", "context manager exception bypasses retry". Do NOT load for sync context-managers, async-with where __aenter__ does only local work (file-open, in-memory state), retry around async-iterators, or first-time-design of an async-context-manager class itself.
 
 ---
 
@@ -167,7 +167,7 @@ Plus: existing "send-fails-but-aenter-ok" tests must remain green (regression).
 
 - `superpowers:test-driven-development` — runs AROUND this skill (RED-Test with __aenter__-failure → GREEN-Refactor)
 - `library-subclass-explicit-type-classification-DRAFT` — complementary aspect: WHICH exceptions are retryable? This skill: WHERE does retry take effect?
-- `forensik-spur-fuer-fire-and-forget-sends-DRAFT` — orthogonal: DB-trail on Send-Fail so silent failure does not stay silent
+- `forensic-trail-for-fire-and-forget-sends-DRAFT` — orthogonal: DB-trail on Send-Fail so silent failure does not stay silent
 - `asyncpg-live-vs-mock-shape` — different aspect of mock-vs-live divergence (Type-Coercion, not Context-Manager-Setup)
 
 ## When-Built / Why-Built

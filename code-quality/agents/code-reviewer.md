@@ -81,7 +81,7 @@ Findings below 70% confidence → don't report.
 
 Skills from the `code-quality` bundle that formalize your lenses:
 - `code-review-findings-als-red-tests` — how findings become RED tests
-- `silent-except-versteckt-schema-drift` — lens 2 in depth
+- `silent-except-hides-schema-drift` — lens 2 in depth
 - `cross-file-source-of-truth-grep` — lens 4 in depth
 - `commit-message-honesty-precheck` — lens 5 in depth
 - `code-review-backlog-cost-warning` — when you dispatch (trigger conditions)
