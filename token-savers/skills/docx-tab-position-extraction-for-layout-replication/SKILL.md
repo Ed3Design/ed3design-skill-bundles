@@ -6,8 +6,6 @@ description: |-
 
 # DOCX Tab-Position Extraction for Layout Replication
 
-> ⚠️ **DRAFT** — needs TDD-Promotion (RED: replicate a reference DOCX letter by visual estimation → measure deviation; GREEN: extract from XML → verify deviation drops). See `skill-tdd-promotion-workflow`.
-
 ## Overview
 
 When a reference letter (or any reference DOCX) needs to look "exactly" like the original, the measurements are **already stored inside the DOCX** — you only have to extract them instead of estimating.
@@ -126,10 +124,3 @@ def twips_to_mm(twips: int) -> float:
 - 5+ deploy rounds, each requiring a visual review
 - The reference letter held all values: `w:pos="6803"` = 120mm, date at the bottom next to the greeting line, recipient directly after the header
 - Investing 5 minutes up front with `unzip + grep` would have made the day 2h shorter
-
-## Promotion Checklist (DRAFT → GA)
-
-- [ ] RED subagent: give a reference DOCX + task "replicate layout in HTML", without skill → measure pixel deviation
-- [ ] GREEN subagent: same task with skill → measure deviation
-- [ ] Edge case: section-specific pgMar in a multi-page letter
-- [ ] CSO check: does "layout like my old letter" trigger reliably?

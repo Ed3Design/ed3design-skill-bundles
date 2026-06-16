@@ -128,13 +128,6 @@ Test mentally:
 
 If run 2 would do something run 1 did not → bug.
 
-## TDD task for the next skill-building session
-
-1. **RED**: Subagent without skill: "Write a Postgres migration that adds a UNIQUE INDEX on (symbol, direction) WHERE status='open' for the table virtual_trades." Observe: does it check the existing data? Probably not. Live test with existing dupes → silent fail.
-2. **GREEN**: With skill: same task. Should do SELECT-then-UPDATE-then-CREATE.
-3. **REFACTOR**: Loopholes: "It's a fresh DB, there's no data" — the skill must explicitly ask "is this a populated DB?"
-4. **Trigger phrases**: "UNIQUE INDEX migration", "add constraint to existing table" → auto-triggered?
-
 ## Cross-references
 
 - The "code review must become standard" maxim — a reviewer flagging missing pre-migration verification is a standard review lens
