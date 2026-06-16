@@ -6,6 +6,13 @@ All notable changes to this repository are tracked here. The format follows [Kee
 
 ### Added
 
+- `scripts/audit-private-skill-crosslinks.py` + CI step: fails when a skill
+  body references a back-ticked skill-name that resolves to neither a skill in
+  this repo, a `superpowers:`/`gsd:` plugin, nor the curated allow-list (CSS
+  props, libraries, CLI tools, sibling-bundle skills, built-ins). Catches the
+  private-only dangling-reference class that `audit-stale-draft-crosslinks.py`
+  (which only flags `-DRAFT` suffixes) misses.
+
 - **9 skills published** (47 → 56), resolving dangling cross-references to skills that previously existed only in the private catalog: `asyncpg-live-vs-mock-shape` (async-forensik); `pre-migration-data-verification`, `production-seed-vs-demo-seed-split` (schema-discipline); `pre-deploy-code-drift-detection`, `external-advisor-output-plausibility-audit`, `mcp-server-stdio-to-http-migration`, `remote-script-scp-over-ssh-heredoc`, `frontend-ui-self-verify-before-user-demo` (code-quality); `docx-tab-position-extraction-for-layout-replication` (token-savers). Each was anonymized (real client/tenant names, private paths, hostnames, German body text removed), YAML-frontmatter-normalized, and trimmed to the ≤1024-char description spec. Counts regenerated across README, marketplace.json, all plugin.json, and bundle READMEs.
 - `package.json` + `package-lock.json` so Dependabot can update the Claude Code CLI via PR (CI now uses `npm ci`)
 

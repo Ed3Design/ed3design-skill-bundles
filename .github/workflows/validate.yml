@@ -166,6 +166,11 @@ jobs:
           set -e
           python3 scripts/audit-stale-draft-crosslinks.py --check
 
+      - name: Private/unresolved skill crosslink check
+        run: |
+          set -e
+          python3 scripts/audit-private-skill-crosslinks.py --check
+
       - name: Pre-promotion residue in GA skills (sections + narrative)
         run: |
           set -e
