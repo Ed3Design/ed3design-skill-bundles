@@ -17,13 +17,13 @@ jobs:
       # GitHub Actions pinned to commit-SHAs for reproducible CI.
       # Dependabot is configured (.github/dependabot.yml) to bump these
       # via PR when upstream releases — never auto-update silently.
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
           # Don't fetch PR head from forks with elevated perms. Default is safe but explicit.
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: '3.11'
 
@@ -35,9 +35,9 @@ jobs:
           python3 -m pip install pyyaml Pillow beautifulsoup4 certifi
 
       - name: Set up Node + install Claude Code CLI
-        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af  # v4.1.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Install @anthropic-ai/claude-code (pinned via package.json + lockfile)
         # The CLI version lives in package.json (devDependency) + package-lock.json.
         # `npm ci` installs the lockfile-pinned version, byte-for-byte reproducible.
