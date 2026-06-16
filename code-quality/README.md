@@ -1,6 +1,6 @@
 # code-quality
 
-> Code-quality + Git discipline skills — the largest bundle (16 skills + 4 hooks + 1 agent). Language-/framework-agnostic.
+> Code-quality + Git discipline skills — the largest bundle (21 skills + 4 hooks + 1 agent). Language-/framework-agnostic.
 
 ## Skills (16) by sub-domain
 

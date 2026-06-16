@@ -1,6 +1,6 @@
 # token-savers
 
-> Token optimization bundle for Claude Code. 3 skills + 5 Python tools with empirically measured 70-98% savings.
+> Token optimization bundle for Claude Code. 4 skills + 5 Python tools with empirically measured 70-98% savings.
 
 ## 📊 Empirical Token Savings
 
@@ -79,9 +79,9 @@ brew install poppler            # pdf-text-extract
 
 ## 🔗 Related Bundles
 
-- `code-quality` — 16 skills for code-review + Git discipline
-- `schema-discipline` — 6 skills for SQL/schema patterns
-- `async-forensik` — 7 skills for asyncio + container debugging
+- `code-quality` — 21 skills for code-review + Git discipline
+- `schema-discipline` — 8 skills for SQL/schema patterns
+- `async-forensik` — 8 skills for asyncio + container debugging
 - `planning-disciplines` — 10 skills for roadmap + decision-making
 - `skill-system-meta` — 5 skills for skill-building itself
 

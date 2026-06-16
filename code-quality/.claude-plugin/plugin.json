@@ -1,7 +1,7 @@
 {
   "name": "code-quality",
   "version": "0.2.0",
-  "description": "Code-quality + Git disciplines for Python/SQL/Git projects. 16 skills for code review (chunk dispatch, findings-as-RED-tests), Git hygiene (commit honesty, cross-repo state inspection, bypass audit), code patterns (lazy module getattr, subprocess SSH arg quoting). Plus 4 PreToolUse hooks for automatic Git enforcement and 1 read-only code-reviewer sub-agent. Language- and framework-agnostic.",
+  "description": "Code-quality + Git disciplines for Python/SQL/Git projects. 21 skills for code review (chunk dispatch, findings-as-RED-tests), Git hygiene (commit honesty, cross-repo state inspection, bypass audit), code patterns (lazy module getattr, subprocess SSH arg quoting). Plus 4 PreToolUse hooks for automatic Git enforcement and 1 read-only code-reviewer sub-agent. Language- and framework-agnostic.",
   "author": {
     "name": "ed3Dworks"
   },
@@ -19,5 +19,7 @@
     "ed3design"
   ],
   "hooks": "./hooks/hooks.json",
-  "agents": ["./agents/code-reviewer.md"]
+  "agents": [
+    "./agents/code-reviewer.md"
+  ]
 }

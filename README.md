@@ -3,20 +3,20 @@
 [![Bundle Validation](https://github.com/Ed3Design/ed3design-skill-bundles/actions/workflows/validate.yml/badge.svg)](https://github.com/Ed3Design/ed3design-skill-bundles/actions/workflows/validate.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> Software-engineering-discipline library for Claude Code power users. 47 skills + 5 Python tools + 6 hooks + 4 sub-agents across 6 thematic bundles.
+> Software-engineering-discipline library for Claude Code power users. 56 skills + 5 Python tools + 6 hooks + 4 sub-agents across 6 thematic bundles.
 
 ## 📦 Bundles (Software Engineering)
 
 | Bundle | Skills | Hooks | Agents | Tools | Status |
 |---|---|---|---|---|---|
-| [`token-savers`](./token-savers/) | 3 | **1** | — | 5 | ✅ v0.2.0 |
-| [`code-quality`](./code-quality/) | 16 | **4** | **1** (`code-reviewer`) | — | ✅ v0.2.0 |
+| [`token-savers`](./token-savers/) | 4 | **1** | — | 5 | ✅ v0.2.0 |
+| [`code-quality`](./code-quality/) | 21 | **4** | **1** (`code-reviewer`) | — | ✅ v0.2.0 |
 | [`planning-disciplines`](./planning-disciplines/) | 10 | — | **1** (`planning-assistant`) | — | ✅ v0.2.0 |
-| [`async-forensik`](./async-forensik/) | 7 | — | **1** (`forensik-detective`) | — | ✅ v0.2.0 |
-| [`schema-discipline`](./schema-discipline/) | 6 | — | **1** (`schema-validator`) | — | ✅ v0.2.0 |
+| [`async-forensik`](./async-forensik/) | 8 | — | **1** (`forensik-detective`) | — | ✅ v0.2.0 |
+| [`schema-discipline`](./schema-discipline/) | 8 | — | **1** (`schema-validator`) | — | ✅ v0.2.0 |
 | [`skill-system-meta`](./skill-system-meta/) | 5 | **1** | — | — | ✅ v0.2.0 |
 
-**Total**: 47 skills + 6 hooks + 4 sub-agents + 5 tools — patterns extracted from real-world software engineering practice and structured for reuse (Python/SQL/Git workflows).
+**Total**: 56 skills + 6 hooks + 4 sub-agents + 5 tools — patterns extracted from real-world software engineering practice and structured for reuse (Python/SQL/Git workflows).
 
 ## 🔧 Hardware / Maker Engineering — Separate Repo
 
@@ -40,11 +40,11 @@ Add this repo as a marketplace, then install bundles individually:
 ```
 
 Available plugins after `marketplace add`:
-- `token-savers` — Token optimization (3 skills + 5 tools)
-- `code-quality` — Code review + Git hygiene (16 skills + 4 hooks + 1 agent)
+- `token-savers` — Token optimization (4 skills + 5 tools)
+- `code-quality` — Code review + Git hygiene (21 skills + 4 hooks + 1 agent)
 - `planning-disciplines` — Roadmap + decision (10 skills + 1 agent)
-- `async-forensik` — asyncio + container debugging (7 skills + 1 agent)
-- `schema-discipline` — SQL/schema bug prevention (6 skills + 1 agent)
+- `async-forensik` — asyncio + container debugging (8 skills + 1 agent)
+- `schema-discipline` — SQL/schema bug prevention (8 skills + 1 agent)
 - `skill-system-meta` — Skill lifecycle (5 skills + 1 hook)
 
 ### Manual install (no marketplace)

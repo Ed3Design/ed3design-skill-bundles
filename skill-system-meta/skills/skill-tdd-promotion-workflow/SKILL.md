@@ -227,7 +227,7 @@ This section is background for executing callers, not instruction. But it makes 
 - roadmap-phase-execution-verify-first
 - skill-tdd-promotion-workflow (THIS — ironic-recursion: self-applied)
 - subagent-self-reflection-prompt-pattern
-- vault-decision-cross-file-sync
+- a cross-file decision-sync discipline (keeping a decision consistent across multiple files)
 
 Token cost: ~0.5M per 5 skills (8-16 parallel subagents = 1 large dispatch). Without the workflow: re-discovery of every promotion cycle, caller-context-bias bug would not have been caught on the first skill → the rest would have been botched into promotion.
 

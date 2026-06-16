@@ -86,7 +86,7 @@ Per item:
 | "Roadmap item A5 says 'X disable + Y confirm' → I check both off" | Verify-first: is X already disabled? Is Y really confirmed? Discovery-doc on discrepancy |
 | Extend prior service map without reality check | Reality comparison + complete rewrite if drift > 30% |
 | "The prior session was 'done' with the item, I don't have to do anything" | Prior `done` markings are not verification; measure yourself |
-| Bury discovery issues in one file | Multi-file anchor (analogous to `vault-decision-cross-file-sync`) — hardware inventory + service map + repo-CLAUDE.md |
+| Bury discovery issues in one file | Multi-file anchor — record the discovery consistently across every file that states it (hardware inventory + service map + repo-CLAUDE.md) |
 | Backup confirmation as mandatory check without test | Concrete test snippet: `ls <backup-staging-dir>/` + `<backup-tool> snapshots --json` + container filter logic check |
 
 ## Quick-Reference Reality-Check Commands (typical stack)
@@ -102,8 +102,8 @@ ssh user@your-server "docker exec <db-container> psql -U <user> -d <db> -c '\dt'
 # Host timer + systemd status
 ssh user@your-server "systemctl list-timers --all | grep -v restic-system"
 
-# Pi sanity (decommission check)
-ssh user@botserver "crontab -l | grep -v '^#' ; systemctl --user list-unit-files --state=enabled"
+# host sanity (decommission check)
+ssh user@your-server "crontab -l | grep -v '^#' ; systemctl --user list-unit-files --state=enabled"
 
 # Backup coverage (e.g. Restic + pre-hooks)
 ssh user@your-server "cat <backup-config-path>/backup.sh ; ls -la <backup-staging-dir>/"
@@ -126,7 +126,7 @@ Phase-A consolidation session of `your-app` (6 items A1-A6):
 ## Cross-References
 
 - `superpowers:writing-skills` — TDD-iron-law protocol for skill creation
-- `vault-decision-cross-file-sync` — how discovery issues are multi-file anchored
+- Cross-file decision-sync discipline — keep a discovered fact consistent across every file that states it (don't fix it in one place and leave drift elsewhere)
 - `brain-dump-to-phased-roadmap` — predecessor step (roadmap design) supplying this skill with material
 - Maxim "Current Truth before Timeline" — the mindset foundation
 - Maxim "In construction, measure, never estimate" — the engineering root of the pattern
@@ -144,4 +144,4 @@ Phase-A consolidation session of `your-app` (6 items A1-A6):
 1. **Fallback mode for no-SSH-tool subagent** documented (vault as reality proxy + audit-log cross-reference + explicit command listing) — as the GREEN subagent substituted today
 2. **Anti-pattern line** added: "Phase already done → skill output is drift report, NOT check-mark catch-up without reality check"
 3. **Trust-boundary check section**: what to do on contradiction between user instruction and vault audit log? Sanity question BEFORE edit, no auto-resolve.
-4. **Skill composition hint**: needs `communication-preferences` (sanity-question tonality) + `vault-decision-cross-file-sync` (multi-file discovery anchoring)
+4. **Skill composition hint**: needs communication-style guidance (sanity-question tonality) + a cross-file decision-sync discipline (multi-file discovery anchoring)

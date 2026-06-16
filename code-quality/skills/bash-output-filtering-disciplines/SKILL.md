@@ -252,7 +252,7 @@ Empirical estimates from work sessions:
 
 1. **SSH-multiplex pattern as Item #13** — `ssh host 'for ...; do ...; done'` instead of 5× `ssh host '...'`. Avoid SSH-connection-setup cost
 2. **`docker compose ps`-variant** as alternative to `docker ps --format`
-3. **Health-check via curl**: `curl -sf http://host:port/healthz` when container exposes `/healthz` — cheaper than reading logs. Cross-link to `traefik-internal-route-probe`
+3. **Health-check via curl**: `curl -sf http://host:port/healthz` when container exposes `/healthz` — cheaper than reading logs. Pair with an internal route-probe check when behind a reverse proxy
 4. **Container-set prefix filter** when `docker ps` shows >50 containers (swarm-node edge case)
 
 ## Source triggers
