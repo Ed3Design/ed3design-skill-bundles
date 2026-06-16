@@ -145,8 +145,8 @@ Both are silent — no Python-side error, no traceback, just wrong remote behavi
 
 ## Connection to other skills
 
-- `your-server-fastapi-iteration` (GA): every SSH-based deploy step is candidate for this skill if it has metacharacter args
-- `remote-script-scp-over-ssh-heredoc` (GA): heredoc is one valid alternative to stdin-piping
+- A remote-deploy iteration workflow (rsync → build → health-check over SSH): every SSH-based deploy step is a candidate for this skill if it has metacharacter args
+- `remote-script-scp-over-ssh-heredoc`: heredoc is one valid alternative to stdin-piping
 - `db-telemetry-primary-docker-logs-secondary` (GA): typical caller building `ssh + docker exec psql` chains
 - `mcp-server-stdio-to-http-migration` (GA): MCP servers often have this exact issue at the SSH boundary
 

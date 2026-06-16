@@ -115,7 +115,7 @@ In roadmap: explicit separation "Code-Complete" vs "Live-Verified".
 - `superpowers:executing-plans` — parent workflow (this skill is Pre-Step-0)
 - `superpowers:subagent-driven-development` — parent workflow (same)
 - `superpowers:writing-plans` — plan writing should contain stack-mode annotation (cycle-2 backlog for writing-plans skill)
-- `your-server-fastapi-iteration` — if stack mode = remote-only, this skill for live deploy
+- A remote-deploy iteration workflow — if stack mode = remote-only, for the live deploy loop
 - Diagnosing the remote connection (e.g. a Tailscale multi-account check) — if the remote connection is broken
 
 ## Real-world impact

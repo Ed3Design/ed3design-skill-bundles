@@ -157,7 +157,7 @@ Without the structured audit these problems would **not all have been found** â€
 
 ## Cross-references
 
-- Complementary: `legal-paragraph-recommendation-checklist` â€” for the legal-check step
+- Complementary: a legal-paragraph recommendation checklist (a domain-specific legal-citation discipline) for the legal-check step
 
 ## Notes for skill reviewers
 

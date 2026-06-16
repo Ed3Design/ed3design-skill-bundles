@@ -133,7 +133,7 @@ Mono-repo + separate sub-repos can coexist when `.gitignore` excludes the subpro
 
 - `commit-message-honesty-precheck` (GA) — after scope clarification comes commit-message truth
 - `pre-push-bypass-audit-trail` (GA) — if push still fails due to hook, do the bypass-audit first
-- `your-server-fastapi-iteration` (GA) — sibling for server deployment loop (rsync → docker compose → curl), no git
+- A remote-deploy iteration workflow — sibling for the server deployment loop (rsync → docker compose → curl), no git
 - `production-seed-vs-demo-seed-split` (GA) — related to subproject clarification (when seed files in git vs gitignored)
 
 ## Promotion notes (DRAFT → GA)

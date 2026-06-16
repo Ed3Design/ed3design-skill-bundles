@@ -213,20 +213,20 @@ This section is background for executing callers, not instruction. But it makes 
 ## Real-World Impact
 
 **Cleanup day**: 5 skills promoted in one session via this workflow:
-- chunk-dispatch (Cycle-1 refactor + Cycle-2 value-prop)
-- asyncpg-decimal-test-shape (trivial PASS)
-- cross-repo-stack-cockpit-pattern (moderate value-add, baseline good)
-- htmx-outerhtml-load-loop (RED reproduced exact anti-pattern)
-- macos-launchagent-fda-pattern (RED fell into Lesson-1 trap)
+- a chunk-dispatch skill (Cycle-1 refactor + Cycle-2 value-prop)
+- an asyncpg mock-shape skill (trivial PASS)
+- a cross-repo cockpit pattern (moderate value-add, baseline good)
+- an htmx load-loop fix (RED reproduced exact anti-pattern)
+- a macOS LaunchAgent file-access pattern (RED fell into Lesson-1 trap)
 
 **Promotion day**: 8 skills promoted via this workflow (including this self-application):
-- external-advisor-output-plausibility-audit
-- legal-paragraph-recommendation-checklist
-- pre-migration-data-verification
-- pytest-venv-first-triage
-- roadmap-phase-execution-verify-first
-- skill-tdd-promotion-workflow (THIS — ironic-recursion: self-applied)
-- subagent-self-reflection-prompt-pattern
+- an external-advisor plausibility audit
+- a legal-paragraph recommendation checklist
+- a pre-migration data-verification skill
+- a pytest venv-first triage
+- a roadmap-phase verify-first discipline
+- this skill itself (ironic-recursion: self-applied)
+- a subagent self-reflection prompt pattern
 - a cross-file decision-sync discipline (keeping a decision consistent across multiple files)
 
 Token cost: ~0.5M per 5 skills (8-16 parallel subagents = 1 large dispatch). Without the workflow: re-discovery of every promotion cycle, caller-context-bias bug would not have been caught on the first skill → the rest would have been botched into promotion.

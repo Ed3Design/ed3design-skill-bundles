@@ -123,4 +123,4 @@ Pattern discovered after maxim "Outcome > Tool" + Phase B+C+D experience.
 
 - **Caller-context section** "subagent without AskUserQuestion → markdown-simulated block + report-up to top-level caller"
 - **AskUserQuestion template** as JSON schema code block, so top-level caller can translate subagent markdown block directly into real tool-call
-- **Cross-reference** to `subagent-driven-development` for caller-limit topic
+- **Cross-reference** to `superpowers:subagent-driven-development` for caller-limit topic

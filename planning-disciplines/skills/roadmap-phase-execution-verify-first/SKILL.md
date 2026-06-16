@@ -76,7 +76,7 @@ Per item:
    - DO NOT dutifully write "✓"
    - Instead: document discovery ("verified: services already disabled" + new issue if verify itself reveals something, e.g. "backup missing")
 3. **If item updates a prior artifact**: NOT edit-on-top, but reality comparison → if drift > 30% → complete rewrite with verified values
-4. **If item is a code change**: follow the usual TDD/smoke-test loop (see `your-server-fastapi-iteration` if FastAPI, otherwise project-specific)
+4. **If item is a code change**: follow the usual TDD/smoke-test loop (a framework-specific deploy-iteration workflow if you have one, otherwise project-specific)
 5. **Interim review** with user before next item
 
 ## Anti-patterns
