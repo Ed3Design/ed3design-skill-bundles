@@ -98,7 +98,7 @@ After the roadmap exists, the original brain-dump should not just be deleted —
 ```markdown
 ## _Recently moved items_
 
-The following 6 items have been structured into [[Roadmap Infrastructure Summer]]
+The following 6 items have been structured into [[Roadmap — Infrastructure]]
 (Phases Alpha/Beta/Gamma):
 
 1. → Alpha A1

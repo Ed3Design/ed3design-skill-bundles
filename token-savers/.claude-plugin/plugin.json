@@ -1,7 +1,7 @@
 {
   "name": "token-savers",
   "version": "0.2.0",
-  "description": "Token optimization for Claude Code: 3 skills + 5 Python tools delivering 70-98% token savings in typical workflows (PDF reads, image vision, web reads, vault searches, DB schema checks, Git diff summaries). Empirically measured savings rates from sustained engineering practice.",
+  "description": "Token optimization for Claude Code: 4 skills + 5 Python tools delivering 70-98% token savings in typical workflows (PDF reads, image vision, web reads, vault searches, DB schema checks, Git diff summaries). Empirically measured savings rates from sustained engineering practice.",
   "author": {
     "name": "ed3Dworks"
   },

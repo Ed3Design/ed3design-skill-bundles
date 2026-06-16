@@ -133,7 +133,7 @@ At 10 PDFs/month, savings = $3-8/month from this skill alone.
 
 ## Cross-Skill-Connections
 
-- `obsidian-vault-folder-restructure`: relevant when extracted text files are archived in attachments instead of just temp
+- A vault/folder restructuring workflow: relevant when extracted text files should be archived in the vault instead of just kept in temp
 - `briefing-source-triangulation`: with multiple PDF sources on a topic (notary + buyer's lawyer + insurance) — extract all first, then triangulate
 - `code-review-backlog-cost-warning`: same domain (token-cost awareness as discipline)
 - `docx-tab-position-extraction-for-layout-replication`: sister skill for DOCX files (XML extraction instead of Vision)
@@ -163,4 +163,4 @@ At 10 PDFs/month, savings = $3-8/month from this skill alone.
 1. **Cleanup hint for /tmp/ files** — avoid vault-CWD relative paths, always use absolute `/tmp/` (GREEN subagent self-discipline, should be explicitly documented)
 2. **Privacy boundary note** — for confidential-tagged PDFs (notary, contracts, retirement data) a temp file in `/tmp/` bypasses hook detection. Edge case but relevant for privacy discipline
 3. **Token-cost-tracking practice** — how to actually measure the token difference? `~/Library/Logs/anthropic-billing/` is heuristic; a better metric would be desirable
-4. **Cross-skill with `obsidian-vault-folder-restructure`** — when extracted text files should permanently land in the vault, they belong in resources, not `/tmp/`
+4. **Vault placement** — when extracted text files should permanently land in the vault, they belong in resources, not `/tmp/`

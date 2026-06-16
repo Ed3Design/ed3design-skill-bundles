@@ -1,13 +1,13 @@
 {
   "name": "ed3design-skill-bundles",
-  "description": "Engineering-discipline library for Claude Code: 47 skills, 6 hooks, 4 sub-agents, 5 Python tools across 6 thematic bundles. Empirically validated patterns.",
+  "description": "Engineering-discipline library for Claude Code: 56 skills, 6 hooks, 4 sub-agents, 5 Python tools across 6 thematic bundles. Empirically validated patterns.",
   "owner": {
     "name": "ed3Dworks"
   },
   "plugins": [
     {
       "name": "token-savers",
-      "description": "Token optimization for Claude Code: 3 skills + 5 Python tools delivering 70-98% token savings in typical workflows (PDF reads, image vision, web reads, vault searches, DB schema checks, Git diff summaries).",
+      "description": "Token optimization for Claude Code: 4 skills + 5 Python tools delivering 70-98% token savings in typical workflows (PDF reads, image vision, web reads, vault searches, DB schema checks, Git diff summaries).",
       "version": "0.2.0",
       "source": "./token-savers",
       "author": {
@@ -16,7 +16,7 @@
     },
     {
       "name": "code-quality",
-      "description": "Code-quality + Git disciplines for Python/SQL/Git projects. 16 skills (code review, Git hygiene, code patterns), 4 PreToolUse hooks for automatic Git enforcement, and 1 read-only code-reviewer sub-agent. Language- and framework-agnostic.",
+      "description": "Code-quality + Git disciplines for Python/SQL/Git projects. 21 skills (code review, Git hygiene, code patterns), 4 PreToolUse hooks for automatic Git enforcement, and 1 read-only code-reviewer sub-agent. Language- and framework-agnostic.",
       "version": "0.2.0",
       "source": "./code-quality",
       "author": {
@@ -34,7 +34,7 @@
     },
     {
       "name": "async-forensik",
-      "description": "Forensic disciplines for asyncio Python + container stacks. 7 skills + 1 forensik-detective sub-agent for hypothesis-test pipelines.",
+      "description": "Forensic disciplines for asyncio Python + container stacks. 8 skills + 1 forensik-detective sub-agent for hypothesis-test pipelines.",
       "version": "0.2.0",
       "source": "./async-forensik",
       "author": {
@@ -43,7 +43,7 @@
     },
     {
       "name": "schema-discipline",
-      "description": "SQL/schema disciplines that structurally prevent bug classes. 6 skills + 1 schema-validator sub-agent. Pattern correctness across DB engines (PostgreSQL/MySQL/SQLite).",
+      "description": "SQL/schema disciplines that structurally prevent bug classes. 8 skills + 1 schema-validator sub-agent. Pattern correctness across DB engines (PostgreSQL/MySQL/SQLite).",
       "version": "0.2.0",
       "source": "./schema-discipline",
       "author": {

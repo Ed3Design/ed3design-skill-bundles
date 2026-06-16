@@ -77,8 +77,8 @@ For a Vault-First check with unclear scope: `--scope all` (default). For product
     {
       "rank": 1,
       "score": 109.0,
-      "wikilink": "[[02 Projects/token-optimierung/token-optimierung]]",
-      "path_rel": "02 Projects/token-optimierung/token-optimierung.md",
+      "wikilink": "[[02 Projects/example-project/example-project]]",
+      "path_rel": "02 Projects/example-project/example-project.md",
       "breakdown": {
         "filename": 2, "heading": 7, "content": 64,
         "tag": 2, "recency": 6.0

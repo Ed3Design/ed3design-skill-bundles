@@ -1,7 +1,7 @@
 {
   "name": "schema-discipline",
   "version": "0.2.0",
-  "description": "SQL/schema disciplines that structurally prevent bug classes. 6 skills + 1 schema-validator sub-agent for schema verification, SQL validation, enum discovery, NULL-counter-vs-COALESCE. Pattern correctness across DB engines (PostgreSQL/MySQL/SQLite).",
+  "description": "SQL/schema disciplines that structurally prevent bug classes. 8 skills + 1 schema-validator sub-agent for schema verification, SQL validation, enum discovery, NULL-counter-vs-COALESCE. Pattern correctness across DB engines (PostgreSQL/MySQL/SQLite).",
   "author": {
     "name": "ed3Dworks"
   },
@@ -17,5 +17,7 @@
     "enum",
     "ed3design"
   ],
-  "agents": ["./agents/schema-validator.md"]
+  "agents": [
+    "./agents/schema-validator.md"
+  ]
 }

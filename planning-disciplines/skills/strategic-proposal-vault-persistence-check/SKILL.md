@@ -129,7 +129,7 @@ Token saving from active application of this skill: ~25-35k per avoided re-disco
 ## Connection to other skills
 
 - `post-session-skill-review` (GA) — complementary; that one scans for SKILL candidates, this one for PROPOSAL persistence. Run THIS one FIRST so proposals are in vault before skill-review scans.
-- `obsidian-vault-graph-cleanup` (GA) — after cluster creation, this catches duplicate-cluster scenarios
+- A vault graph-cleanup pass — after cluster creation, run a sanity check that catches duplicate-cluster scenarios and ambiguous links
 - `brain-dump-to-phased-roadmap` (GA) — if persistence target is a fresh brain-dump-derived cluster, use that skill for the roadmap-phase structure
 
 ## Promotion notes (DRAFT → GA)
