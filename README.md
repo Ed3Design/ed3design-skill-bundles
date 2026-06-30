@@ -40,7 +40,7 @@ Add this repo as a marketplace, then install bundles individually:
 ```
 
 Available plugins after `marketplace add`:
-- `token-savers` — Token optimization (4 skills + 5 tools)
+- `token-savers` — Token optimization (4 skills + 5 tools + 1 hook)
 - `code-quality` — Code review + Git hygiene (21 skills + 4 hooks + 1 agent)
 - `planning-disciplines` — Roadmap + decision (10 skills + 1 agent)
 - `async-forensik` — asyncio + container debugging (8 skills + 1 agent)

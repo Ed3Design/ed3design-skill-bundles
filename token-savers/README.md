@@ -16,11 +16,12 @@
 
 ## 🛠 Contents
 
-### Skills (3)
+### Skills (4)
 
 - **`pdf-text-extract-without-vision`** — `pdftotext` (poppler) or OCR fallback (`ocrmypdf`) instead of Claude Vision for PDFs
 - **`image-preprocessing-helper`** — resize/ocr/info/colors via local Python tool before vision call
 - **`vault-search-helper`** — single-call ranked search instead of multiple Glob+Grep
+- **`docx-tab-position-extraction-for-layout-replication`** — extract tab-stop positions from a Word `.docx` to replicate its layout in HTML/CSS/PDF/Print-CSS
 
 For bash-output filtering disciplines (head, tail, grep, jq, awk patterns), see the `code-quality` bundle.
 

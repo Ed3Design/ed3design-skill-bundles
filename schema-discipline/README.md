@@ -2,7 +2,7 @@
 
 > SQL/schema disciplines that structurally avoid bug classes.
 
-## Skills (6)
+## Skills (8)
 
 | Skill | Prevents |
 |---|---|
@@ -12,6 +12,8 @@
 | `enum-value-discovery-before-sql-where` | WHERE x = 'wrongValue' → silent empty result |
 | `schema-use-case-mismatch-detection` | DB schema doesn't fit the use case (e.g. NOT NULL where NULL is expected) |
 | `explicit-unknown-counter-vs-coalesce-mask` | COALESCE hides NULL values rendered as 0 |
+| `pre-migration-data-verification` | Adding a constraint to a populated table → query existing data for violations first |
+| `production-seed-vs-demo-seed-split` | Pushing a repo → real personal/customer data leaking via seed/fixture files |
 
 ## 🤖 Sub-Agent (1)
 
