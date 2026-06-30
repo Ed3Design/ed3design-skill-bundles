@@ -2,7 +2,7 @@
 
 > Forensic disciplines for asyncio Python + container stacks. Hard-won debugging lessons as skills.
 
-## Skills (7)
+## Skills (8)
 
 | Skill | Pain Point |
 |---|---|
@@ -13,6 +13,7 @@
 | `async-context-manager-retry-pattern` | Retry pattern for async with blocks |
 | `asyncio-fire-and-forget-loop-exit-await` | Loop exit not awaited → tasks dangling |
 | `ephemeral-container-file-detection` | File exists in container but `docker exec` doesn't see it (tmpfs/overlay) |
+| `asyncpg-live-vs-mock-shape` | asyncpg type coercion (Decimal/str/UUID/INET) → mock-vs-live divergence in tests |
 
 ## 🤖 Sub-Agent (1)
 

@@ -2,9 +2,9 @@
 
 > Code-quality + Git discipline skills — the largest bundle (21 skills + 4 hooks + 1 agent). Language-/framework-agnostic.
 
-## Skills (16) by sub-domain
+## Skills (21) by sub-domain
 
-### Code Review (4)
+### Code Review (6)
 
 | Skill | Trigger |
 |---|---|
@@ -12,14 +12,17 @@
 | `code-review-chunk-dispatch` | >30 commits backlog → parallel sub-agent chunks |
 | `code-review-findings-als-red-tests` | Findings = test cases → RED test per finding |
 | `aggregate-code-review-after-tdd-tasks` | Multi-TDD task → one aggregate review |
+| `external-advisor-output-plausibility-audit` | External advisor output (energy/PV/tax/expert report) → audit, don't accept blindly |
+| `frontend-ui-self-verify-before-user-demo` | Before telling the user "refresh the browser" → verify the UI change actually rendered |
 
-### Git Hygiene (3)
+### Git Hygiene (4)
 
 | Skill | Prevents |
 |---|---|
 | `commit-message-honesty-precheck` | Subject lies about content of the diff |
 | `pre-push-bypass-audit-trail` | `--no-verify` without audit entry |
 | `cross-repo-state-inspection-before-commit` | Blind `add .` in mono-repo with untracked subdirs |
+| `pre-deploy-code-drift-detection` | Deploy with multiple push-sources → undetected local/origin/server Git-drift |
 
 ### Code Patterns (5)
 
@@ -31,7 +34,7 @@
 | `library-subclass-explicit-type-classification` | Name subclass type explicitly, not implicitly |
 | `lazy-module-getattr-for-settings-override` | Module-level freeze → lazy read in functions (env override works) |
 
-### Tooling (4)
+### Tooling (6)
 
 | Skill | Purpose |
 |---|---|
@@ -39,6 +42,8 @@
 | `bash-output-filtering-disciplines` | 12-pattern catalog for bash-output triage |
 | `ga-skill-edit-tdd-workflow` | Edit GA skill with TDD cycle |
 | `pytest-venv-first-triage` | venv activation before pytest triage |
+| `mcp-server-stdio-to-http-migration` | Migrate per-sub-agent stdio MCP server to a persistent HTTP server |
+| `remote-script-scp-over-ssh-heredoc` | scp script to remote instead of heredoc when special chars break SSH quoting |
 
 ## 🪝 Hooks (4) — Automatic enforcement
 
