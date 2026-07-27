@@ -17,7 +17,7 @@ jobs:
       # GitHub Actions pinned to commit-SHAs for reproducible CI.
       # Dependabot is configured (.github/dependabot.yml) to bump these
       # via PR when upstream releases — never auto-update silently.
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           # Don't fetch PR head from forks with elevated perms. Default is safe but explicit.
           persist-credentials: false
