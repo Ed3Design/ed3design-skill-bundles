@@ -1,7 +1,7 @@
 ---
 name: pdf-text-extract-without-vision
 description: |-
-  Use BEFORE reading any PDF file when the goal is to extract textual content (specs, contracts, articles, manuals, financial reports, legal documents). STOP and run `pdftotext` from poppler-utils locally instead of letting Claude read the PDF directly. Claude Vision burns 1-5k tokens per page even for text-heavy PDFs that are 100% mechanically extractable. `pdftotext` is a free local CLI (typically at /opt/homebrew/bin/pdftotext) that converts the PDF text-layer to plain UTF-8 at zero token cost. Trigger on phrases like "read this PDF", "extract text from PDF", "what's in the PDF", "summarize the PDF", "analyze PDF", "read spec from PDF", "evaluate contract from PDF", any user request involving "PDF" + content comprehension. Do NOT use for image-only PDFs without OCR'd text layer (fall back to Vision or run `ocrmypdf` first), PDFs where layout is the primary information (drawings, mockups, infographics), PDFs less than ~1 page, or PDFs with critical embedded images.
+  Use BEFORE reading any PDF file when the goal is to extract textual content (specs, contracts, articles, manuals, financial reports, legal documents). STOP and run `pdftotext` from poppler-utils locally (macOS/Linux) or `pdf-extract.py` (Windows, pure-Python/PyMuPDF, no system binary) instead of letting Claude read the PDF directly. Claude Vision burns 1-5k tokens per page even for text-heavy PDFs that are 100% mechanically extractable. Both tools convert the PDF text-layer to plain UTF-8 at zero token cost. Trigger on phrases like "read this PDF", "extract text from PDF", "what's in the PDF", "summarize the PDF", "analyze PDF", "read spec from PDF", "evaluate contract from PDF", any user request involving "PDF" + content comprehension — on any OS. Do NOT use for image-only PDFs without OCR'd text layer (fall back to Vision or run `ocrmypdf` first), PDFs where layout is the primary information (drawings, mockups, infographics), PDFs less than ~1 page, or PDFs with critical embedded images.
 
 ---
 
@@ -16,6 +16,16 @@ Brain-dump item: *"critical analysis of token usage — own tools (for example p
 Claude Vision processes every PDF page as an image → **1-5k tokens per page** even for pure text PDFs. For a 20-page spec = 20-100k tokens **just for reading**, before any analysis. Completely avoidable when the PDF has a text layer (true for ~95% of all modern PDFs).
 
 `pdftotext` from `poppler-utils` (installed locally on macOS via Homebrew) extracts the text layer at **0 tokens** server-cost and returns plain text, which Claude reads efficiently via the `Read` tool.
+
+### Platform note (macOS vs. Windows)
+
+| | macOS/Linux | Windows |
+|---|---|---|
+| Tool | `pdftotext` / `pdfinfo` (poppler-utils, `brew install poppler`) | `${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/pdf-extract.py` (pure-Python, `pip install pymupdf`) |
+| Why different | Homebrew makes poppler a one-liner | No admin-free, reliable system-binary install path on a fresh Windows box; a pip wheel (PyMuPDF) needs no compiled binary and no PATH setup |
+| CLI shape | `pdftotext [-layout] [-nopgbrk] file.pdf out.txt`, `pdfinfo file.pdf` | `pdf-extract.py text [--layout] [--pages] file.pdf --out out.txt`, `pdf-extract.py info file.pdf`, `pdf-extract.py probe file.pdf` |
+
+The rest of this skill is written poppler-first; every step below has a Windows-equivalent command. Pick the column that matches `sys.platform` / `uname`.
 
 ## When to Trigger
 
@@ -44,6 +54,13 @@ pdfinfo "/path/to/doc.pdf" | grep -E "Pages|File size|Page size"
 # Page size:       612 x 792 pts (letter)
 ```
 
+**Windows equivalent:**
+
+```bash
+python "$HOME/.claude/tools/pdf-extract.py" info "/path/to/doc.pdf"
+# {"pages": 1, "file_size_bytes": 244532, "page_size": {...}, "has_text_layer": true, ...}
+```
+
 If `Pages: 1` → token cost for direct Vision is also low (~2-5k); skill setup overhead may not be worth it. If `Pages: >5` → skill clearly worth it. If `Pages: 20+` → MUST-USE.
 
 ### Step 1: Path check + text-layer probe
@@ -54,6 +71,15 @@ which pdftotext || brew install poppler
 
 # Quick probe: does the PDF have a text layer?
 pdftotext -nopgbrk "/path/to/doc.pdf" - | head -20
+```
+
+**Windows equivalent** (no system binary to check for — PyMuPDF is a pip wheel):
+
+```bash
+python -m pip show pymupdf >/dev/null 2>&1 || python -m pip install pymupdf
+
+# Quick probe: does the PDF have a text layer?
+python "$HOME/.claude/tools/pdf-extract.py" probe "/path/to/doc.pdf"
 ```
 
 If output is empty / only whitespace → PDF is scan-based, fall back to OCR (see Step 4) or Vision.
@@ -77,6 +103,22 @@ pdftotext "/path/to/doc.pdf" -  # default: form-feed \f as page separator
 - `-raw`: keep original text-order (sometimes better for complex layouts)
 - `-f N -l M`: only pages N to M (targeted for large PDFs)
 - `-enc UTF-8` (default): Unicode
+
+**Windows equivalent** (`pdf-extract.py` — same flag semantics, pure-Python/PyMuPDF, no system binary/PATH dependency):
+
+```bash
+# Standard variant: a flat text file
+python "$HOME/.claude/tools/pdf-extract.py" text "/path/to/doc.pdf" --out /tmp/extracted.txt
+
+# Layout-aware variant (for tables / multi-column text):
+python "$HOME/.claude/tools/pdf-extract.py" text "/path/to/doc.pdf" --layout --out /tmp/extracted-layout.txt
+
+# With page numbers as separator (\f form-feed, like plain pdftotext):
+python "$HOME/.claude/tools/pdf-extract.py" text "/path/to/doc.pdf" --pages --out /tmp/extracted.txt
+
+# Only pages N to M (targeted for large PDFs):
+python "$HOME/.claude/tools/pdf-extract.py" text "/path/to/doc.pdf" -f 5 -l 10 --out /tmp/extracted.txt
+```
 
 ### Step 3: Read with Claude
 
@@ -113,6 +155,16 @@ pdftotext /tmp/with-ocr.pdf /tmp/extracted.txt
 ```
 
 `ocrmypdf` is significantly faster (~30s per 20-page PDF with German language) than Claude Vision for 20 pages (~20s per page × 20 = 400s) and produces a reusable text layer in the PDF.
+
+**Windows equivalent:** `ocrmypdf` also installs via pip (`pip install ocrmypdf`), but it still shells out to a Tesseract binary internally, so Tesseract must be installed first — see the `image-preprocessing-helper` skill's Windows section (`winget install --id UB-Mannheim.TesseractOCR`). Once Tesseract is present:
+
+```bash
+python -m pip install ocrmypdf
+python -m ocrmypdf "/path/to/scan.pdf" /tmp/with-ocr.pdf
+python "$HOME/.claude/tools/pdf-extract.py" text /tmp/with-ocr.pdf --out /tmp/extracted.txt
+```
+
+If installing Tesseract is not desired, page-by-page fallback: rasterize the scanned pages (PyMuPDF `page.get_pixmap()`) and run `img-preprocess.py ocr` on each page image, or fall back to Claude Vision for just the scanned pages.
 
 ## Anti-Patterns
 

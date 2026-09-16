@@ -20,6 +20,12 @@ Usage:
 Dependencies:
 - Pillow (PIL) >= 10.0 — required for resize/info/describe/colors subcommands
 - Tesseract (optional, system binary) — for `ocr` subcommand
+  - macOS: `brew install tesseract tesseract-lang`
+  - Windows: `winget install --id UB-Mannheim.TesseractOCR -e --silent
+    --accept-package-agreements --accept-source-agreements` (per-user install,
+    no admin needed). This tool auto-detects the winget/manual install
+    locations even when tesseract isn't on PATH yet, and falls back to
+    whatever language packs are actually installed instead of hard-failing.
 - ImageMagick `convert` (optional) — for extreme HEIC-conversions outside Pillow's scope
 """
 
@@ -27,11 +33,121 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
+
+# Windows: default stdout/stderr encoding follows the system ANSI codepage
+# (e.g. cp1252), which silently mangles non-ASCII output (umlauts, em-dash,
+# accented names) even though it never raises. Force UTF-8 unconditionally.
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+# ──────────────────────────────────────────────────────────────────────────
+# tesseract lookup (cross-platform)
+# ──────────────────────────────────────────────────────────────────────────
+#
+# On macOS `brew install tesseract` puts the binary on PATH. On Windows the
+# common installers (winget UB-Mannheim.TesseractOCR, or the manual UB-Mannheim
+# .exe installer) do NOT reliably add themselves to PATH for the current
+# session/shell — so `shutil.which` alone often misses a real install. Check a
+# handful of well-known install locations as a fallback before giving up.
+
+_WINDOWS_TESSERACT_CANDIDATES = [
+    r"%LOCALAPPDATA%\Programs\Tesseract-OCR\tesseract.exe",   # winget (user scope)
+    r"%ProgramFiles%\Tesseract-OCR\tesseract.exe",              # manual installer (machine scope)
+    r"%ProgramFiles(x86)%\Tesseract-OCR\tesseract.exe",
+]
+
+
+def _find_tesseract() -> str | None:
+    """Return a usable tesseract executable path, or None if not found."""
+    env_override = os.environ.get("TESSERACT_PATH")
+    if env_override and Path(env_override).exists():
+        return env_override
+
+    found = shutil.which("tesseract")
+    if found:
+        return found
+
+    if sys.platform == "win32":
+        for template in _WINDOWS_TESSERACT_CANDIDATES:
+            candidate = Path(os.path.expandvars(template))
+            if candidate.exists():
+                return str(candidate)
+    return None
+
+
+def _tesseract_install_hint() -> str:
+    if sys.platform == "win32":
+        return (
+            "ERROR: tesseract not found.\n"
+            "Install (no admin required, per-user install):\n"
+            "  winget install --id UB-Mannheim.TesseractOCR -e --silent \\\n"
+            "      --accept-package-agreements --accept-source-agreements\n"
+            "  # installs to %LOCALAPPDATA%\\Programs\\Tesseract-OCR — this tool "
+            "auto-detects that path.\n"
+            "If winget is unavailable or blocked, download the installer manually:\n"
+            "  https://github.com/UB-Mannheim/tesseract/wiki\n"
+            "  (UB-Mannheim Windows build; run the .exe, no admin needed for a "
+            "per-user install)\n"
+            "Alternative: img-preprocess.py resize <file> then send via Claude Vision."
+        )
+    return (
+        "ERROR: tesseract nicht installiert.\n"
+        "Install: brew install tesseract tesseract-lang\n"
+        "Alternative: img-preprocess.py resize <file> dann via Claude Vision."
+    )
+
+
+def _available_tesseract_langs(tesseract_path: str) -> set[str]:
+    """Best-effort: parse `tesseract --list-langs` output."""
+    try:
+        proc = subprocess.run(
+            [tesseract_path, "--list-langs"],
+            capture_output=True, text=True, timeout=10,
+        )
+        langs = set()
+        for line in proc.stdout.splitlines():
+            line = line.strip()
+            if line and "list of" not in line.lower():
+                langs.add(line)
+        return langs
+    except Exception:
+        return set()
+
+
+def _resolve_lang(tesseract_path: str, requested: str) -> tuple[str, str | None]:
+    """Resolve a requested Tesseract --lang value against what's actually
+    installed (e.g. only 'eng' present on a fresh Windows install that lacks
+    the German language pack). Returns (lang_to_use, warning_or_None)."""
+    available = _available_tesseract_langs(tesseract_path)
+    if not available:
+        # couldn't introspect — just pass the request through as-is
+        return requested, None
+
+    requested_parts = requested.split("+")
+    usable = [p for p in requested_parts if p in available]
+    if usable == requested_parts:
+        return requested, None
+    if usable:
+        return "+".join(usable), (
+            f"[some requested languages not installed: "
+            f"{sorted(set(requested_parts) - available)}; using {'+'.join(usable)}]"
+        )
+    # nothing requested is available — fall back to whatever IS there
+    fallback = "eng" if "eng" in available else sorted(available)[0]
+    return fallback, (
+        f"[none of requested languages {requested_parts} installed "
+        f"(have: {sorted(available)}); falling back to '{fallback}'. "
+        f"Install more via: winget install --id UB-Mannheim.TesseractOCR "
+        f"or rerun the installer and pick additional language components.]"
+    )
 
 # Pillow is imported lazily INSIDE the subcommands that need it, so that
 # `img-preprocess.py --help` works even on a system without Pillow.
@@ -159,19 +275,16 @@ def cmd_ocr(args: argparse.Namespace) -> int:
         print(f"ERROR: file not found: {src}", file=sys.stderr)
         return 2
 
-    tesseract = shutil.which("tesseract")
+    tesseract = _find_tesseract()
     if tesseract is None:
-        print(
-            "ERROR: tesseract nicht installiert.\n"
-            "Install: brew install tesseract tesseract-lang\n"
-            "Alternative: img-preprocess.py resize <file> dann via Claude Vision.",
-            file=sys.stderr,
-        )
+        print(_tesseract_install_hint(), file=sys.stderr)
         return 3
+
+    lang, warning = _resolve_lang(tesseract, args.lang)
 
     try:
         proc = subprocess.run(
-            [tesseract, str(src), "-", "-l", args.lang],
+            [tesseract, str(src), "-", "-l", lang],
             capture_output=True, text=True, timeout=30,
         )
     except subprocess.TimeoutExpired:
@@ -186,11 +299,14 @@ def cmd_ocr(args: argparse.Namespace) -> int:
     text = proc.stdout.strip()
     report = {
         "file": str(src),
-        "lang": args.lang,
+        "lang": lang,
+        "requested_lang": args.lang,
         "char_count": len(text),
         "line_count": len(text.split("\n")),
         "text": text,
     }
+    if warning:
+        report["warning"] = warning
     print(json.dumps(report, indent=2, default=str))
     return 0
 
@@ -223,11 +339,12 @@ def cmd_describe(args: argparse.Namespace) -> int:
         "exif_summary": exif_clean,
     }
 
-    tesseract = shutil.which("tesseract")
+    tesseract = _find_tesseract()
     if tesseract:
+        lang, warning = _resolve_lang(tesseract, args.lang)
         try:
             proc = subprocess.run(
-                [tesseract, str(src), "-", "-l", args.lang],
+                [tesseract, str(src), "-", "-l", lang],
                 capture_output=True, text=True, timeout=15,
             )
             if proc.returncode == 0:
@@ -237,12 +354,12 @@ def cmd_describe(args: argparse.Namespace) -> int:
                     preview += f"... [+{len(text) - args.preview} chars]"
                 out["ocr_preview"] = preview
                 out["ocr_char_count"] = len(text)
+                if warning:
+                    out["ocr_warning"] = warning
         except subprocess.TimeoutExpired:
             out["ocr_preview"] = "[OCR timeout]"
     else:
-        out["ocr_preview"] = (
-            "[tesseract nicht installiert — brew install tesseract tesseract-lang]"
-        )
+        out["ocr_preview"] = "[" + _tesseract_install_hint().replace("\n", " ") + "]"
 
     print(json.dumps(out, indent=2, default=str))
     return 0

@@ -54,6 +54,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Windows: default stdout/stderr encoding follows the system ANSI codepage
+# (e.g. cp1252), which silently mangles non-ASCII output (umlauts, em-dash,
+# accented names) even though it never raises. Force UTF-8 unconditionally.
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if sys.stderr.encoding and sys.stderr.encoding.lower() != "utf-8":
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # ──────────────────────────────────────────────────────────────────────────
 # Config loading
 # ──────────────────────────────────────────────────────────────────────────

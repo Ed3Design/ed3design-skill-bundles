@@ -66,7 +66,12 @@ ${CLAUDE_PLUGIN_ROOT:-$HOME/.claude}/tools/img-preprocess.py ocr <file> --lang d
 
 Output: JSON with `text`, `char_count`, `line_count`. If char_count <100 → maybe still use Vision (e.g. logos instead of text). If char_count >500 → OCR text as substrate for question analysis.
 
-Tesseract must be installed: `brew install tesseract tesseract-lang`. If not → skill emits a hint and falls back to Vision.
+Tesseract must be installed:
+- macOS: `brew install tesseract tesseract-lang`
+- Windows (no admin required): `winget install --id UB-Mannheim.TesseractOCR -e --silent --accept-package-agreements --accept-source-agreements` — installs per-user to `%LOCALAPPDATA%\Programs\Tesseract-OCR`. `img-preprocess.py` auto-detects this location even before the PATH is refreshed (new shells pick up PATH automatically after; this session's shell won't until then, so the tool checks the known install dirs directly instead of relying on PATH). If winget is blocked/unavailable, download the installer manually from https://github.com/UB-Mannheim/tesseract/wiki (no admin needed for a per-user install location).
+- The winget/manual Windows installer ships only the `eng` language pack by default (no `deu`). If you request `--lang deu+eng` and only `eng` is installed, `img-preprocess.py` detects this via `tesseract --list-langs`, falls back to whatever is actually installed, and reports a `warning`/`ocr_warning` field in its JSON output instead of failing outright. To add more languages, re-run the installer and pick additional language components, or drop extra `*.traineddata` files into the `tessdata` folder next to `tesseract.exe`.
+
+If tesseract is not installed at all → skill emits a hint (with the platform-specific install command) and falls back to Vision.
 
 ### Step 3 — Info (for metadata)
 
