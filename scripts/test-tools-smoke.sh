@@ -190,6 +190,14 @@ dep_missing() {
 }
 
 FIXTURES=$(mktemp -d)
+# Git Bash hands out POSIX paths (/tmp/...), which a native python.exe cannot
+# resolve. MSYS rewrites paths passed as argv automatically, but NOT paths
+# embedded in generated Python source — which is how the Pillow fixture below
+# is written. Normalise once, here, into the mixed form (C:/...) that both
+# bash and Windows Python accept. No-op everywhere cygpath does not exist.
+if command -v cygpath > /dev/null 2>&1; then
+    FIXTURES=$(cygpath -m "$FIXTURES")
+fi
 trap 'rm -rf "$FIXTURES"' EXIT
 
 # img-preprocess: generate a real 4×4 PNG, then exercise info + colors + resize
