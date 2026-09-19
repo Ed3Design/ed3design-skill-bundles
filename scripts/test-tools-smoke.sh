@@ -15,18 +15,45 @@ set -u
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TOOLS_DIR="$REPO_ROOT/token-savers/tools"
 
+# Cross-platform interpreter + venv layout. Two things differ on Windows
+# (Git Bash): `python3` frequently does not exist (only `python.exe` is on
+# PATH), and `venv` creates `Scripts/` instead of `bin/` — with no
+# `python3` inside it either way.
+PY="$(command -v python3 || command -v python || true)"
+if [ -z "$PY" ]; then
+    echo "FAIL: no python interpreter on PATH (tried python3, python)"
+    exit 1
+fi
+
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) VENV_BIN="Scripts" ;;
+    *)                    VENV_BIN="bin" ;;
+esac
+
+# Echo the interpreter inside a venv created at $1, whatever it is called.
+venv_python() {
+    local d="$1/$VENV_BIN"
+    for cand in python3 python python3.exe python.exe; do
+        if [ -f "$d/$cand" ]; then
+            echo "$d/$cand"
+            return 0
+        fi
+    done
+    return 1
+}
+
 PASS=0
 FAIL=0
 
 assert_help_ok() {
     local tool="$1"
     local label="$2"
-    if [ ! -x "$TOOLS_DIR/$tool" ]; then
+    if [ "$VENV_BIN" = "bin" ] && [ ! -x "$TOOLS_DIR/$tool" ]; then
         echo "  ❌ $label: $tool not executable"
         FAIL=$((FAIL + 1))
         return
     fi
-    if "$TOOLS_DIR/$tool" --help > /dev/null 2>&1; then
+    if "$PY" "$TOOLS_DIR/$tool" --help > /dev/null 2>&1; then
         PASS=$((PASS + 1))
         echo "  ✅ $label"
     else
@@ -40,8 +67,10 @@ assert_help_in_clean_venv() {
     local label="$2"
     local tmp
     tmp=$(mktemp -d)
-    python3 -m venv "$tmp/venv" 2>/dev/null
-    if "$tmp/venv/bin/python3" "$TOOLS_DIR/$tool" --help > /dev/null 2>&1; then
+    "$PY" -m venv "$tmp/venv" 2>/dev/null
+    local vpy
+    vpy="$(venv_python "$tmp/venv")" || vpy="$PY"
+    if "$vpy" "$TOOLS_DIR/$tool" --help > /dev/null 2>&1; then
         PASS=$((PASS + 1))
         echo "  ✅ $label (--help works without third-party deps)"
     else
@@ -58,11 +87,13 @@ assert_missing_dep_message() {
     local label="$4"
     local tmp
     tmp=$(mktemp -d)
-    python3 -m venv "$tmp/venv" 2>/dev/null
+    "$PY" -m venv "$tmp/venv" 2>/dev/null
     # Create a dummy file so the tool's path-check passes before the dep-check
     touch "$tmp/dummy.png"
     local out
-    out=$("$tmp/venv/bin/python3" "$TOOLS_DIR/$tool" $subcmd "$tmp/dummy.png" 2>&1 || true)
+    local vpy
+    vpy="$(venv_python "$tmp/venv")" || vpy="$PY"
+    out=$("$vpy" "$TOOLS_DIR/$tool" $subcmd "$tmp/dummy.png" 2>&1 || true)
     if echo "$out" | grep -qi "$needle"; then
         PASS=$((PASS + 1))
         echo "  ✅ $label (clear missing-dep message)"
@@ -139,7 +170,7 @@ assert_behavioral() {
 # Dependency policy:
 #   STRICT_BEHAVIORAL=1   missing Pillow/bs4 → FAIL (CI default)
 #   otherwise             missing dep → SKIP with warning (local dev)
-TEST_PY="${PYTHON:-python3}"
+TEST_PY="${PYTHON:-$PY}"
 STRICT_BEHAVIORAL="${STRICT_BEHAVIORAL:-0}"
 
 # Install missing deps into the test interpreter (not bare `pip`).
@@ -159,6 +190,14 @@ dep_missing() {
 }
 
 FIXTURES=$(mktemp -d)
+# Git Bash hands out POSIX paths (/tmp/...), which a native python.exe cannot
+# resolve. MSYS rewrites paths passed as argv automatically, but NOT paths
+# embedded in generated Python source — which is how the Pillow fixture below
+# is written. Normalise once, here, into the mixed form (C:/...) that both
+# bash and Windows Python accept. No-op everywhere cygpath does not exist.
+if command -v cygpath > /dev/null 2>&1; then
+    FIXTURES=$(cygpath -m "$FIXTURES")
+fi
 trap 'rm -rf "$FIXTURES"' EXIT
 
 # img-preprocess: generate a real 4×4 PNG, then exercise info + colors + resize

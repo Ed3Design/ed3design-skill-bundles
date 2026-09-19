@@ -6,6 +6,14 @@ All notable changes to this repository are tracked here. The format follows [Kee
 
 ### Added
 
+- `validate-windows` CI job (`windows-latest`, Git Bash): runs the hook
+  syntax check, hook trigger-matrix, tool smoke-tests and `py_compile` on
+  Windows. Rationale: the bundle ships bash hooks and Python tools that users
+  run under Git Bash, but CI was ubuntu-only, which made every
+  Windows-portability claim in a PR structurally unverifiable. Scope is
+  deliberately narrow — schema/counts/description audits are pure text
+  analysis and stay ubuntu-only rather than being paid for twice.
+
 - `scripts/audit-private-skill-crosslinks.py` + CI step: fails when a skill
   body references a back-ticked skill-name that resolves to neither a skill in
   this repo, a `superpowers:`/`gsd:` plugin, nor the curated allow-list (CSS
@@ -17,6 +25,15 @@ All notable changes to this repository are tracked here. The format follows [Kee
 - `package.json` + `package-lock.json` so Dependabot can update the Claude Code CLI via PR (CI now uses `npm ci`)
 
 ### Fixed
+
+- `scripts/test-hooks.sh` + `scripts/test-tools-smoke.sh` were not runnable on
+  Windows: both assumed `python3` on PATH (Git Bash commonly has only
+  `python`), and the smoke-test hardcoded `venv/bin/python3` where Windows
+  venvs use `Scripts/` and ship no `python3` at all. Both now resolve the
+  interpreter once and derive the venv layout from `uname -s`. In
+  `test-hooks.sh` the old form was actively dangerous: a failed `python3`
+  produced an empty payload, which the harness reads as "silent" — turning
+  every should-warn case into a false PASS instead of a failure.
 
 - **12 dangling cross-references** to private-only skills genericized to prose (a public user cannot install them): `communication-preferences`, `vault-decision-cross-file-sync`, `obsidian-vault-folder-restructure`, `obsidian-vault-graph-cleanup`, `tailscale-multi-account-diagnosis`, `traefik-internal-route-probe`. This finding class was previously uncaught because `audit-stale-draft-crosslinks.py` only flags `-DRAFT`-suffixed references, not references to skills absent from every public bundle.
 - One residual private hostname (`botserver`) in `roadmap-phase-execution-verify-first` genericized to `your-server`.
