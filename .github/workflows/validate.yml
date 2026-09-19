@@ -229,3 +229,81 @@ jobs:
             tools=$(ls -1 ${bundle_dir}tools/*.py 2>/dev/null | wc -l | tr -d ' ')
             echo "  ${bundle_dir%/}: $skills skills, $hooks hooks, $agents agents, $tools tools"
           done
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Windows leg. Rationale: the bundle ships bash hooks and Python tools
+  # that users run on Windows via Git Bash, but every check above runs on
+  # ubuntu only — so any Windows-portability claim in a PR was structurally
+  # unverifiable and had to be taken on the contributor's word.
+  #
+  # Scope is deliberately narrow: only the checks whose outcome can actually
+  # differ by platform. Schema/counts/description audits are pure text
+  # analysis and identical on every OS, so they stay in the ubuntu job
+  # rather than being paid for twice.
+  # ──────────────────────────────────────────────────────────────────────
+  validate-windows:
+    name: Windows portability (Git Bash)
+    runs-on: windows-latest
+    defaults:
+      run:
+        # Git Bash is preinstalled on windows-latest — this is the same shell
+        # a Windows user runs the hooks in.
+        shell: bash
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: '3.11'
+
+      - name: Install behavioral smoke-test deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install Pillow beautifulsoup4 certifi
+
+      - name: Report interpreter names actually present
+        # Diagnostic, not a gate: on Windows `python3` often does not exist.
+        # The scripts fall back to `python`; this step makes which one was
+        # used visible in the log when something fails.
+        run: |
+          echo "uname -s : $(uname -s)"
+          echo "python3  : $(command -v python3 || echo '(absent)')"
+          echo "python   : $(command -v python || echo '(absent)')"
+          python --version
+
+      - name: Hook syntax check
+        run: |
+          set -e
+          for hook_sh in */hooks/*.sh; do
+            [ ! -f "$hook_sh" ] && continue
+            # No `test -x` here: Git for Windows sets core.filemode=false, so
+            # the exec bit carries no information on this platform. The ubuntu
+            # job owns that check.
+            head -1 "$hook_sh" | grep -q "^#!" || (echo "FAIL: $hook_sh missing shebang" && exit 1)
+            bash -n "$hook_sh" || (echo "FAIL: $hook_sh bash syntax error" && exit 1)
+            echo "  OK $hook_sh"
+          done
+
+      - name: Hook trigger-matrix tests
+        run: |
+          set -e
+          bash scripts/test-hooks.sh
+
+      - name: Tool smoke-tests (--help + missing-dep + behavioral fixtures)
+        env:
+          STRICT_BEHAVIORAL: "1"
+        run: |
+          set -e
+          bash scripts/test-tools-smoke.sh
+
+      - name: Validate Python tools syntax
+        run: |
+          set -e
+          for tool_py in */tools/*.py; do
+            [ ! -f "$tool_py" ] && continue
+            python -m py_compile "$tool_py" || (echo "FAIL: $tool_py syntax error" && exit 1)
+            echo "  OK $tool_py"
+          done

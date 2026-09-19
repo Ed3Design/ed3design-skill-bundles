@@ -8,6 +8,16 @@
 set -u
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Windows (Git Bash) frequently has only `python` on PATH, not `python3` —
+# the same assumption the hooks themselves carry. Resolve it once here so the
+# harness does not silently produce empty payloads (which read as "silent"
+# and would turn every should-warn case into a false pass).
+PY="$(command -v python3 || command -v python || true)"
+if [ -z "$PY" ]; then
+    echo "FAIL: no python interpreter on PATH (tried python3, python)"
+    exit 1
+fi
+
 HOOK_PYTEST="$REPO_ROOT/code-quality/hooks/pytest-venv-first.sh"
 HOOK_BYPASS="$REPO_ROOT/code-quality/hooks/pre-push-bypass-audit.sh"
 
@@ -18,7 +28,7 @@ run_hook() {
     local hook="$1"
     local command="$2"
     local payload
-    payload=$(python3 -c "import json,sys; print(json.dumps({'tool_input':{'command':sys.argv[1]}}))" "$command")
+    payload=$("$PY" -c "import json,sys; print(json.dumps({'tool_input':{'command':sys.argv[1]}}))" "$command")
     echo "$payload" | bash "$hook" 2>&1
 }
 
