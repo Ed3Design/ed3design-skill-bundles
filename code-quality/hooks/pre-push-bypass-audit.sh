@@ -1,4 +1,5 @@
 #!/bin/bash
+PY=$(command -v python3 || command -v python)
 # pre-push-bypass-audit.sh
 #
 # PreToolUse-Hook (Bash). Audit-Log + Warnung bei `git push --no-verify` /
@@ -6,6 +7,8 @@
 #
 # Skill: pre-push-bypass-audit-trail
 # Verhalten: warn + audit (exit 0). Audit-Log: ~/.claude/audit/git-bypass.log
+# Warnung geht zusätzlich als hookSpecificOutput.additionalContext nach stdout
+# (nicht als plain stderr) — nur additionalContext landet zuverlässig im Claude-Kontext.
 #
 # Privacy: Audit-Log enthält bewusst NICHT den vollen Command, damit
 # token-haltige Remote-URLs (https://oauth:TOKEN@github.com/...),
@@ -20,7 +23,7 @@
 set -u
 
 input=$(cat)
-command=$(echo "$input" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('command',''))" 2>/dev/null)
+command=$(echo "$input" | "$PY" -c "import json,sys; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('command',''))" 2>/dev/null)
 
 # Match bypass-Flags in git push/commit/rebase
 if echo "$command" | grep -qE 'git\s+(push|commit|rebase).*--?(no-verify|no-gpg-sign|amend.*--no-edit)'; then
@@ -58,12 +61,25 @@ if echo "$command" | grep -qE 'git\s+(push|commit|rebase).*--?(no-verify|no-gpg-
 
     echo "[$timestamp] repo=$repo flags=$flags cwd=$cwd cmd_sha256_16=$cmd_hash" >> "$AUDIT_LOG"
 
-    echo "⚠️  pre-push-bypass-audit: Bypass-Flag in git-Command erkannt." >&2
-    echo "    Flags:  $flags" >&2
-    echo "    Repo:   $repo" >&2
-    echo "    Logged (redacted) to $AUDIT_LOG" >&2
-    echo "    Empfehlung: Bypass nur mit dokumentiertem Grund." >&2
-    echo "    Skill: pre-push-bypass-audit-trail" >&2
+    "$PY" -c "
+import json, sys
+flags = sys.argv[1] if len(sys.argv) > 1 else ''
+repo = sys.argv[2] if len(sys.argv) > 2 else 'unknown'
+log_path = sys.argv[3] if len(sys.argv) > 3 else ''
+ctx = (
+    f'pre-push-bypass-audit: bypass flag(s) detected in git command: {flags}. '
+    f'Repo: {repo}. Logged (redacted, no full command text) to {log_path}. '
+    'Recommendation: only bypass with a documented reason. '
+    'Skill: pre-push-bypass-audit-trail'
+)
+print(json.dumps({
+    'hookSpecificOutput': {
+        'hookEventName': 'PreToolUse',
+        'permissionDecision': 'allow',
+        'additionalContext': ctx,
+    }
+}))
+" "$flags" "$repo" "$AUDIT_LOG"
 fi
 
 exit 0

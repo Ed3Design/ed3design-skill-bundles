@@ -1,16 +1,19 @@
 #!/bin/bash
+PY=$(command -v python3 || command -v python)
 # pytest-venv-first.sh
 #
 # PreToolUse-Hook (Bash). Warnt wenn `pytest` ohne aktive venv ausgeführt wird
 # (false-negative-Risk: Tests laufen gegen System-Python statt Projekt-deps).
 #
 # Skill: pytest-venv-first-triage
-# Verhalten: warn-only (exit 0).
+# Verhalten: warn-only (exit 0). Warnung geht als hookSpecificOutput.additionalContext
+# nach stdout (nicht als plain stderr) — nur additionalContext landet zuverlässig im
+# Claude-Kontext.
 
 set -u
 
 input=$(cat)
-command=$(echo "$input" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('command',''))" 2>/dev/null)
+command=$(echo "$input" | "$PY" -c "import json,sys; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('command',''))" 2>/dev/null)
 
 # Detect pytest invocations across common runners (uv, poetry, hatch, pdm,
 # .venv-direct-path, python -m pytest). Matched on the FIRST command of a
@@ -61,10 +64,22 @@ fi
 if [ -z "${VIRTUAL_ENV:-}" ]; then
     # Check ob venv-Folder im CWD existiert
     if [ -d ".venv" ] || [ -d "venv" ]; then
-        echo "⚠️  pytest-venv-first: pytest aufgerufen ohne aktive venv." >&2
-        echo "    CWD hat .venv/venv-Folder — möglicherweise gegen System-Python getestet." >&2
-        echo "    Empfehlung: 'source .venv/bin/activate && pytest' oder '.venv/bin/pytest'" >&2
-        echo "    Skill: pytest-venv-first-triage" >&2
+        "$PY" -c "
+import json
+ctx = (
+    'pytest-venv-first: pytest invoked without an active venv. '
+    'CWD has a .venv/venv folder — this may be testing against system Python instead '
+    \"of the project's deps. Recommendation: 'source .venv/bin/activate && pytest' or \"
+    \"'.venv/bin/pytest'. Skill: pytest-venv-first-triage\"
+)
+print(json.dumps({
+    'hookSpecificOutput': {
+        'hookEventName': 'PreToolUse',
+        'permissionDecision': 'allow',
+        'additionalContext': ctx,
+    }
+}))
+"
     fi
 fi
 

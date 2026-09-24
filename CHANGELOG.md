@@ -26,6 +26,24 @@ All notable changes to this repository are tracked here. The format follows [Kee
 
 ### Fixed
 
+- **All six warn-only hooks were silently ineffective** — fixed across
+  `code-quality`, `skill-system-meta` and `token-savers`. Two independent causes,
+  both reproduced rather than inferred:
+  1. Every hook printed its warning to stderr and exited 0. The official hook
+     documentation is explicit that this never reaches the model: *"Stderr from a
+     hook that exits 0 goes to the debug log only, never the transcript, and Claude
+     never sees it."* Each hook's own comment claimed the opposite. They now emit
+     `hookSpecificOutput.additionalContext`, which is the documented channel, and
+     `permissionDecision: "allow"` for the PreToolUse ones (that value does **not**
+     bypass the permission system — the call still goes through the normal flow).
+  2. Every hook invoked `python3` unconditionally to parse its stdin JSON. Where
+     only `python` exists, the parse failed silently, the extracted command came
+     back empty and the trigger was never evaluated. Resolved once per hook via
+     `command -v python3 || command -v python`.
+  Reproduction: in a PATH sandbox containing only `python`, `scripts/test-hooks.sh`
+  scored **14 pass / 8 fail** before and **22 / 0** after; all eight failures were
+  should-warn cases going silent. Unchanged on a normal Linux PATH (22 / 0 both ways).
+
 - `scripts/test-hooks.sh` + `scripts/test-tools-smoke.sh` were not runnable on
   Windows: both assumed `python3` on PATH (Git Bash commonly has only
   `python`), and the smoke-test hardcoded `venv/bin/python3` where Windows

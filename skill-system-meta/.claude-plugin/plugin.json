@@ -1,6 +1,6 @@
 {
   "name": "skill-system-meta",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Skill-system disciplines for Claude Code power users who build their own skills. 5 skills for skill lifecycle (TDD promotion, post-session review, sub-agent patterns, design-first iteration). Tools for the tool ecosystem itself.",
   "author": {
     "name": "ed3Dworks"
