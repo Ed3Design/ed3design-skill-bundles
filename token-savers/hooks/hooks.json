@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/vault-first-prompt-detect.sh"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/vault-first-prompt-detect.sh\""
           }
         ]
       }

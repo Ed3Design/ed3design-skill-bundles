@@ -8,7 +8,7 @@
     {
       "name": "token-savers",
       "description": "Token optimization for Claude Code: 4 skills + 5 Python tools delivering 70-98% token savings in typical workflows (PDF reads, image vision, web reads, vault searches, DB schema checks, Git diff summaries).",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "source": "./token-savers",
       "author": {
         "name": "ed3Dworks"
@@ -17,7 +17,7 @@
     {
       "name": "code-quality",
       "description": "Code-quality + Git disciplines for Python/SQL/Git projects. 21 skills (code review, Git hygiene, code patterns), 4 PreToolUse hooks for automatic Git enforcement, and 1 read-only code-reviewer sub-agent. Language- and framework-agnostic.",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "source": "./code-quality",
       "author": {
         "name": "ed3Dworks"
@@ -53,7 +53,7 @@
     {
       "name": "skill-system-meta",
       "description": "Skill-system disciplines for Claude Code power users who build their own skills. 5 skills for skill lifecycle (TDD promotion, post-session review, sub-agent patterns, design-first iteration) + 1 UserPromptSubmit hook for session-end detection.",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "source": "./skill-system-meta",
       "author": {
         "name": "ed3Dworks"

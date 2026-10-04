@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/post-session-skill-review-trigger.sh"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/post-session-skill-review-trigger.sh\""
           }
         ]
       }
