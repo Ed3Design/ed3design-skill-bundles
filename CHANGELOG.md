@@ -26,6 +26,15 @@ All notable changes to this repository are tracked here. The format follows [Kee
 
 ### Fixed
 
+- `hooks/hooks.json` in `code-quality`, `skill-system-meta` and
+  `token-savers`: the six hook commands now quote `${CLAUDE_PLUGIN_ROOT}`.
+  Unquoted, a plugin installed under a path containing a space splits into
+  several words and the hook never starts. Claude Code 2.1.284 reports this
+  as a validator warning, which `plugin validate --strict` turns into a CI
+  failure (surfaced by the Dependabot CLI bump in #38). Bundle versions
+  bumped to `0.2.1` in each `plugin.json` and in the matching
+  `marketplace.json` entries (a mismatch fails `plugin validate --strict .`).
+
 - `scripts/test-hooks.sh` + `scripts/test-tools-smoke.sh` were not runnable on
   Windows: both assumed `python3` on PATH (Git Bash commonly has only
   `python`), and the smoke-test hardcoded `venv/bin/python3` where Windows
