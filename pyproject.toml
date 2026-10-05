@@ -52,3 +52,13 @@ token-savers-full = [
 [project.urls]
 Repository = "https://github.com/Ed3Design/ed3design-skill-bundles"
 Issues = "https://github.com/Ed3Design/ed3design-skill-bundles/issues"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]

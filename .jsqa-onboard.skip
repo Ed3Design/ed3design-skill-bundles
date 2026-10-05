@@ -1,0 +1,3 @@
+Kein JavaScript in diesem Repo (0 .js/.mjs/.cjs/.ts-Dateien, Stand 2026-10-04).
+package.json fuehrt nur das Claude-CLI fuer die CI-Validierung.
+Datei loeschen und Skill jsqa-onboard ausfuehren, sobald JS dazukommt.

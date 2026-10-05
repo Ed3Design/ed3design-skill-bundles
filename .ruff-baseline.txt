@@ -1,0 +1,28 @@
+[*] 10 fixable with the `--fix` option (3 hidden fixes can be enabled with the `--unsafe-fixes` option).
+Found 26 errors.
+scripts/audit-skill-descriptions.py:75:11: F541 [*] f-string without any placeholders
+scripts/audit-skill-descriptions.py:77:15: B007 Loop control variable `d` not used within loop body
+scripts/audit-skill-descriptions.py:83:11: F541 [*] f-string without any placeholders
+scripts/audit-skill-descriptions.py:85:16: B007 Loop control variable `d` not used within loop body
+scripts/regenerate-counts.py:141:35: B023 Function definition does not bind loop variable `r`
+scripts/test-sql-injection-guard.py:21:5: S101 Use of `assert` detected
+scripts/test-sql-injection-guard.py:9:8: F401 [*] `sys` imported but unused
+token-savers/tools/db-schema-inspector.py:172:14: S603 `subprocess` call: check for execution of untrusted input
+token-savers/tools/db-schema-inspector.py:216:14: S603 `subprocess` call: check for execution of untrusted input
+token-savers/tools/db-schema-inspector.py:294:15: F541 [*] f-string without any placeholders
+token-savers/tools/db-schema-inspector.py:295:15: F541 [*] f-string without any placeholders
+token-savers/tools/diff-summary.py:121:14: S603 `subprocess` call: check for execution of untrusted input
+token-savers/tools/diff-summary.py:252:18: S603 `subprocess` call: check for execution of untrusted input
+token-savers/tools/diff-summary.py:253:13: S607 Starting a process with a partial executable path
+token-savers/tools/html2md.py:35:8: F401 [*] `os` imported but unused
+token-savers/tools/html2md.py:85:11: S310 Audit URL open for permitted schemes. Allowing use of `file:` or custom schemes is often unexpected.
+token-savers/tools/html2md.py:86:10: S310 Audit URL open for permitted schemes. Allowing use of `file:` or custom schemes is often unexpected.
+token-savers/tools/img-preprocess.py:136:13: S110 `try`-`except`-`pass` detected, consider logging the exception
+token-savers/tools/img-preprocess.py:173:16: S603 `subprocess` call: check for execution of untrusted input
+token-savers/tools/img-preprocess.py:229:20: S603 `subprocess` call: check for execution of untrusted input
+token-savers/tools/img-preprocess.py:44:9: I001 [*] Import block is un-sorted or un-formatted
+token-savers/tools/img-preprocess.py:54:5: I001 [*] Import block is un-sorted or un-formatted
+token-savers/tools/vault-search.py:133:9: B007 Loop control variable `i` not used within loop body
+token-savers/tools/vault-search.py:216:13: S112 `try`-`except`-`continue` detected, consider logging the exception
+token-savers/tools/vault-search.py:296:15: F541 [*] f-string without any placeholders
+token-savers/tools/vault-search.py:297:15: F541 [*] f-string without any placeholders
